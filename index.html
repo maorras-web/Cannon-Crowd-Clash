@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cannon Crowd Clash</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- טעינת ספריית Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <!-- ממשק משתמש - HUD -->
+    <div id="ui-hud">
+        <div class="hud-top-bar">
+            <div class="hud-card">ניקוד: <span id="score-val">0</span> ⭐</div>
+        </div>
+        <div id="instructions">החלק ימינה ושמאלה כדי להזיז את התותח!</div>
+    </div>
+
+    <!-- קובץ המשחק הראשי -->
+    <script src="main.js" defer></script>
+</body>
+</html>
