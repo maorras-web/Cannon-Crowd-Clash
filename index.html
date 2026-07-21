@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0b0f19">
     <title>Cannon Crowd Clash</title>
     
-    <!-- פונט גוגל Rubik למראה גיימרי מודרני -->
+    <!-- Google Font Rubik -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -18,45 +18,56 @@
 </head>
 <body>
 
-    <!-- שכבת ממשק משתמש (HUD) -->
+    <!-- UI Overlay HUD -->
     <div id="ui-hud">
         
-        <!-- סרגל עליון -->
+        <!-- Top Bar -->
         <div class="hud-top-bar">
-            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="השהה משחק">⏸️</button>
+            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button>
             <div id="score-card" class="hud-card hidden">
-                ⭐ ניקוד: <span id="score-val">0</span>
-                <div class="high-score-small">👑 שיא: <span id="high-score-hud">0</span></div>
+                ⭐ <span data-i18n="score">Score</span>: <span id="score-val">0</span>
+                <div class="high-score-small">👑 <span data-i18n="best">Best</span>: <span id="high-score-hud">0</span></div>
             </div>
         </div>
         
-        <!-- הוראות גרירה -->
-        <div id="instructions" class="hidden">👈 החלק ימינה ושמאלה כדי להזיז👉</div>
+        <!-- Instructions Banner -->
+        <div id="instructions" class="hidden" data-i18n="instructions">👈 Swipe left and right to move 👉</div>
 
-        <!-- מסך פתיחה -->
+        <!-- Start Screen -->
         <div id="start-menu" class="status-popup">
             <h1>Cannon Crowd Clash</h1>
-            <p>השמד את הרובוטים, עבור בשערים והכנע את הבוס!</p>
-            <div class="high-score-box">🏆 שיא אישי: <span id="start-high-score">0</span></div>
-            <button id="start-btn" type="button" class="main-btn">התחל משחק 🚀</button>
+            <p data-i18n="subtitle">Destroy robots, pass through gates, and defeat the boss!</p>
+
+            <!-- Language Selector Switcher -->
+            <div class="lang-selector">
+                <span data-i18n="language">Language</span>:
+                <select id="lang-select">
+                    <option value="en" selected>English 🇬🇧</option>
+                    <option value="he">עברית 🇮🇱</option>
+                    <option value="es">Español 🇪🇸</option>
+                </select>
+            </div>
+
+            <div class="high-score-box">🏆 <span data-i18n="personalBest">Personal Best</span>: <span id="start-high-score">0</span></div>
+            <button id="start-btn" type="button" class="main-btn" data-i18n="startGame">Start Game 🚀</button>
         </div>
 
-        <!-- חלון סיום משחק -->
+        <!-- Game Over / Victory Modal -->
         <div id="game-status" class="status-popup hidden">
-            <h2 id="status-title">🏆 ניצחת!</h2>
-            <p id="final-score-text">הניקוד שלך: 0</p>
-            <button id="restart-btn" type="button" class="main-btn">שחק שוב 🔄</button>
+            <h2 id="status-title" data-i18n="victory">🏆 You Won!</h2>
+            <p id="final-score-text"><span data-i18n="finalScore">Your Final Score</span>: 0</p>
+            <button id="restart-btn" type="button" class="main-btn" data-i18n="playAgain">Play Again 🔄</button>
         </div>
 
-        <!-- חלון הפסקה -->
+        <!-- Pause Screen -->
         <div id="pause-menu" class="status-popup hidden">
-            <h2>משחק מושהה ⏸️</h2>
-            <button id="resume-btn" type="button" class="main-btn">המשך משחק ▶️</button>
+            <h2 data-i18n="gamePaused">Game Paused ⏸️</h2>
+            <button id="resume-btn" type="button" class="main-btn" data-i18n="resumeGame">Resume Game ▶️</button>
         </div>
 
     </div>
 
-    <!-- סקריפט המשחק הראשי -->
+    <!-- Main Game Script -->
     <script src="main.js" defer></script>
 </body>
 </html>
