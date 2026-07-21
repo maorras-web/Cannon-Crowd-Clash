@@ -79,7 +79,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 6. שערים ---
     const gates = [];
-    function createGate(x, z, type, value) {
+    function createGate(id, x, z, type, value) {
         const gateGroup = new THREE.Group();
         const width = trackWidth / 2 - 0.6;
         const height = 4.5;
@@ -95,17 +95,17 @@ window.addEventListener('DOMContentLoaded', () => {
         gateGroup.add(frame);
 
         gateGroup.position.set(x, 0, z);
-        gateGroup.userData = { type, value };
+        gateGroup.userData = { id, type, value };
         scene.add(gateGroup);
         gates.push(gateGroup);
     }
 
-    createGate(-3.3, -40, 'multiply', 2);
-    createGate(3.3, -40, 'add', 50);
-    createGate(-3.3, -130, 'multiply', 3);
-    createGate(3.3, -130, 'multiply', 2);
-    createGate(-3.3, -220, 'add', 100);
-    createGate(3.3, -220, 'multiply', 5);
+    createGate('g1', -3.3, -40, 'multiply', 2);
+    createGate('g2', 3.3, -40, 'add', 10);
+    createGate('g3', -3.3, -130, 'multiply', 3);
+    createGate('g4', 3.3, -130, 'multiply', 2);
+    createGate('g5', -3.3, -220, 'add', 20);
+    createGate('g6', 3.3, -220, 'multiply', 4);
 
     // --- 7. רובוטים רשעים ---
     const robots = [];
@@ -136,11 +136,11 @@ window.addEventListener('DOMContentLoaded', () => {
         robots.push(robotGroup);
     }
 
-    createRobot(-3, -85, 20);
-    createRobot(3, -85, 20);
-    createRobot(0, -170, 50);
-    createRobot(-4, -260, 80);
-    createRobot(4, -260, 80);
+    createRobot(-3, -85, 30);
+    createRobot(3, -85, 30);
+    createRobot(0, -170, 70);
+    createRobot(-4, -260, 120);
+    createRobot(4, -260, 120);
 
     // --- 8. בוס בסוף ---
     const bossGroup = new THREE.Group();
@@ -165,10 +165,10 @@ window.addEventListener('DOMContentLoaded', () => {
     bossGroup.add(hpBar);
 
     bossGroup.position.set(0, 0, bossZ);
-    bossGroup.userData = { hp: 500, maxHp: 500 };
+    bossGroup.userData = { hp: 1000, maxHp: 1000 };
     scene.add(bossGroup);
 
-    // --- 9. מערכת חלקיקים / נצנצים תכלת בזמן פגיעה ---
+    // --- 9. מערכת חלקיקים / נצנצים תכלת ---
     const particles = [];
     const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
     const particleMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
@@ -178,10 +178,10 @@ window.addEventListener('DOMContentLoaded', () => {
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
             p.userData = {
-                vx: (Math.random() - 0.5) * 12,
-                vy: Math.random() * 8 + 2,
-                vz: (Math.random() - 0.5) * 12,
-                life: 0.4
+                vx: (Math.random() - 0.5) * 10,
+                vy: Math.random() * 6 + 2,
+                vz: (Math.random() - 0.5) * 10,
+                life: 0.35
             };
             scene.add(p);
             particles.push(p);
@@ -194,10 +194,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const bulletMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 });
 
     function spawnBullet(x, z, passedGates = []) {
-        if (bullets.length > 120) return;
+        if (bullets.length > 250) return; // תקרת כדורים מקסימלית למניעת תקיעות
 
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x + (Math.random() - 0.5) * 0.4, 0.35, z);
+        bullet.position.set(x + (Math.random() - 0.5) * 0.3, 0.35, z);
         bullet.userData = { passedGates: [...passedGates] };
         scene.add(bullet);
         bullets.push(bullet);
@@ -243,7 +243,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    // --- 12. מצבי משחק וניקוד עד 2,000,000 ---
+    // --- 12. מצבי משחק וניקוד ---
     let gameStarted = false;
     let isPaused = false;
     let isGameOver = false;
@@ -332,7 +332,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // ירייה אוטומטית
         shootTimer += delta;
-        if (shootTimer >= 0.15) {
+        if (shootTimer >= 0.18) {
             spawnBullet(cannonGroup.position.x, cannonGroup.position.z - 1.2);
             shootTimer = 0;
         }
@@ -340,7 +340,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // צעידת רובוטים קדימה
         for (let r = robots.length - 1; r >= 0; r--) {
             const robot = robots[r];
-            robot.position.z += 2.0 * delta;
+            robot.position.z += 2.2 * delta;
 
             if (robot.position.z >= cannonGroup.position.z - 1.2) {
                 triggerGameOver(false);
@@ -354,25 +354,27 @@ window.addEventListener('DOMContentLoaded', () => {
             b.position.z -= 35 * delta;
 
             // התנגשות בשערים
-            gates.forEach((gate, gateIdx) => {
-                if (!b.userData.passedGates.includes(gateIdx)) {
-                    if (Math.abs(b.position.z - gate.position.z) < 0.6) {
+            gates.forEach((gate) => {
+                const gateId = gate.userData.id;
+                if (!b.userData.passedGates.includes(gateId)) {
+                    if (Math.abs(b.position.z - gate.position.z) < 1.0) {
                         if (Math.abs(b.position.x - gate.position.x) < (trackWidth / 4)) {
-                            b.userData.passedGates.push(gateIdx);
+                            b.userData.passedGates.push(gateId);
 
-                            createSparkles(b.position, 6); // נצנצים בשער
+                            createSparkles(b.position, 6);
 
                             const newPassed = [...b.userData.passedGates];
+                            // משגרים את הכדורים החדשים קדימה (z-2.0) כדי שלא יישארו בתוך הטווח של השער!
                             if (gate.userData.type === 'multiply') {
                                 for (let k = 0; k < gate.userData.value - 1; k++) {
-                                    spawnBullet(b.position.x, b.position.z - 0.4, newPassed);
+                                    spawnBullet(b.position.x, b.position.z - 2.0, newPassed);
                                 }
                             } else if (gate.userData.type === 'add') {
                                 for (let k = 0; k < gate.userData.value; k++) {
-                                    spawnBullet(b.position.x, b.position.z - 0.4, newPassed);
+                                    spawnBullet(b.position.x, b.position.z - 2.0, newPassed);
                                 }
                             }
-                            addScore(150);
+                            addScore(100);
                         }
                     }
                 }
@@ -385,10 +387,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (b.position.distanceTo(robot.position) < 1.4) {
                     robot.userData.hp -= 1;
                     bulletHit = true;
-                    createSparkles(b.position, 8); // נצנצים בפגיעה ברובוט
+                    createSparkles(b.position, 6);
 
                     if (robot.userData.hp <= 0) {
-                        createSparkles(robot.position, 20);
+                        createSparkles(robot.position, 15);
                         scene.remove(robot);
                         robots.splice(r, 1);
                         addScore(2500);
@@ -406,19 +408,19 @@ window.addEventListener('DOMContentLoaded', () => {
             // התנגשות בבוס
             if (bossGroup.userData.hp > 0 && b.position.distanceTo(bossGroup.position) < 3.8) {
                 bossGroup.userData.hp -= 1;
-                createSparkles(b.position, 10); // נצנצים בפגיעה בבוס
+                createSparkles(b.position, 8);
 
                 const hpPercent = Math.max(0, bossGroup.userData.hp / bossGroup.userData.maxHp);
                 hpBar.scale.x = hpPercent;
                 hpBar.position.x = (1 - hpPercent) * -2.2;
 
-                addScore(1000);
+                addScore(500);
                 scene.remove(b);
                 bullets.splice(i, 1);
 
                 if (bossGroup.userData.hp <= 0) {
                     createSparkles(bossGroup.position, 40);
-                    addScore(500000); // בונוס סיום ניצחון
+                    addScore(200000);
                     scene.remove(bossGroup);
                     triggerGameOver(true);
                 }
