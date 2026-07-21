@@ -1,5 +1,5 @@
 window.addEventListener('DOMContentLoaded', () => {
-    // --- 0. מנוע סאונד (Web Audio API) ---
+    // --- 0. מנוע סאונד משודרג (Web Audio API) ---
     let audioCtx = null;
 
     function initAudio() {
@@ -10,45 +10,71 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function playSound(type) {
         if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
         const now = audioCtx.currentTime;
 
         if (type === 'shoot') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            // צליל ירייה עמוק ומחוספס
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(30, now + 0.06);
+
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
             osc.start(now);
-            osc.stop(now + 0.05);
+            osc.stop(now + 0.06);
+
         } else if (type === 'gate') {
+            // צליל מעבר שער נעים ומלודי
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(523.25, now);
-            osc.frequency.setValueAtTime(659.25, now + 0.06);
-            gain.gain.setValueAtTime(0.15, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.setValueAtTime(659.25, now + 0.05); // E5
+
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
             osc.start(now);
             osc.stop(now + 0.12);
+
         } else if (type === 'hit') {
+            // צליל פגיעה מתכתי וקצר
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
             osc.type = 'square';
-            osc.frequency.setValueAtTime(120, now);
-            osc.frequency.exponentialRampToValueAtTime(40, now + 0.04);
-            gain.gain.setValueAtTime(0.08, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + 0.04);
+
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
             osc.start(now);
             osc.stop(now + 0.04);
+
         } else if (type === 'explosion') {
+            // פיצוץ עמוק עם רעש
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.exponentialRampToValueAtTime(20, now + 0.25);
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(10, now + 0.3);
+
             gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
             osc.start(now);
-            osc.stop(now + 0.25);
+            osc.stop(now + 0.3);
         }
     }
 
@@ -90,7 +116,7 @@ window.addEventListener('DOMContentLoaded', () => {
     rightWall.position.set(trackWidth / 2 + 0.25, 0.35, track.position.z);
     scene.add(rightWall);
 
-    // --- 4. התותח (עם קנה משודרג) ---
+    // --- 4. התותח ופלאש ירייה (Muzzle Flash VFX) ---
     const cannonGroup = new THREE.Group();
     const baseGeo = new THREE.BoxGeometry(1.6, 0.8, 2.2);
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6 });
@@ -110,8 +136,26 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelRight.position.set(0.4, 0.3, -1);
     cannonGroup.add(barrelRight);
 
+    // VFX פלאש ירייה בפתחי הקנים
+    const flashGeo = new THREE.SphereGeometry(0.3, 8, 8);
+    const flashMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0 });
+    
+    const flashLeft = new THREE.Mesh(flashGeo, flashMat);
+    flashLeft.position.set(-0.4, 0.3, -1.9);
+    cannonGroup.add(flashLeft);
+
+    const flashRight = new THREE.Mesh(flashGeo, flashMat);
+    flashRight.position.set(0.4, 0.3, -1.9);
+    cannonGroup.add(flashRight);
+
     cannonGroup.position.set(0, 0.4, 0);
     scene.add(cannonGroup);
+
+    function triggerMuzzleFlash() {
+        flashMat.opacity = 0.9;
+        flashLeft.scale.set(1.5, 1.5, 1.5);
+        flashRight.scale.set(1.5, 1.5, 1.5);
+    }
 
     // --- 5. טקסט על שערים ---
     function createGateTexture(label, colorHex) {
@@ -178,8 +222,8 @@ window.addEventListener('DOMContentLoaded', () => {
         barriers.push(mesh);
     }
 
-    createBarrier(0, -100, 40);
-    createBarrier(-3, -190, 60);
+    createBarrier(0, -100, 30);
+    createBarrier(-3, -190, 45);
 
     // --- 8. רובוטים זזים בזיגזג ---
     const robots = [];
@@ -210,11 +254,11 @@ window.addEventListener('DOMContentLoaded', () => {
         robots.push(robotGroup);
     }
 
-    createRobot(-3, -85, 30, 2.5);
-    createRobot(3, -85, 30, -2.5);
-    createRobot(0, -170, 70, 3.0);
-    createRobot(-4, -260, 120, 3.5);
-    createRobot(4, -260, 120, -3.5);
+    createRobot(-3, -85, 20, 2.5);
+    createRobot(3, -85, 20, -2.5);
+    createRobot(0, -170, 45, 3.0);
+    createRobot(-4, -260, 80, 3.5);
+    createRobot(4, -260, 80, -3.5);
 
     // --- 9. בוס בסוף ---
     const bossGroup = new THREE.Group();
@@ -239,23 +283,26 @@ window.addEventListener('DOMContentLoaded', () => {
     bossGroup.add(hpBar);
 
     bossGroup.position.set(0, 0, bossZ);
-    bossGroup.userData = { hp: 1200, maxHp: 1200 };
+    bossGroup.userData = { hp: 500, maxHp: 500 };
     scene.add(bossGroup);
 
-    // --- 10. מערכת חלקיקים / נצנצים ---
+    // --- 10. VFX: חלקיקים ופיצוצים מתקדמים ---
     const particles = [];
-    const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
-    const particleMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const particleGeo = new THREE.SphereGeometry(0.15, 6, 6);
 
-    function createSparkles(pos, count = 8) {
+    function createExplosionVFX(pos, colorHex = 0xf59e0b, count = 12) {
+        const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1 });
         for (let i = 0; i < count; i++) {
-            const p = new THREE.Mesh(particleGeo, particleMat);
+            const p = new THREE.Mesh(particleGeo, mat.clone());
             p.position.copy(pos);
+            const scale = Math.random() * 0.8 + 0.4;
+            p.scale.set(scale, scale, scale);
             p.userData = {
-                vx: (Math.random() - 0.5) * 10,
-                vy: Math.random() * 6 + 2,
-                vz: (Math.random() - 0.5) * 10,
-                life: 0.35
+                vx: (Math.random() - 0.5) * 12,
+                vy: Math.random() * 7 + 2,
+                vz: (Math.random() - 0.5) * 12,
+                life: 0.4,
+                maxLife: 0.4
             };
             scene.add(p);
             particles.push(p);
@@ -322,7 +369,6 @@ window.addEventListener('DOMContentLoaded', () => {
     let isPaused = false;
     let isGameOver = false;
     let score = 0;
-    const maxScore = 2000000;
 
     let highScore = localStorage.getItem('ccc_high_score') || 0;
     document.getElementById('start-high-score').innerText = Number(highScore).toLocaleString('en-US');
@@ -363,7 +409,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     function addScore(amount) {
-        score = Math.min(maxScore, score + amount);
+        score += amount;
         document.getElementById('score-val').innerText = score.toLocaleString('en-US');
 
         if (score > highScore) {
@@ -401,13 +447,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = clock.getDelta();
 
-        // עדכון נצנצים
+        // עמעום Muzzle Flash הדרגתי
+        if (flashMat.opacity > 0) {
+            flashMat.opacity -= delta * 8;
+            flashLeft.scale.subScalar(delta * 4);
+            flashRight.scale.subScalar(delta * 4);
+        }
+
+        // עדכון חלקיקי VFX
         for (let pIdx = particles.length - 1; pIdx >= 0; pIdx--) {
             const p = particles[pIdx];
             p.position.x += p.userData.vx * delta;
             p.position.y += p.userData.vy * delta;
             p.position.z += p.userData.vz * delta;
             p.userData.life -= delta;
+
+            p.material.opacity = p.userData.life / p.userData.maxLife;
 
             if (p.userData.life <= 0) {
                 scene.remove(p);
@@ -420,17 +475,18 @@ window.addEventListener('DOMContentLoaded', () => {
         targetX = Math.max(-maxX, Math.min(maxX, targetX));
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.18);
 
-        // ירייה אוטומטית (קצב מוגבר ככל שמשיגים יותר ניקוד!)
-        const fireInterval = score > 50000 ? 0.09 : 0.16;
+        // ירייה אוטומטית
+        const fireInterval = score > 1500 ? 0.09 : 0.16;
         shootTimer += delta;
         if (shootTimer >= fireInterval) {
             spawnBullet(cannonGroup.position.x - 0.4, cannonGroup.position.z - 1.2);
             spawnBullet(cannonGroup.position.x + 0.4, cannonGroup.position.z - 1.2);
+            triggerMuzzleFlash();
             playSound('shoot');
             shootTimer = 0;
         }
 
-        // תנועת רובוטים (קדימה + זיגזג)
+        // תנועת רובוטים
         for (let r = robots.length - 1; r >= 0; r--) {
             const robot = robots[r];
             robot.position.z += 2.2 * delta;
@@ -460,14 +516,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (b.position.distanceTo(bar.position) < 1.8) {
                     bar.userData.hp -= 1;
                     hitBarrier = true;
-                    createSparkles(b.position, 4);
+                    createExplosionVFX(b.position, 0xf59e0b, 5);
                     playSound('hit');
 
                     if (bar.userData.hp <= 0) {
-                        createSparkles(bar.position, 15);
+                        createExplosionVFX(bar.position, 0xd97706, 18);
                         scene.remove(bar);
                         barriers.splice(barIdx, 1);
-                        addScore(1000);
+                        addScore(100);
                     }
                     break;
                 }
@@ -487,7 +543,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         if (Math.abs(b.position.x - gate.position.x) < (trackWidth / 4)) {
                             b.userData.passedGates.push(gateId);
 
-                            createSparkles(b.position, 6);
+                            createExplosionVFX(b.position, 0x38bdf8, 6);
                             playSound('gate');
 
                             const newPassed = [...b.userData.passedGates];
@@ -500,7 +556,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                     spawnBullet(b.position.x, b.position.z - 2.0, newPassed);
                                 }
                             }
-                            addScore(100);
+                            addScore(5);
                         }
                     }
                 }
@@ -513,15 +569,16 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (b.position.distanceTo(robot.position) < 1.4) {
                     robot.userData.hp -= 1;
                     bulletHit = true;
-                    createSparkles(b.position, 6);
+                    createExplosionVFX(b.position, 0xef4444, 5);
                     playSound('hit');
+                    addScore(2);
 
                     if (robot.userData.hp <= 0) {
-                        createSparkles(robot.position, 18);
+                        createExplosionVFX(robot.position, 0xef4444, 25);
                         playSound('explosion');
                         scene.remove(robot);
                         robots.splice(r, 1);
-                        addScore(2500);
+                        addScore(100);
                     }
                     break;
                 }
@@ -536,20 +593,20 @@ window.addEventListener('DOMContentLoaded', () => {
             // התנגשות בבוס
             if (bossGroup.userData.hp > 0 && b.position.distanceTo(bossGroup.position) < 3.8) {
                 bossGroup.userData.hp -= 1;
-                createSparkles(b.position, 8);
+                createExplosionVFX(b.position, 0xfacc15, 6);
                 playSound('hit');
 
                 const hpPercent = Math.max(0, bossGroup.userData.hp / bossGroup.userData.maxHp);
                 hpBar.scale.x = hpPercent;
                 hpBar.position.x = (1 - hpPercent) * -2.2;
 
-                addScore(500);
+                addScore(5);
                 scene.remove(b);
                 bullets.splice(i, 1);
 
                 if (bossGroup.userData.hp <= 0) {
-                    createSparkles(bossGroup.position, 50);
-                    addScore(200000);
+                    createExplosionVFX(bossGroup.position, 0xef4444, 60);
+                    addScore(5000);
                     scene.remove(bossGroup);
                     triggerGameOver(true);
                 }

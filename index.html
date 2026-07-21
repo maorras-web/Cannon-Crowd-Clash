@@ -2,46 +2,61 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0f19">
     <title>Cannon Crowd Clash</title>
+    
+    <!-- פונט גוגל Rubik למראה גיימרי מודרני -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Three.js Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
+    <!-- שכבת ממשק משתמש (HUD) -->
     <div id="ui-hud">
+        
+        <!-- סרגל עליון -->
         <div class="hud-top-bar">
-            <button id="pause-btn" class="hud-btn hidden">⏸️</button>
+            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="השהה משחק">⏸️</button>
             <div id="score-card" class="hud-card hidden">
-                ניקוד: <span id="score-val">0</span> ⭐
-                <div class="high-score-small">שיא: <span id="high-score-hud">0</span></div>
+                ⭐ ניקוד: <span id="score-val">0</span>
+                <div class="high-score-small">👑 שיא: <span id="high-score-hud">0</span></div>
             </div>
         </div>
         
-        <div id="instructions" class="hidden">החלק ימינה ושמאלה כדי להזיז את התותח!</div>
+        <!-- הוראות גרירה -->
+        <div id="instructions" class="hidden">👈 החלק ימינה ושמאלה כדי להזיז👉</div>
 
         <!-- מסך פתיחה -->
         <div id="start-menu" class="status-popup">
             <h1>Cannon Crowd Clash</h1>
-            <p>השמד את הרובוטים והגע לבוס!</p>
+            <p>השמד את הרובוטים, עבור בשערים והכנע את הבוס!</p>
             <div class="high-score-box">🏆 שיא אישי: <span id="start-high-score">0</span></div>
-            <button id="start-btn" class="main-btn">התחל משחק 🚀</button>
+            <button id="start-btn" type="button" class="main-btn">התחל משחק 🚀</button>
         </div>
 
         <!-- חלון סיום משחק -->
         <div id="game-status" class="status-popup hidden">
             <h2 id="status-title">🏆 ניצחת!</h2>
             <p id="final-score-text">הניקוד שלך: 0</p>
-            <button id="restart-btn" class="main-btn">שחק שוב</button>
+            <button id="restart-btn" type="button" class="main-btn">שחק שוב 🔄</button>
         </div>
 
         <!-- חלון הפסקה -->
         <div id="pause-menu" class="status-popup hidden">
             <h2>משחק מושהה ⏸️</h2>
-            <button id="resume-btn" class="main-btn">המשך משחק ▶️</button>
+            <button id="resume-btn" type="button" class="main-btn">המשך משחק ▶️</button>
         </div>
+
     </div>
 
+    <!-- סקריפט המשחק הראשי -->
     <script src="main.js" defer></script>
 </body>
 </html>
