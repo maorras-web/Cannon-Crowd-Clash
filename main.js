@@ -107,13 +107,12 @@ window.addEventListener('DOMContentLoaded', () => {
     createGate(-3.3, -135, 'add', 10);
     createGate(3.3, -135, 'multiply', 2);
 
-    // --- 7. רובוטים רשעים ואויבים ---
+    // --- 7. רובוטים רשעים לאורך המסלול ---
     const robots = [];
-
     function createRobot(x, z, hp) {
         const robotGroup = new THREE.Group();
 
-        // גוף הרובוט
+        // גוף
         const bodyGeo = new THREE.BoxGeometry(1.2, 1.4, 0.8);
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.7, roughness: 0.3 });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -127,7 +126,7 @@ window.addEventListener('DOMContentLoaded', () => {
         head.position.y = 2.0;
         robotGroup.add(head);
 
-        // עיניים אדומות זוהרות
+        // עיניים
         const eyeGeo = new THREE.BoxGeometry(0.6, 0.2, 0.1);
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 1 });
         const eyes = new THREE.Mesh(eyeGeo, eyeMat);
@@ -140,12 +139,12 @@ window.addEventListener('DOMContentLoaded', () => {
         robots.push(robotGroup);
     }
 
-    // יצירת רובוטים לאורך המסלול הצועדים קדימה
-    createRobot(-3, -60, 10);
-    createRobot(3, -60, 10);
-    createRobot(0, -110, 25);
-    createRobot(-4, -160, 35);
-    createRobot(4, -160, 35);
+    // מיקום רובוטים
+    createRobot(-3, -60, 15);
+    createRobot(3, -60, 15);
+    createRobot(0, -110, 30);
+    createRobot(-4, -160, 40);
+    createRobot(4, -160, 40);
 
     // --- 8. בוס בסוף ---
     const bossGroup = new THREE.Group();
@@ -171,7 +170,7 @@ window.addEventListener('DOMContentLoaded', () => {
     bossGroup.add(hpBar);
 
     bossGroup.position.set(0, 0, bossZ);
-    bossGroup.userData = { hp: 120, maxHp: 120 };
+    bossGroup.userData = { hp: 200, maxHp: 200 };
     scene.add(bossGroup);
 
     // --- 9. כדורים/פגזים ---
@@ -179,16 +178,20 @@ window.addEventListener('DOMContentLoaded', () => {
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 });
 
-    function spawnBullet(x, z) {
+    function spawnBullet(x, z, passedGates = []) {
+        // הגבלה של מקסימום פגזים במסך למניעת התקעויות
+        if (bullets.length > 150) return;
+
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x + (Math.random() - 0.5) * 0.5, 0.35, z);
+        bullet.position.set(x + (Math.random() - 0.5) * 0.4, 0.35, z);
+        bullet.userData = { passedGates: [...passedGates] }; // שמירת השערים שכבר עבר בהם
         scene.add(bullet);
         bullets.push(bullet);
     }
 
     let shootTimer = 0;
 
-    // --- 10. בקרות ושליטה ---
+    // --- 10. בקרות גרירה מתוקנות (ללא גלילת הדף) ---
     let targetX = 0;
     let isDragging = false;
     let previousTouchX = 0;
@@ -211,14 +214,20 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('touchstart', (e) => { isDragging = true; previousTouchX = e.touches[0].clientX; hideInstructions(); });
+    window.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        previousTouchX = e.touches[0].clientX;
+        hideInstructions();
+    }, { passive: false });
+
     window.addEventListener('touchend', () => { isDragging = false; });
     window.addEventListener('touchmove', (e) => {
+        e.preventDefault(); // מונע לחלוטין גלילה
         if (isDragging && !isPaused && !isGameOver) {
             targetX += (e.touches[0].clientX - previousTouchX) * 0.025;
             previousTouchX = e.touches[0].clientX;
         }
-    });
+    }, { passive: false });
 
     // --- 11. מצבי משחק ---
     let isPaused = false;
@@ -272,21 +281,20 @@ window.addEventListener('DOMContentLoaded', () => {
         // תנועת התותח
         const maxX = trackWidth / 2 - 1.2;
         targetX = Math.max(-maxX, Math.min(maxX, targetX));
-        cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.15);
+        cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.18);
 
-        // ירייה אוטומטית
+        // ירייה בקצב יציב
         shootTimer += delta;
-        if (shootTimer >= 0.14) {
+        if (shootTimer >= 0.16) {
             spawnBullet(cannonGroup.position.x, cannonGroup.position.z - 1.2);
             shootTimer = 0;
         }
 
-        // תנועת הרובוטים לכיוון התותח!
+        // צעידת רובוטים
         for (let r = robots.length - 1; r >= 0; r--) {
             const robot = robots[r];
-            robot.position.z += 2.5 * delta; // מהירות הצעידה של הרובוטים
+            robot.position.z += 1.8 * delta;
 
-            // אם רובוט הגיע לתותח - הפסד!
             if (robot.position.z >= cannonGroup.position.z - 1.2) {
                 triggerGameOver(false);
                 return;
@@ -296,23 +304,28 @@ window.addEventListener('DOMContentLoaded', () => {
         // עדכון כדורים והתנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
-            b.position.z -= 28 * delta;
+            b.position.z -= 32 * delta;
 
-            // התנגשות בשערים
-            gates.forEach(gate => {
-                if (Math.abs(b.position.z - gate.position.z) < 0.5) {
-                    if (Math.abs(b.position.x - gate.position.x) < (trackWidth / 4)) {
-                        if (gate.userData.type === 'multiply') {
-                            for (let k = 0; k < gate.userData.value - 1; k++) {
-                                spawnBullet(b.position.x, b.position.z - 0.3);
+            // התנגשות בשערים (עם מנגנון מניעת כפילויות)
+            gates.forEach((gate, gateIdx) => {
+                if (!b.userData.passedGates.includes(gateIdx)) {
+                    if (Math.abs(b.position.z - gate.position.z) < 0.6) {
+                        if (Math.abs(b.position.x - gate.position.x) < (trackWidth / 4)) {
+                            b.userData.passedGates.push(gateIdx);
+
+                            const newPassed = [...b.userData.passedGates];
+                            if (gate.userData.type === 'multiply') {
+                                for (let k = 0; k < gate.userData.value - 1; k++) {
+                                    spawnBullet(b.position.x, b.position.z - 0.4, newPassed);
+                                }
+                            } else if (gate.userData.type === 'add') {
+                                for (let k = 0; k < gate.userData.value; k++) {
+                                    spawnBullet(b.position.x, b.position.z - 0.4, newPassed);
+                                }
                             }
-                        } else if (gate.userData.type === 'add') {
-                            for (let k = 0; k < gate.userData.value; k++) {
-                                spawnBullet(b.position.x, b.position.z - 0.3);
-                            }
+                            score += 5;
+                            document.getElementById('score-val').innerText = score;
                         }
-                        score += 5;
-                        document.getElementById('score-val').innerText = score;
                     }
                 }
             });
@@ -359,6 +372,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
+            // ניקוי כדורים שיצאו מגבולות המסלול
             if (b && b.position.z < -trackLength) {
                 scene.remove(b);
                 bullets.splice(i, 1);
@@ -366,10 +380,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         // מצלמה
-        camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x * 0.3, 0.1);
+        camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x * 0.25, 0.1);
         camera.position.y = 8.5;
         camera.position.z = cannonGroup.position.z + 12;
-        camera.lookAt(cannonGroup.position.x * 0.15, 1, cannonGroup.position.z - 12);
+        camera.lookAt(cannonGroup.position.x * 0.1, 1, cannonGroup.position.z - 12);
 
         renderer.render(scene, camera);
     }

@@ -5,7 +5,7 @@
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    touch-action: manipulation;
+    touch-action: none; /* מונע לחלוטין את גלילת הדף במובייל */
 }
 
 html, body {
@@ -15,6 +15,8 @@ html, body {
     background-color: #0f172a;
     font-family: 'Segoe UI', Roboto, sans-serif;
     position: fixed;
+    top: 0;
+    left: 0;
 }
 
 canvas {
@@ -25,6 +27,7 @@ canvas {
     width: 100vw;
     height: 100vh;
     z-index: 1;
+    touch-action: none;
 }
 
 #ui-hud {
@@ -82,6 +85,7 @@ canvas {
     border-radius: 20px;
     pointer-events: none;
     transition: opacity 0.4s ease;
+    white-space: nowrap;
 }
 
 .status-popup {
@@ -104,7 +108,7 @@ canvas {
 
 .status-popup h2 {
     color: #ffffff;
-    font-size: 28px;
+    font-size: 26px;
     margin: 0;
 }
 
@@ -118,7 +122,6 @@ canvas {
     border-radius: 12px;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-    transition: transform 0.1s;
 }
 
 .main-btn:active {
