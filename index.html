@@ -11,16 +11,23 @@
 
     <div id="ui-hud">
         <div class="hud-top-bar">
-            <button id="pause-btn" class="hud-btn">⏸️</button>
-            <div class="hud-card">ניקוד: <span id="score-val">0</span> ⭐</div>
+            <button id="pause-btn" class="hud-btn hidden">⏸️</button>
+            <div id="score-card" class="hud-card hidden">ניקוד: <span id="score-val">0</span> ⭐</div>
         </div>
         
-        <div id="instructions">החלק ימינה ושמאלה כדי להזיז את התותח!</div>
+        <div id="instructions" class="hidden">החלק ימינה ושמאלה כדי להזיז את התותח!</div>
+
+        <!-- מסך פתיחה -->
+        <div id="start-menu" class="status-popup">
+            <h1>Cannon Crowd Clash</h1>
+            <p>השמד את הרובוטים והגע לבוס!</p>
+            <button id="start-btn" class="main-btn">התחל משחק 🚀</button>
+        </div>
 
         <!-- חלון סיום משחק -->
         <div id="game-status" class="status-popup hidden">
             <h2 id="status-title">🏆 ניצחת!</h2>
-            <button id="restart-btn" class="main-btn">שחק שוב 🔄</button>
+            <button id="restart-btn" class="main-btn">שחק שוב</button>
         </div>
 
         <!-- חלון הפסקה -->
