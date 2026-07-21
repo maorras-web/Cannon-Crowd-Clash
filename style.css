@@ -12,7 +12,7 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #111827;
+    background-color: #0f172a;
     font-family: 'Segoe UI', Roboto, sans-serif;
     position: fixed;
 }
@@ -43,7 +43,7 @@ canvas {
 }
 
 .hud-card {
-    background: rgba(17, 24, 39, 0.85);
+    background: rgba(15, 23, 42, 0.85);
     border: 2px solid #3b82f6;
     color: #60a5fa;
     padding: 10px 20px;
@@ -53,19 +53,35 @@ canvas {
     box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
 }
 
-.hud-card span { 
-    color: #ffffff; 
-}
+.hud-card span { color: #ffffff; }
 
 #instructions {
     position: absolute;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 15px;
     font-weight: 600;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 18px;
     border-radius: 20px;
+    pointer-events: none;
 }
+
+.status-popup {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    font-weight: 900;
+    color: #38bdf8;
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+    background: rgba(15, 23, 42, 0.9);
+    padding: 20px 40px;
+    border-radius: 20px;
+    border: 3px solid #38bdf8;
+}
+
+.hidden { display: none; }

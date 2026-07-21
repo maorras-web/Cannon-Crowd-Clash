@@ -1,8 +1,8 @@
 window.addEventListener('DOMContentLoaded', () => {
-    // --- 1. אתחול סצנה, מצלמה ורנדרר ---
+    // --- 1. אתחול סצנה ומצלמה ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
-    scene.fog = new THREE.FogExp2(0x0f172a, 0.008);
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.007);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -11,45 +11,41 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(renderer.domElement);
 
     // --- 2. תאורה ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight.position.set(20, 40, 20);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight.position.set(20, 50, 20);
     scene.add(dirLight);
 
-    // --- 3. המסלול (Track) ---
+    // --- 3. המסלול ---
     const trackWidth = 14;
-    const trackLength = 200;
+    const trackLength = 220;
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // גבולות המסלול (קירות צדדיים)
-    const wallGeo = new THREE.BoxGeometry(0.5, 1, trackLength);
+    // קירות
+    const wallGeo = new THREE.BoxGeometry(0.5, 1.2, trackLength);
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
-    
     const leftWall = new THREE.Mesh(wallGeo, wallMat);
-    leftWall.position.set(-trackWidth / 2 - 0.25, 0.25, track.position.z);
+    leftWall.position.set(-trackWidth / 2 - 0.25, 0.35, track.position.z);
     scene.add(leftWall);
 
     const rightWall = new THREE.Mesh(wallGeo, wallMat);
-    rightWall.position.set(trackWidth / 2 + 0.25, 0.25, track.position.z);
+    rightWall.position.set(trackWidth / 2 + 0.25, 0.35, track.position.z);
     scene.add(rightWall);
 
-    // --- 4. התותח (Player Cannon) ---
+    // --- 4. התותח ---
     const cannonGroup = new THREE.Group();
-    
-    // גוף התותח
     const baseGeo = new THREE.BoxGeometry(1.6, 0.8, 2.2);
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.5 });
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6 });
     const base = new THREE.Mesh(baseGeo, baseMat);
     cannonGroup.add(base);
 
-    // קנה התותח
-    const barrelGeo = new THREE.CylinderGeometry(0.4, 0.5, 1.8, 16);
+    const barrelGeo = new THREE.CylinderGeometry(0.45, 0.55, 1.8, 16);
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.8 });
     const barrel = new THREE.Mesh(barrelGeo, barrelMat);
     barrel.rotation.x = Math.PI / 2;
@@ -59,20 +55,45 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 0.4, 0);
     scene.add(cannonGroup);
 
-    // --- 5. יצירת שערי מכפילים (Gates) ---
+    // --- 5. יצירת טקסט על השערים בעזרת Canvas2D ---
+    function createGateTexture(label, colorHex) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = colorHex;
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 12;
+        ctx.strokeRect(6, 6, 244, 244);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 90px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, 128, 128);
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    // --- 6. שערים מכפילים ---
     const gates = [];
     function createGate(x, z, type, value) {
         const gateGroup = new THREE.Group();
-        const width = trackWidth / 2 - 0.5;
-        const height = 4;
+        const width = trackWidth / 2 - 0.6;
+        const height = 4.5;
 
-        // מסגרת השער
+        const label = type === 'multiply' ? `x${value}` : `+${value}`;
+        const colorHex = type === 'multiply' ? '#10b981' : '#06b6d4';
+        const texture = createGateTexture(label, colorHex);
+
         const frameGeo = new THREE.BoxGeometry(width, height, 0.2);
-        const color = type === 'multiply' ? 0x10b981 : 0x06b6d4; // ירוק למכפיל, טורקיז לחיבור
-        const frameMat = new THREE.MeshStandardMaterial({ 
-            color: color, 
-            transparent: true, 
-            opacity: 0.65 
+        const frameMat = new THREE.MeshStandardMaterial({
+            map: texture,
+            transparent: true,
+            opacity: 0.85
         });
         const frame = new THREE.Mesh(frameGeo, frameMat);
         frame.position.y = height / 2;
@@ -84,28 +105,54 @@ window.addEventListener('DOMContentLoaded', () => {
         gates.push(gateGroup);
     }
 
-    // הוספת שערים לאורך המסלול
-    createGate(-3.3, -30, 'multiply', 2); // x2
-    createGate(3.3, -30, 'add', 5);        // +5
-    createGate(-3.3, -80, 'multiply', 3); // x3
-    createGate(3.3, -80, 'multiply', 2); // x2
+    createGate(-3.3, -35, 'multiply', 2);
+    createGate(3.3, -35, 'add', 5);
+    createGate(-3.3, -85, 'multiply', 3);
+    createGate(3.3, -85, 'multiply', 2);
+    createGate(-3.3, -135, 'add', 10);
+    createGate(3.3, -135, 'multiply', 2);
 
-    // --- 6. כדורים/פגזים (Crowd Bullets) ---
+    // --- 7. אויבים ובוס בסוף המסלול ---
+    const enemies = [];
+    const enemyGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+
+    // צבא אויבים קטנים
+    const bossZ = -185;
+    for (let row = 0; row < 5; row++) {
+        for (let col = -5; col <= 5; col += 2) {
+            const enemy = new THREE.Mesh(enemyGeo, enemyMat);
+            enemy.position.set(col, 0.4, bossZ + row * 2);
+            enemy.userData = { hp: 1 };
+            scene.add(enemy);
+            enemies.push(enemy);
+        }
+    }
+
+    // 👹 בוס ענקי בסוף
+    const bossGeo = new THREE.BoxGeometry(4, 5, 4);
+    const bossMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.3 });
+    const boss = new THREE.Mesh(bossGeo, bossMat);
+    boss.position.set(0, 2.5, bossZ - 10);
+    boss.userData = { hp: 120, maxHp: 120, isBoss: true };
+    scene.add(boss);
+    enemies.push(boss);
+
+    // --- 8. כדורים/פגזים ---
     const bullets = [];
-    const bulletGeo = new THREE.SphereGeometry(0.25, 12, 12);
-    const bulletMat = new THREE.MeshStandardMaterial({ color: 0x60a5fa, emissive: 0x2563eb, emissiveIntensity: 0.5 });
+    const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
+    const bulletMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 });
 
     function spawnBullet(x, z) {
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x + (Math.random() - 0.5) * 0.4, 0.3, z);
+        bullet.position.set(x + (Math.random() - 0.5) * 0.5, 0.35, z);
         scene.add(bullet);
         bullets.push(bullet);
     }
 
-    // יריית כדורים אוטומטית מהתותח
     let shootTimer = 0;
 
-    // --- 7. שליטה בתותח (Drag/Touch) ---
+    // --- 9. בקרות גרירה ---
     let targetX = 0;
     let isDragging = false;
     let previousTouchX = 0;
@@ -114,61 +161,53 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('mouseup', () => { isDragging = false; });
     window.addEventListener('mousemove', (e) => {
         if (isDragging) {
-            const deltaX = e.clientX - previousTouchX;
-            targetX += deltaX * 0.025;
+            targetX += (e.clientX - previousTouchX) * 0.025;
             previousTouchX = e.clientX;
         }
     });
 
-    window.addEventListener('touchstart', (e) => {
-        isDragging = true;
-        previousTouchX = e.touches[0].clientX;
-    });
+    window.addEventListener('touchstart', (e) => { isDragging = true; previousTouchX = e.touches[0].clientX; });
     window.addEventListener('touchend', () => { isDragging = false; });
     window.addEventListener('touchmove', (e) => {
         if (isDragging) {
-            const deltaX = e.touches[0].clientX - previousTouchX;
-            targetX += deltaX * 0.025;
+            targetX += (e.touches[0].clientX - previousTouchX) * 0.025;
             previousTouchX = e.touches[0].clientX;
         }
     });
 
-    // --- 8. לולאת המשחק הראשת (Game Loop) ---
+    // --- 10. לולאת המשחק ---
     let score = 0;
+    let gameOver = false;
     const clock = new THREE.Clock();
 
     function animate() {
+        if (gameOver) return;
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
 
-        // הגבלת תנועת התותח לגבולות המסלול
+        // תנועת תותח
         const maxX = trackWidth / 2 - 1.2;
         targetX = Math.max(-maxX, Math.min(maxX, targetX));
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.15);
 
-        // קצב ירייה אוטומטי מהתותח
+        // ירייה אוטומטית
         shootTimer += delta;
-        if (shootTimer >= 0.15) {
+        if (shootTimer >= 0.14) {
             spawnBullet(cannonGroup.position.x, cannonGroup.position.z - 1.2);
             shootTimer = 0;
         }
 
-        // עדכון תנועת הכדורים והתנגשות בשערים
+        // תנועת כדורים
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
-            b.position.z -= 25 * delta; // מהירות הכדור קדימה
+            b.position.z -= 28 * delta;
 
-            // בדיקת התנגשות בשערים
+            // התנגשות בשערים
             gates.forEach(gate => {
-                if (gate.userData.active && Math.abs(b.position.z - gate.position.z) < 0.5) {
-                    const gateX = gate.position.x;
-                    const gateWidth = trackWidth / 2 - 0.5;
-
-                    if (Math.abs(b.position.x - gateX) < gateWidth / 2) {
-                        // שכפול הכדורים לפי סוג השער
+                if (Math.abs(b.position.z - gate.position.z) < 0.5) {
+                    if (Math.abs(b.position.x - gate.position.x) < (trackWidth / 4)) {
                         if (gate.userData.type === 'multiply') {
-                            const newCount = gate.userData.value - 1;
-                            for (let k = 0; k < newCount; k++) {
+                            for (let k = 0; k < gate.userData.value - 1; k++) {
                                 spawnBullet(b.position.x, b.position.z - 0.3);
                             }
                         } else if (gate.userData.type === 'add') {
@@ -176,32 +215,55 @@ window.addEventListener('DOMContentLoaded', () => {
                                 spawnBullet(b.position.x, b.position.z - 0.3);
                             }
                         }
-                        
-                        score += 10;
+                        score += 5;
                         document.getElementById('score-val').innerText = score;
                     }
                 }
             });
 
-            // מחיקת כדורים שעברו את סוף המסלול
-            if (b.position.z < -trackLength) {
+            // התנגשות באויבים/בוס
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const e = enemies[j];
+                if (b.position.distanceTo(e.position) < (e.userData.isBoss ? 2.5 : 0.8)) {
+                    e.userData.hp -= 1;
+
+                    // מחיקת כדור
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+
+                    // פגיעה באויב
+                    if (e.userData.hp <= 0) {
+                        scene.remove(e);
+                        enemies.splice(j, 1);
+
+                        if (e.userData.isBoss) {
+                            gameOver = true;
+                            const popup = document.getElementById('game-status');
+                            popup.innerText = "🏆 ניצחת! הבוס הובס!";
+                            popup.classList.remove('hidden');
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (b && b.position.z < -trackLength) {
                 scene.remove(b);
                 bullets.splice(i, 1);
             }
         }
 
-        // מיקום המצלמה מאחורי התותח במבט מורם (Third-Person Runner Style)
-        camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x * 0.4, 0.1);
-        camera.position.y = 8;
+        // מצלמה עוקבת
+        camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x * 0.3, 0.1);
+        camera.position.y = 8.5;
         camera.position.z = cannonGroup.position.z + 12;
-        camera.lookAt(cannonGroup.position.x * 0.2, 1, cannonGroup.position.z - 10);
+        camera.lookAt(cannonGroup.position.x * 0.15, 1, cannonGroup.position.z - 12);
 
         renderer.render(scene, camera);
     }
 
     animate();
 
-    // התאמה לגודל המסך ברענון/סיבוב המסך
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
