@@ -1,4 +1,57 @@
 window.addEventListener('DOMContentLoaded', () => {
+    // --- 0. מנוע סאונד (Web Audio API) ---
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    function playSound(type) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'shoot') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'gate') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.06);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+            osc.start(now);
+            osc.stop(now + 0.12);
+        } else if (type === 'hit') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.04);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+            osc.start(now);
+            osc.stop(now + 0.04);
+        } else if (type === 'explosion') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + 0.25);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+    }
+
     // --- 1. אתחול סצנה ומצלמה ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
@@ -37,19 +90,25 @@ window.addEventListener('DOMContentLoaded', () => {
     rightWall.position.set(trackWidth / 2 + 0.25, 0.35, track.position.z);
     scene.add(rightWall);
 
-    // --- 4. התותח ---
+    // --- 4. התותח (עם קנה משודרג) ---
     const cannonGroup = new THREE.Group();
     const baseGeo = new THREE.BoxGeometry(1.6, 0.8, 2.2);
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6 });
     const base = new THREE.Mesh(baseGeo, baseMat);
     cannonGroup.add(base);
 
-    const barrelGeo = new THREE.CylinderGeometry(0.45, 0.55, 1.8, 16);
+    const barrelGeo = new THREE.CylinderGeometry(0.35, 0.45, 1.8, 16);
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.8 });
-    const barrel = new THREE.Mesh(barrelGeo, barrelMat);
-    barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.3, -1);
-    cannonGroup.add(barrel);
+    
+    const barrelLeft = new THREE.Mesh(barrelGeo, barrelMat);
+    barrelLeft.rotation.x = Math.PI / 2;
+    barrelLeft.position.set(-0.4, 0.3, -1);
+    cannonGroup.add(barrelLeft);
+
+    const barrelRight = new THREE.Mesh(barrelGeo, barrelMat);
+    barrelRight.rotation.x = Math.PI / 2;
+    barrelRight.position.set(0.4, 0.3, -1);
+    cannonGroup.add(barrelRight);
 
     cannonGroup.position.set(0, 0.4, 0);
     scene.add(cannonGroup);
@@ -107,13 +166,28 @@ window.addEventListener('DOMContentLoaded', () => {
     createGate('g5', -3.3, -220, 'add', 20);
     createGate('g6', 3.3, -220, 'multiply', 4);
 
-    // --- 7. רובוטים רשעים ---
+    // --- 7. מכשולים אדומים (Barriers) ---
+    const barriers = [];
+    function createBarrier(x, z, hp) {
+        const geo = new THREE.BoxGeometry(3.5, 2.0, 1.0);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.2 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, 1.0, z);
+        mesh.userData = { hp, maxHp: hp };
+        scene.add(mesh);
+        barriers.push(mesh);
+    }
+
+    createBarrier(0, -100, 40);
+    createBarrier(-3, -190, 60);
+
+    // --- 8. רובוטים זזים בזיגזג ---
     const robots = [];
-    function createRobot(x, z, hp) {
+    function createRobot(x, z, hp, speedX = 0) {
         const robotGroup = new THREE.Group();
 
         const bodyGeo = new THREE.BoxGeometry(1.4, 1.6, 1.0);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.7, roughness: 0.3 });
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, metalness: 0.7, roughness: 0.3 });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
         body.position.y = 1.0;
         robotGroup.add(body);
@@ -125,24 +199,24 @@ window.addEventListener('DOMContentLoaded', () => {
         robotGroup.add(head);
 
         const eyeGeo = new THREE.BoxGeometry(0.7, 0.25, 0.1);
-        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 1 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 1 });
         const eyes = new THREE.Mesh(eyeGeo, eyeMat);
         eyes.position.set(0, 2.25, -0.46);
         robotGroup.add(eyes);
 
         robotGroup.position.set(x, 0, z);
-        robotGroup.userData = { hp, maxHp: hp };
+        robotGroup.userData = { hp, maxHp: hp, speedX, initialX: x };
         scene.add(robotGroup);
         robots.push(robotGroup);
     }
 
-    createRobot(-3, -85, 30);
-    createRobot(3, -85, 30);
-    createRobot(0, -170, 70);
-    createRobot(-4, -260, 120);
-    createRobot(4, -260, 120);
+    createRobot(-3, -85, 30, 2.5);
+    createRobot(3, -85, 30, -2.5);
+    createRobot(0, -170, 70, 3.0);
+    createRobot(-4, -260, 120, 3.5);
+    createRobot(4, -260, 120, -3.5);
 
-    // --- 8. בוס בסוף ---
+    // --- 9. בוס בסוף ---
     const bossGroup = new THREE.Group();
     const bossZ = -350;
 
@@ -165,10 +239,10 @@ window.addEventListener('DOMContentLoaded', () => {
     bossGroup.add(hpBar);
 
     bossGroup.position.set(0, 0, bossZ);
-    bossGroup.userData = { hp: 1000, maxHp: 1000 };
+    bossGroup.userData = { hp: 1200, maxHp: 1200 };
     scene.add(bossGroup);
 
-    // --- 9. מערכת חלקיקים / נצנצים תכלת ---
+    // --- 10. מערכת חלקיקים / נצנצים ---
     const particles = [];
     const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
     const particleMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
@@ -188,13 +262,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 10. כדורים ---
+    // --- 11. כדורים ---
     const bullets = [];
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 });
 
     function spawnBullet(x, z, passedGates = []) {
-        if (bullets.length > 250) return; // תקרת כדורים מקסימלית למניעת תקיעות
+        if (bullets.length > 250) return;
 
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
         bullet.position.set(x + (Math.random() - 0.5) * 0.3, 0.35, z);
@@ -205,7 +279,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let shootTimer = 0;
 
-    // --- 11. בקרות גרירה ---
+    // --- 12. בקרות גרירה ---
     let targetX = 0;
     let isDragging = false;
     let previousTouchX = 0;
@@ -243,12 +317,16 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    // --- 12. מצבי משחק וניקוד ---
+    // --- 13. שיא אישי ומצבי משחק ---
     let gameStarted = false;
     let isPaused = false;
     let isGameOver = false;
     let score = 0;
     const maxScore = 2000000;
+
+    let highScore = localStorage.getItem('ccc_high_score') || 0;
+    document.getElementById('start-high-score').innerText = Number(highScore).toLocaleString('en-US');
+    document.getElementById('high-score-hud').innerText = Number(highScore).toLocaleString('en-US');
 
     const startBtn = document.getElementById('start-btn');
     const startMenu = document.getElementById('start-menu');
@@ -260,6 +338,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const restartBtn = document.getElementById('restart-btn');
 
     startBtn.addEventListener('click', () => {
+        initAudio();
         gameStarted = true;
         startMenu.classList.add('hidden');
         pauseBtn.classList.remove('hidden');
@@ -286,22 +365,33 @@ window.addEventListener('DOMContentLoaded', () => {
     function addScore(amount) {
         score = Math.min(maxScore, score + amount);
         document.getElementById('score-val').innerText = score.toLocaleString('en-US');
+
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('ccc_high_score', highScore);
+            document.getElementById('high-score-hud').innerText = Number(highScore).toLocaleString('en-US');
+        }
     }
 
     function triggerGameOver(isWin) {
         isGameOver = true;
         const statusTitle = document.getElementById('status-title');
         const gameStatus = document.getElementById('game-status');
+        const finalScoreText = document.getElementById('final-score-text');
+
+        finalScoreText.innerText = `הניקוד הסופי שלך: ${score.toLocaleString('en-US')}`;
 
         if (isWin) {
             statusTitle.innerText = "🏆 ניצחת! הבוס הובס!";
+            playSound('explosion');
         } else {
             statusTitle.innerText = "💥 הפסדת! הרובוטים הגיעו לתותח!";
+            playSound('explosion');
         }
         gameStatus.classList.remove('hidden');
     }
 
-    // --- 13. לולאת המשחק ---
+    // --- 14. לולאת המשחק ---
     const clock = new THREE.Clock();
 
     function animate() {
@@ -330,17 +420,27 @@ window.addEventListener('DOMContentLoaded', () => {
         targetX = Math.max(-maxX, Math.min(maxX, targetX));
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.18);
 
-        // ירייה אוטומטית
+        // ירייה אוטומטית (קצב מוגבר ככל שמשיגים יותר ניקוד!)
+        const fireInterval = score > 50000 ? 0.09 : 0.16;
         shootTimer += delta;
-        if (shootTimer >= 0.18) {
-            spawnBullet(cannonGroup.position.x, cannonGroup.position.z - 1.2);
+        if (shootTimer >= fireInterval) {
+            spawnBullet(cannonGroup.position.x - 0.4, cannonGroup.position.z - 1.2);
+            spawnBullet(cannonGroup.position.x + 0.4, cannonGroup.position.z - 1.2);
+            playSound('shoot');
             shootTimer = 0;
         }
 
-        // צעידת רובוטים קדימה
+        // תנועת רובוטים (קדימה + זיגזג)
         for (let r = robots.length - 1; r >= 0; r--) {
             const robot = robots[r];
             robot.position.z += 2.2 * delta;
+
+            if (robot.userData.speedX !== 0) {
+                robot.position.x += robot.userData.speedX * delta;
+                if (Math.abs(robot.position.x - robot.userData.initialX) > 3.0) {
+                    robot.userData.speedX *= -1;
+                }
+            }
 
             if (robot.position.z >= cannonGroup.position.z - 1.2) {
                 triggerGameOver(false);
@@ -351,7 +451,33 @@ window.addEventListener('DOMContentLoaded', () => {
         // עדכון כדורים
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
-            b.position.z -= 35 * delta;
+            b.position.z -= 38 * delta;
+
+            // התנגשות במכשולים
+            let hitBarrier = false;
+            for (let barIdx = barriers.length - 1; barIdx >= 0; barIdx--) {
+                const bar = barriers[barIdx];
+                if (b.position.distanceTo(bar.position) < 1.8) {
+                    bar.userData.hp -= 1;
+                    hitBarrier = true;
+                    createSparkles(b.position, 4);
+                    playSound('hit');
+
+                    if (bar.userData.hp <= 0) {
+                        createSparkles(bar.position, 15);
+                        scene.remove(bar);
+                        barriers.splice(barIdx, 1);
+                        addScore(1000);
+                    }
+                    break;
+                }
+            }
+
+            if (hitBarrier) {
+                scene.remove(b);
+                bullets.splice(i, 1);
+                continue;
+            }
 
             // התנגשות בשערים
             gates.forEach((gate) => {
@@ -362,9 +488,9 @@ window.addEventListener('DOMContentLoaded', () => {
                             b.userData.passedGates.push(gateId);
 
                             createSparkles(b.position, 6);
+                            playSound('gate');
 
                             const newPassed = [...b.userData.passedGates];
-                            // משגרים את הכדורים החדשים קדימה (z-2.0) כדי שלא יישארו בתוך הטווח של השער!
                             if (gate.userData.type === 'multiply') {
                                 for (let k = 0; k < gate.userData.value - 1; k++) {
                                     spawnBullet(b.position.x, b.position.z - 2.0, newPassed);
@@ -388,9 +514,11 @@ window.addEventListener('DOMContentLoaded', () => {
                     robot.userData.hp -= 1;
                     bulletHit = true;
                     createSparkles(b.position, 6);
+                    playSound('hit');
 
                     if (robot.userData.hp <= 0) {
-                        createSparkles(robot.position, 15);
+                        createSparkles(robot.position, 18);
+                        playSound('explosion');
                         scene.remove(robot);
                         robots.splice(r, 1);
                         addScore(2500);
@@ -409,6 +537,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (bossGroup.userData.hp > 0 && b.position.distanceTo(bossGroup.position) < 3.8) {
                 bossGroup.userData.hp -= 1;
                 createSparkles(b.position, 8);
+                playSound('hit');
 
                 const hpPercent = Math.max(0, bossGroup.userData.hp / bossGroup.userData.maxHp);
                 hpBar.scale.x = hpPercent;
@@ -419,7 +548,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 bullets.splice(i, 1);
 
                 if (bossGroup.userData.hp <= 0) {
-                    createSparkles(bossGroup.position, 40);
+                    createSparkles(bossGroup.position, 50);
                     addScore(200000);
                     scene.remove(bossGroup);
                     triggerGameOver(true);

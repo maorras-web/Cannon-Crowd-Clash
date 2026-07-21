@@ -12,7 +12,10 @@
     <div id="ui-hud">
         <div class="hud-top-bar">
             <button id="pause-btn" class="hud-btn hidden">⏸️</button>
-            <div id="score-card" class="hud-card hidden">ניקוד: <span id="score-val">0</span> ⭐</div>
+            <div id="score-card" class="hud-card hidden">
+                ניקוד: <span id="score-val">0</span> ⭐
+                <div class="high-score-small">שיא: <span id="high-score-hud">0</span></div>
+            </div>
         </div>
         
         <div id="instructions" class="hidden">החלק ימינה ושמאלה כדי להזיז את התותח!</div>
@@ -21,12 +24,14 @@
         <div id="start-menu" class="status-popup">
             <h1>Cannon Crowd Clash</h1>
             <p>השמד את הרובוטים והגע לבוס!</p>
+            <div class="high-score-box">🏆 שיא אישי: <span id="start-high-score">0</span></div>
             <button id="start-btn" class="main-btn">התחל משחק 🚀</button>
         </div>
 
         <!-- חלון סיום משחק -->
         <div id="game-status" class="status-popup hidden">
             <h2 id="status-title">🏆 ניצחת!</h2>
+            <p id="final-score-text">הניקוד שלך: 0</p>
             <button id="restart-btn" class="main-btn">שחק שוב</button>
         </div>
 
