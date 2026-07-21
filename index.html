@@ -11,10 +11,23 @@
 
     <div id="ui-hud">
         <div class="hud-top-bar">
+            <button id="pause-btn" class="hud-btn">⏸️</button>
             <div class="hud-card">ניקוד: <span id="score-val">0</span> ⭐</div>
         </div>
-        <div id="game-status" class="status-popup hidden"></div>
-        <div id="instructions">החלק ימינה ושמאלה כדי להזיר את התותח!</div>
+        
+        <div id="instructions">החלק ימינה ושמאלה כדי להזיז את התותח!</div>
+
+        <!-- חלון סיום משחק (ניצחון / הפסד) -->
+        <div id="game-status" class="status-popup hidden">
+            <h2 id="status-title">🏆 ניצחת!</h2>
+            <button id="restart-btn" class="main-btn">שחק שוב 🔄</button>
+        </div>
+
+        <!-- חלון הפסקה (Pause) -->
+        <div id="pause-menu" class="status-popup hidden">
+            <h2>משחק מושהה ⏸️</h2>
+            <button id="resume-btn" class="main-btn">המשך משחק ▶️</button>
+        </div>
     </div>
 
     <script src="main.js" defer></script>

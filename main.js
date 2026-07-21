@@ -27,7 +27,6 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // קירות
     const wallGeo = new THREE.BoxGeometry(0.5, 1.2, trackLength);
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
     const leftWall = new THREE.Mesh(wallGeo, wallMat);
@@ -55,7 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 0.4, 0);
     scene.add(cannonGroup);
 
-    // --- 5. יצירת טקסט על השערים בעזרת Canvas2D ---
+    // --- 5. טקסט על שערים ---
     function createGateTexture(label, colorHex) {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
@@ -78,7 +77,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return new THREE.CanvasTexture(canvas);
     }
 
-    // --- 6. שערים מכפילים ---
+    // --- 6. שערים ---
     const gates = [];
     function createGate(x, z, type, value) {
         const gateGroup = new THREE.Group();
@@ -90,17 +89,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const texture = createGateTexture(label, colorHex);
 
         const frameGeo = new THREE.BoxGeometry(width, height, 0.2);
-        const frameMat = new THREE.MeshStandardMaterial({
-            map: texture,
-            transparent: true,
-            opacity: 0.85
-        });
+        const frameMat = new THREE.MeshStandardMaterial({ map: texture, transparent: true, opacity: 0.85 });
         const frame = new THREE.Mesh(frameGeo, frameMat);
         frame.position.y = height / 2;
         gateGroup.add(frame);
 
         gateGroup.position.set(x, 0, z);
-        gateGroup.userData = { type, value, active: true };
+        gateGroup.userData = { type, value };
         scene.add(gateGroup);
         gates.push(gateGroup);
     }
@@ -112,33 +107,74 @@ window.addEventListener('DOMContentLoaded', () => {
     createGate(-3.3, -135, 'add', 10);
     createGate(3.3, -135, 'multiply', 2);
 
-    // --- 7. אויבים ובוס בסוף המסלול ---
-    const enemies = [];
-    const enemyGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-    const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+    // --- 7. רובוטים רשעים ואויבים ---
+    const robots = [];
 
-    // צבא אויבים קטנים
-    const bossZ = -185;
-    for (let row = 0; row < 5; row++) {
-        for (let col = -5; col <= 5; col += 2) {
-            const enemy = new THREE.Mesh(enemyGeo, enemyMat);
-            enemy.position.set(col, 0.4, bossZ + row * 2);
-            enemy.userData = { hp: 1 };
-            scene.add(enemy);
-            enemies.push(enemy);
-        }
+    function createRobot(x, z, hp) {
+        const robotGroup = new THREE.Group();
+
+        // גוף הרובוט
+        const bodyGeo = new THREE.BoxGeometry(1.2, 1.4, 0.8);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.7, roughness: 0.3 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 0.9;
+        robotGroup.add(body);
+
+        // ראש
+        const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 2.0;
+        robotGroup.add(head);
+
+        // עיניים אדומות זוהרות
+        const eyeGeo = new THREE.BoxGeometry(0.6, 0.2, 0.1);
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 1 });
+        const eyes = new THREE.Mesh(eyeGeo, eyeMat);
+        eyes.position.set(0, 2.0, -0.41);
+        robotGroup.add(eyes);
+
+        robotGroup.position.set(x, 0, z);
+        robotGroup.userData = { hp, maxHp: hp };
+        scene.add(robotGroup);
+        robots.push(robotGroup);
     }
 
-    // 👹 בוס ענקי בסוף
-    const bossGeo = new THREE.BoxGeometry(4, 5, 4);
-    const bossMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.3 });
-    const boss = new THREE.Mesh(bossGeo, bossMat);
-    boss.position.set(0, 2.5, bossZ - 10);
-    boss.userData = { hp: 120, maxHp: 120, isBoss: true };
-    scene.add(boss);
-    enemies.push(boss);
+    // יצירת רובוטים לאורך המסלול הצועדים קדימה
+    createRobot(-3, -60, 10);
+    createRobot(3, -60, 10);
+    createRobot(0, -110, 25);
+    createRobot(-4, -160, 35);
+    createRobot(4, -160, 35);
 
-    // --- 8. כדורים/פגזים ---
+    // --- 8. בוס בסוף ---
+    const bossGroup = new THREE.Group();
+    const bossZ = -195;
+
+    const bossGeo = new THREE.BoxGeometry(4.5, 5.5, 4.5);
+    const bossMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 });
+    const bossMesh = new THREE.Mesh(bossGeo, bossMat);
+    bossMesh.position.y = 2.75;
+    bossGroup.add(bossMesh);
+
+    // מד חיים לבוס
+    const hpBgGeo = new THREE.PlaneGeometry(4, 0.6);
+    const hpBgMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
+    const hpBg = new THREE.Mesh(hpBgGeo, hpBgMat);
+    hpBg.position.set(0, 6.2, 0);
+    bossGroup.add(hpBg);
+
+    const hpBarGeo = new THREE.PlaneGeometry(3.9, 0.5);
+    const hpBarMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+    const hpBar = new THREE.Mesh(hpBarGeo, hpBarMat);
+    hpBar.position.set(0, 6.2, 0.01);
+    bossGroup.add(hpBar);
+
+    bossGroup.position.set(0, 0, bossZ);
+    bossGroup.userData = { hp: 120, maxHp: 120 };
+    scene.add(bossGroup);
+
+    // --- 9. כדורים/פגזים ---
     const bullets = [];
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 });
@@ -152,40 +188,88 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let shootTimer = 0;
 
-    // --- 9. בקרות גרירה ---
+    // --- 10. בקרות ושליטה ---
     let targetX = 0;
     let isDragging = false;
     let previousTouchX = 0;
+    let firstTouch = true;
 
-    window.addEventListener('mousedown', (e) => { isDragging = true; previousTouchX = e.clientX; });
+    function hideInstructions() {
+        if (firstTouch) {
+            const inst = document.getElementById('instructions');
+            if (inst) inst.style.opacity = '0';
+            firstTouch = false;
+        }
+    }
+
+    window.addEventListener('mousedown', (e) => { isDragging = true; previousTouchX = e.clientX; hideInstructions(); });
     window.addEventListener('mouseup', () => { isDragging = false; });
     window.addEventListener('mousemove', (e) => {
-        if (isDragging) {
+        if (isDragging && !isPaused && !isGameOver) {
             targetX += (e.clientX - previousTouchX) * 0.025;
             previousTouchX = e.clientX;
         }
     });
 
-    window.addEventListener('touchstart', (e) => { isDragging = true; previousTouchX = e.touches[0].clientX; });
+    window.addEventListener('touchstart', (e) => { isDragging = true; previousTouchX = e.touches[0].clientX; hideInstructions(); });
     window.addEventListener('touchend', () => { isDragging = false; });
     window.addEventListener('touchmove', (e) => {
-        if (isDragging) {
+        if (isDragging && !isPaused && !isGameOver) {
             targetX += (e.touches[0].clientX - previousTouchX) * 0.025;
             previousTouchX = e.touches[0].clientX;
         }
     });
 
-    // --- 10. לולאת המשחק ---
+    // --- 11. מצבי משחק ---
+    let isPaused = false;
+    let isGameOver = false;
     let score = 0;
-    let gameOver = false;
+
+    const pauseBtn = document.getElementById('pause-btn');
+    const pauseMenu = document.getElementById('pause-menu');
+    const resumeBtn = document.getElementById('resume-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    pauseBtn.addEventListener('click', () => {
+        if (!isGameOver) {
+            isPaused = true;
+            pauseMenu.classList.remove('hidden');
+        }
+    });
+
+    resumeBtn.addEventListener('click', () => {
+        isPaused = false;
+        pauseMenu.classList.add('hidden');
+    });
+
+    restartBtn.addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    function triggerGameOver(isWin) {
+        isGameOver = true;
+        const statusTitle = document.getElementById('status-title');
+        const gameStatus = document.getElementById('game-status');
+
+        if (isWin) {
+            statusTitle.innerText = "🏆 ניצחת! הבוס הובס!";
+        } else {
+            statusTitle.innerText = "💥 הפסדת! הרובוטים הגיעו לתותח!";
+        }
+        gameStatus.classList.remove('hidden');
+    }
+
+    // --- 12. לולאת המשחק ---
     const clock = new THREE.Clock();
 
     function animate() {
-        if (gameOver) return;
         requestAnimationFrame(animate);
+
+        if (isPaused || isGameOver) return;
+
         const delta = clock.getDelta();
 
-        // תנועת תותח
+        // תנועת התותח
         const maxX = trackWidth / 2 - 1.2;
         targetX = Math.max(-maxX, Math.min(maxX, targetX));
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.15);
@@ -197,7 +281,19 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
-        // תנועת כדורים
+        // תנועת הרובוטים לכיוון התותח!
+        for (let r = robots.length - 1; r >= 0; r--) {
+            const robot = robots[r];
+            robot.position.z += 2.5 * delta; // מהירות הצעידה של הרובוטים
+
+            // אם רובוט הגיע לתותח - הפסד!
+            if (robot.position.z >= cannonGroup.position.z - 1.2) {
+                triggerGameOver(false);
+                return;
+            }
+        }
+
+        // עדכון כדורים והתנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 28 * delta;
@@ -221,30 +317,46 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // התנגשות באויבים/בוס
-            for (let j = enemies.length - 1; j >= 0; j--) {
-                const e = enemies[j];
-                if (b.position.distanceTo(e.position) < (e.userData.isBoss ? 2.5 : 0.8)) {
-                    e.userData.hp -= 1;
+            // התנגשות ברובוטים
+            let bulletHit = false;
+            for (let r = robots.length - 1; r >= 0; r--) {
+                const robot = robots[r];
+                if (b.position.distanceTo(robot.position) < 1.2) {
+                    robot.userData.hp -= 1;
+                    bulletHit = true;
 
-                    // מחיקת כדור
-                    scene.remove(b);
-                    bullets.splice(i, 1);
-
-                    // פגיעה באויב
-                    if (e.userData.hp <= 0) {
-                        scene.remove(e);
-                        enemies.splice(j, 1);
-
-                        if (e.userData.isBoss) {
-                            gameOver = true;
-                            const popup = document.getElementById('game-status');
-                            popup.innerText = "🏆 ניצחת! הבוס הובס!";
-                            popup.classList.remove('hidden');
-                        }
+                    if (robot.userData.hp <= 0) {
+                        scene.remove(robot);
+                        robots.splice(r, 1);
+                        score += 50;
+                        document.getElementById('score-val').innerText = score;
                     }
                     break;
                 }
+            }
+
+            if (bulletHit) {
+                scene.remove(b);
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            // התנגשות בבוס
+            if (bossGroup.userData.hp > 0 && b.position.distanceTo(bossGroup.position) < 3.2) {
+                bossGroup.userData.hp -= 1;
+
+                const hpPercent = Math.max(0, bossGroup.userData.hp / bossGroup.userData.maxHp);
+                hpBar.scale.x = hpPercent;
+                hpBar.position.x = (1 - hpPercent) * -1.95;
+
+                scene.remove(b);
+                bullets.splice(i, 1);
+
+                if (bossGroup.userData.hp <= 0) {
+                    scene.remove(bossGroup);
+                    triggerGameOver(true);
+                }
+                continue;
             }
 
             if (b && b.position.z < -trackLength) {
@@ -253,7 +365,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // מצלמה עוקבת
+        // מצלמה
         camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x * 0.3, 0.1);
         camera.position.y = 8.5;
         camera.position.z = cannonGroup.position.z + 12;

@@ -38,15 +38,17 @@ canvas {
     position: absolute;
     top: 20px;
     right: 20px;
+    left: 20px;
     display: flex;
-    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .hud-card {
     background: rgba(15, 23, 42, 0.85);
     border: 2px solid #3b82f6;
     color: #60a5fa;
-    padding: 10px 20px;
+    padding: 8px 18px;
     border-radius: 12px;
     font-size: 18px;
     font-weight: bold;
@@ -54,6 +56,18 @@ canvas {
 }
 
 .hud-card span { color: #ffffff; }
+
+.hud-btn {
+    background: rgba(15, 23, 42, 0.85);
+    border: 2px solid #38bdf8;
+    color: #ffffff;
+    font-size: 20px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
 
 #instructions {
     position: absolute;
@@ -63,25 +77,52 @@ canvas {
     color: rgba(255, 255, 255, 0.8);
     font-size: 15px;
     font-weight: 600;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 8px 18px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 20px;
     border-radius: 20px;
     pointer-events: none;
+    transition: opacity 0.4s ease;
 }
 
 .status-popup {
     position: absolute;
-    top: 40%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 36px;
-    font-weight: 900;
-    color: #38bdf8;
-    text-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
-    background: rgba(15, 23, 42, 0.9);
-    padding: 20px 40px;
-    border-radius: 20px;
+    background: rgba(15, 23, 42, 0.95);
+    padding: 30px 40px;
+    border-radius: 24px;
     border: 3px solid #38bdf8;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
 }
 
-.hidden { display: none; }
+.status-popup h2 {
+    color: #ffffff;
+    font-size: 28px;
+    margin: 0;
+}
+
+.main-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 12px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+    transition: transform 0.1s;
+}
+
+.main-btn:active {
+    transform: scale(0.95);
+}
+
+.hidden { display: none !important; }
