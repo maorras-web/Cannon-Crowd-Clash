@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו (ברירת מחדל 50%) ---
+    // --- 2. מנוע אודיו ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const audioBuffers = {};
     let audioCtx = null;
-    let masterVolume = 0.5; // ברירת מחדל 50%
+    let masterVolume = 0.5;
 
     function initAudio() {
         if (!audioCtx) {
@@ -171,13 +171,11 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    // פונקציה לשינוי צבע התותח
     function changeCannonColor(hexColor) {
         baseMat.color.setHex(hexColor);
         domeMat.color.setHex(hexColor);
     }
 
-    // חיבור כפתורי הפלטה המודרנית
     const colorButtons = document.querySelectorAll('.color-btn');
     colorButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -189,16 +187,32 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 6. כדורים, שערים ואפקטי התנפצות ---
+    // --- 6. כדורי אנרגיה חשמליים ואפקטי התנפצות ---
     const bullets = [];
-    const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
-    const bulletMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xf59e0b, emissiveIntensity: 2.0 });
+    const coreGeo = new THREE.SphereGeometry(0.22, 16, 16);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // ליבה לבנה בוהקת
+
+    const auraGeo = new THREE.SphereGeometry(0.42, 16, 16);
+    const auraMat = new THREE.MeshBasicMaterial({ color: 0xff8c00, transparent: true, opacity: 0.65 }); // הילה כתומה-אדומה
 
     function spawnBullet(x, z) {
-        const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x, 1.1, z);
-        scene.add(bullet);
-        bullets.push(bullet);
+        const energyBall = new THREE.Group();
+
+        // ליבה פנימית לבנה
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        energyBall.add(core);
+
+        // הילה חיצונית זוהרת
+        const aura = new THREE.Mesh(auraGeo, auraMat);
+        energyBall.add(aura);
+
+        // אור אמיתי שמפיץ זוהר מסביב לכדור
+        const light = new THREE.PointLight(0xff5500, 2.5, 4);
+        energyBall.add(light);
+
+        energyBall.position.set(x, 1.1, z);
+        scene.add(energyBall);
+        bullets.push(energyBall);
     }
 
     const particles = [];
@@ -260,7 +274,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     let gateIdCounter = 1;
-    for (let z = -100; z > -3200; z -= 80) {
+    for (let z = -60; z > -3200; z -= 80) {
         createGate(`g_${gateIdCounter++}`, -3.3, z, 'multiply', 2);
         createGate(`g_${gateIdCounter++}`, 3.3, z, 'add', 20);
     }
@@ -308,7 +322,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
-    const gateSpeed = 12.0; // מהירות התקדמות השערים לכיוון התותח
+    const gateSpeed = 22.0;
 
     function animate() {
         requestAnimationFrame(animate);
@@ -316,9 +330,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
-        cannonGroup.position.z -= 20.0 * delta;
-
-        // התקדמות השערים לכיוון התותח בקצב מבוקר
+        // תנועת השערים
         for (let i = 0; i < gates.length; i++) {
             gates[i].position.z += gateSpeed * delta;
         }
@@ -330,11 +342,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
+        // מיקום מצלמה
         camera.position.x = cannonGroup.position.x * 0.35;
         camera.position.y = cannonGroup.position.y + 9.5;
         camera.position.z = cannonGroup.position.z + 14.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 12.0);
 
+        // יריית כדורים
         shootTimer += delta;
         if (shootTimer >= 0.11) {
             spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
@@ -360,10 +374,17 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // כדורים והתנפצות שערים
+        // כדורי אנרגיה והתנפצות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 55 * delta;
+
+            // אפקט פעימה רנדומלי להילה החשמלית
+            const auraMesh = b.children[1];
+            if (auraMesh) {
+                const scale = 1 + (Math.random() - 0.5) * 0.25;
+                auraMesh.scale.set(scale, scale, scale);
+            }
 
             if (b.position.z < cannonGroup.position.z - 120) {
                 scene.remove(b);
@@ -374,7 +395,7 @@ window.addEventListener('DOMContentLoaded', () => {
             for (let j = gates.length - 1; j >= 0; j--) {
                 const g = gates[j];
                 
-                if (Math.abs(b.position.z - g.position.z) < 1.0 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
+                if (Math.abs(b.position.z - g.position.z) < 1.2 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
                     playSound('gate');
                     score += 20;
                     document.getElementById('score-val').innerText = score;
