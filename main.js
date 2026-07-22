@@ -52,10 +52,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    let currentLang = localStorage.getItem('ccc_language') || 'en';
+    let currentLang = localStorage.getItem('ccc_language') || 'he';
 
     function setLanguage(lang) {
-        if (!translations[lang]) lang = 'en';
+        if (!translations[lang]) lang = 'he';
         currentLang = lang;
         localStorage.setItem('ccc_language', lang);
 
@@ -84,15 +84,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
     setLanguage(currentLang);
 
-    // --- 2. מנוע סאונד ---
+    // --- 2. מנוע סאונד מתקדם (DSP / Advanced Synthesis) ---
     let audioCtx = null;
-    let lastSoundTime = 0;
-    let comboPitchLevel = 0;
-    let comboResetTimer = null;
+    let masterGain = null;
 
     function initAudio() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.5;
+            masterGain.connect(audioCtx.destination);
         }
     }
 
@@ -100,68 +101,149 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
 
-        if (now - lastSoundTime < 0.015 && type === 'hit') return;
-        lastSoundTime = now;
-
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
         if (type === 'shoot') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(260, now);
-            osc.frequency.exponentialRampToValueAtTime(60, now + 0.04);
-            gain.gain.setValueAtTime(0.04, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-            osc.start(now);
-            osc.stop(now + 0.04);
-        } else if (type === 'gate') {
-            comboPitchLevel = Math.min(comboPitchLevel + 1, 10);
-            clearTimeout(comboResetTimer);
-            comboResetTimer = setTimeout(() => { comboPitchLevel = 0; }, 2000);
+            // ירייה: FM Synthesis מעובדת עם Lowpass Filter
+            const osc = audioCtx.createOscillator();
+            const mod = audioCtx.createOscillator();
+            const modGain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            const gain = audioCtx.createGain();
 
-            const pitchFreq = 523.25 * Math.pow(1.06, comboPitchLevel);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(pitchFreq, now);
-            osc.frequency.setValueAtTime(pitchFreq * 1.25, now + 0.05);
-            gain.gain.setValueAtTime(0.06, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-        } else if (type === 'bad_gate') {
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(220, now);
-            osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
-            gain.gain.setValueAtTime(0.08, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-            osc.start(now);
-            osc.stop(now + 0.15);
-        } else if (type === 'powerup') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.exponentialRampToValueAtTime(900, now + 0.2);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-            osc.start(now);
-            osc.stop(now + 0.2);
-        } else if (type === 'hit') {
-            // צליל פגיעה רך, עמוק ונעים לאוזן (Triangle wave בתדר נמוך)
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(440, now);
-            osc.frequency.exponentialRampToValueAtTime(220, now + 0.03);
-            gain.gain.setValueAtTime(0.05, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-            osc.start(now);
-            osc.stop(now + 0.03);
-        } else if (type === 'explosion') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(90, now);
-            osc.frequency.exponentialRampToValueAtTime(15, now + 0.25);
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+
+            // מודולטור תדר להוספת עומק מטאל
+            mod.type = 'sine';
+            mod.frequency.setValueAtTime(150, now);
+            modGain.gain.setValueAtTime(80, now);
+            modGain.gain.exponentialRampToValueAtTime(1, now + 0.08);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1200, now);
+            filter.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+
             gain.gain.setValueAtTime(0.12, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+            mod.connect(modGain);
+            modGain.connect(osc.frequency);
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+
             osc.start(now);
-            osc.stop(now + 0.25);
+            mod.start(now);
+            osc.stop(now + 0.08);
+            mod.stop(now + 0.08);
+
+        } else if (type === 'hit') {
+            // פגיעה: צליל קראנצ'י של פגיעה אמיתית עם רעש לבן סינתטי
+            const bufferSize = audioCtx.sampleRate * 0.05;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(800, now);
+            filter.Q.setValueAtTime(3, now);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+
+            noise.start(now);
+
+        } else if (type === 'gate') {
+            // אקורד הרמוני כפול לשער חיובי
+            [523.25, 659.25, 783.99].forEach((freq, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + index * 0.03);
+
+                gain.gain.setValueAtTime(0.08, now + index * 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.03 + 0.15);
+
+                osc.connect(gain);
+                gain.connect(masterGain);
+
+                osc.start(now + index * 0.03);
+                osc.stop(now + index * 0.03 + 0.15);
+            });
+
+        } else if (type === 'bad_gate') {
+            // שער שלילי: דיסוננס נמוך
+            [180, 170].forEach((freq) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(masterGain);
+
+                osc.start(now);
+                osc.stop(now + 0.2);
+            });
+
+        } else if (type === 'powerup') {
+            // פאוור-אפ: סוויפ תדר עולה מהיר
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start(now);
+            osc.stop(now + 0.3);
+
+        } else if (type === 'explosion') {
+            // פיצוץ: רעש לבן + אוסצילטור בס עמוק
+            const bufferSize = audioCtx.sampleRate * 0.4;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(600, now);
+            filter.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+
+            noise.start(now);
         }
     }
 
@@ -194,7 +276,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const pointLight = new THREE.PointLight(0xff6600, 2, 30);
     scene.add(pointLight);
 
-    // --- 5. מסלול וגבולות גשר קשיחים ---
+    // --- 5. מסלול וגבולות ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
 
@@ -650,7 +732,9 @@ window.addEventListener('DOMContentLoaded', () => {
         startMenu.classList.add('hidden');
         if (startOverlay) {
             startOverlay.style.opacity = '0';
-            setTimeout(() => startOverlay.classList.add('hidden'), 400);
+            setTimeout(() => {
+                startOverlay.classList.add('hidden');
+            }, 500);
         }
         pauseBtn.classList.remove('hidden');
         scoreCard.classList.remove('hidden');
@@ -823,7 +907,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Game Over מתרחש אך ורק בנגיעה פיזית ישירה בתותח (מרחק קטן מאוד ב-X, Y, Z)
+            // Game Over מתרחש אך ורק בנגיעה פיזית ישירה בתותח
             const dx = Math.abs(cannonGroup.position.x - robot.position.x);
             const dz = Math.abs(cannonGroup.position.z - robot.position.z);
             if (dx < 1.2 && dz < 1.2) {
