@@ -136,6 +136,51 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     createMountainRange(1);
+    createMountainRange(-1);// --- 4. מסלול והרים מותאמים למובייל (הורחקנו את ההרים החוצה כדי שלא יתנגשו במסלול) ---
+    const trackWidth = 10; 
+    const maxBoundX = trackWidth / 2 - 1.0;
+    const trackLength = 3500;
+
+    const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
+    const track = new THREE.Mesh(trackGeo, trackMat);
+    track.position.set(0, -0.25, -trackLength / 2 + 10);
+    scene.add(track);
+
+    function createMountainRange(sideMultiplier) {
+        const mountainGroup = new THREE.Group();
+        const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
+        const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
+        
+        // מרווח בטיחות מוגדל בהרבה כדי שההרים ישבו לגמרי מחוץ למסלול
+        const safetyOffset = (trackWidth / 2) + 9.0;
+
+        for (let z = 200; z > -trackLength - 200; z -= 40) {
+            const height = 40 + Math.random() * 40;
+            const radius = 14 + Math.random() * 8;
+            const geo = new THREE.ConeGeometry(radius, height, 5);
+            const mountain = new THREE.Mesh(geo, frontMat);
+            const xPos = sideMultiplier * (safetyOffset + radius * 0.5);
+            mountain.position.set(xPos, height / 2 - 2, z);
+            mountain.rotation.y = Math.random() * Math.PI;
+            mountainGroup.add(mountain);
+        }
+
+        for (let z = 200; z > -trackLength - 200; z -= 60) {
+            const height = 60 + Math.random() * 50;
+            const radius = 22 + Math.random() * 10;
+            const geo = new THREE.ConeGeometry(radius, height, 5);
+            const mountain = new THREE.Mesh(geo, backMat);
+            const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
+            mountain.position.set(xPos, height / 2 - 2, z);
+            mountain.rotation.y = Math.random() * Math.PI;
+            mountainGroup.add(mountain);
+        }
+
+        scene.add(mountainGroup);
+    }
+
+    createMountainRange(1);
     createMountainRange(-1);
 
     // --- 5. עיצוב תותח ושינוי צבעים ---
