@@ -109,24 +109,20 @@ window.addEventListener('DOMContentLoaded', () => {
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
 
-        // מרחק ביטחון בסיסי מקצה המסלול
         const safetyOffset = 4.0;
 
-        // שכבה קדמית
         for (let z = 200; z > -trackLength - 200; z -= 35) {
             const height = 30 + Math.random() * 40;
             const radius = 18 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, frontMat);
 
-            // חישוב המיקום כך שהבסיס של ההר יישאר מחוץ למסלול בכל מקרה
             const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 0.9);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
         }
 
-        // שכבה אחורית
         for (let z = 200; z > -trackLength - 200; z -= 50) {
             const height = 50 + Math.random() * 50;
             const radius = 28 + Math.random() * 15;
@@ -145,18 +141,18 @@ window.addEventListener('DOMContentLoaded', () => {
     createMountainRange(1);
     createMountainRange(-1);
 
-    // --- 5. עיצוב תותח ---
+    // --- 5. עיצוב תותח (עודכן לאדום) ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
     const baseGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.8, 24);
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.8, roughness: 0.2 });
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.rotation.x = Math.PI / 12;
     cannonMeshGroup.add(base);
 
     const domeGeo = new THREE.SphereGeometry(0.9, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1 });
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.9, roughness: 0.1 });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.y = 0.3;
     cannonMeshGroup.add(dome);
@@ -249,7 +245,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     let gateIdCounter = 1;
-    for (let z = -100; z > -3200; z -= 130) {
+    // המרווח הוקטן מ-130 ל-75 כדי שיופיעו יותר שערים ברצף
+    for (let z = -100; z > -3200; z -= 75) {
         createGate(`g_${gateIdCounter++}`, -3.3, z, 'multiply', 2);
         createGate(`g_${gateIdCounter++}`, 3.3, z, 'add', 20);
     }
