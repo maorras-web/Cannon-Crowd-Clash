@@ -11,7 +11,7 @@ body, html {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #0b0f19;
+    background-color: #050811;
 }
 
 canvas {
@@ -20,14 +20,13 @@ canvas {
     height: 100vh;
 }
 
-/* מסך פתיחה אטום לחלוטין שמסתיר את המשחק עד הלחיצה */
 .start-bg-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: #0b0f19;
+    background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
     z-index: 100;
     transition: opacity 0.5s ease, visibility 0.5s ease;
 }
@@ -55,15 +54,15 @@ canvas {
 
 .hud-btn {
     pointer-events: auto;
-    background: rgba(15, 23, 42, 0.75);
-    border: 2px solid #0284c7;
+    background: linear-gradient(180deg, #1e293b, #0f172a);
+    border: 2px solid #38bdf8;
     color: #fff;
     font-size: 22px;
     padding: 10px 16px;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
-    backdrop-filter: blur(8px);
-    transition: transform 0.1s ease;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
 }
 
 .hud-btn:active {
@@ -74,12 +73,12 @@ canvas {
     background: rgba(15, 23, 42, 0.85);
     border: 2px solid #38bdf8;
     color: #f8fafc;
-    padding: 10px 20px;
-    border-radius: 16px;
+    padding: 10px 22px;
+    border-radius: 20px;
     font-size: 20px;
-    font-weight: 800;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
+    font-weight: 900;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+    backdrop-filter: blur(10px);
     text-align: center;
 }
 
@@ -91,29 +90,31 @@ canvas {
 
 #powerup-banner {
     align-self: center;
-    background: #f59e0b;
-    color: #000;
-    padding: 8px 20px;
-    border-radius: 20px;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    color: #fff;
+    padding: 10px 28px;
+    border-radius: 30px;
     font-weight: 900;
-    font-size: 18px;
-    animation: pulse 0.6s infinite alternate;
+    font-size: 20px;
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.8);
+    animation: pulse 0.5s infinite alternate ease-in-out;
 }
 
 @keyframes pulse {
-    from { transform: scale(1); }
-    to { transform: scale(1.08); }
+    from { transform: scale(1); filter: drop-shadow(0 0 5px #f59e0b); }
+    to { transform: scale(1.1); filter: drop-shadow(0 0 20px #ef4444); }
 }
 
 #instructions {
     align-self: center;
     margin-bottom: 40px;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
-    padding: 10px 24px;
+    padding: 12px 28px;
     border-radius: 30px;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     transition: opacity 0.5s ease;
 }
 
@@ -124,27 +125,31 @@ canvas {
     left: 50%;
     transform: translate(-50%, -50%);
     background: rgba(15, 23, 42, 0.95);
-    border: 3px solid #0284c7;
-    border-radius: 24px;
-    padding: 30px;
+    border: 3px solid #38bdf8;
+    border-radius: 28px;
+    padding: 32px;
     width: 90%;
     max-width: 420px;
     text-align: center;
     color: #fff;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(12px);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.3), inset 0 0 15px rgba(56, 189, 248, 0.15);
+    backdrop-filter: blur(16px);
     z-index: 102;
 }
 
-.status-popup h1 {
-    font-size: 28px;
-    font-weight: 900;
-    color: #38bdf8;
-    margin-bottom: 10px;
+.game-title {
+    font-family: 'Black Ops One', cursive;
+    font-size: 34px;
+    letter-spacing: 2px;
+    background: linear-gradient(180deg, #38bdf8, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    text-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
 }
 
 .status-popup h2 {
-    font-size: 24px;
+    font-size: 26px;
     margin-bottom: 15px;
 }
 
@@ -162,40 +167,46 @@ canvas {
 .lang-selector select {
     background: #1e293b;
     color: #fff;
-    border: 1px solid #0284c7;
+    border: 1px solid #38bdf8;
     padding: 6px 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     cursor: pointer;
-    margin-left: 5px;
 }
 
 .high-score-box {
     background: rgba(250, 204, 21, 0.1);
     border: 1px solid #facc15;
     color: #facc15;
-    padding: 8px;
-    border-radius: 12px;
-    font-weight: 800;
-    margin-bottom: 20px;
-}
-
-.main-btn {
-    width: 100%;
-    background: linear-gradient(135deg, #0284c7, #2563eb);
-    border: none;
-    color: #fff;
-    padding: 14px;
+    padding: 10px;
     border-radius: 14px;
-    font-size: 18px;
     font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
-    transition: transform 0.1s ease;
+    margin-bottom: 22px;
+    box-shadow: inset 0 0 10px rgba(250, 204, 21, 0.2);
 }
 
-.main-btn:active {
-    transform: scale(0.96);
+.juicy-btn {
+    width: 100%;
+    background: linear-gradient(180deg, #0284c7, #1d4ed8);
+    border: none;
+    border-bottom: 4px solid #1e40af;
+    color: #fff;
+    padding: 16px;
+    border-radius: 16px;
+    font-size: 19px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(2, 132, 199, 0.5);
+    transition: transform 0.1s ease, filter 0.2s ease;
+}
+
+.juicy-btn:hover {
+    filter: brightness(1.1);
+}
+
+.juicy-btn:active {
+    transform: translateY(3px);
+    border-bottom-width: 1px;
 }
 
 .hidden {
