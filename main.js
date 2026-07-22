@@ -2,8 +2,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. שפות ותרגום ---
     const translations = {
-        en: { score: "Score", best: "Best", instructions: "👈 Swipe left/right to move 👉", subtitle: "Pass through gates and get the highest score!", language: "Language", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Game Paused ⏸️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", dir: "ltr" },
-        he: { score: "ניקוד", best: "שיא", instructions: "👈 החלק ימינה ושמאלה כדי להזיז 👉", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "משחק מושהה ⏸️", volume: "עוצמת שמע 🔊", dir: "rtl" }
+        en: { score: "Score", best: "Best", instructions: "👈 Swipe left/right to move 👉", subtitle: "Pass through gates and get the highest score!", language: "Language", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Settings & Pause ⚙️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", cannonColor: "Cannon Color 🎨", dir: "ltr" },
+        he: { score: "ניקוד", best: "שיא", instructions: "👈 החלק ימינה ושמאלה כדי להזיז 👉", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "הגדרות ופאוזה ⚙️", volume: "עוצמת שמע 🔊", cannonColor: "צבע התותח 🎨", dir: "rtl" }
     };
 
     let currentLang = localStorage.getItem('ccc_language') || 'he';
@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו ---
+    // --- 2. מנוע אודיו (ברירת מחדל 50%) ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const audioBuffers = {};
     let audioCtx = null;
-    let masterVolume = 0.15;
+    let masterVolume = 0.5; // ברירת מחדל 50%
 
     function initAudio() {
         if (!audioCtx) {
@@ -67,6 +67,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const volumeSlider = document.getElementById('volume-slider');
     if (volumeSlider) {
+        volumeSlider.value = masterVolume;
         volumeSlider.addEventListener('input', (e) => {
             masterVolume = parseFloat(e.target.value);
         });
@@ -92,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים (מורחקים מהמסלול) ---
+    // --- 4. מסלול והרים ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
@@ -105,10 +106,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
-        
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-
         const safetyOffset = 4.0;
 
         for (let z = 200; z > -trackLength - 200; z -= 35) {
@@ -116,7 +115,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const radius = 18 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, frontMat);
-
             const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 0.9);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
@@ -128,7 +126,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const radius = 28 + Math.random() * 15;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, backMat);
-
             const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 1.4);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
@@ -141,7 +138,7 @@ window.addEventListener('DOMContentLoaded', () => {
     createMountainRange(1);
     createMountainRange(-1);
 
-    // --- 5. עיצוב תותח (עודכן לאדום) ---
+    // --- 5. עיצוב תותח ושינוי צבעים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -173,6 +170,19 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
+
+    // פונקציה לשינוי צבע התותח
+    function changeCannonColor(hexColor) {
+        baseMat.color.setHex(hexColor);
+        domeMat.color.setHex(hexColor);
+    }
+
+    const colorPicker = document.getElementById('cannon-color-picker');
+    if (colorPicker) {
+        colorPicker.addEventListener('change', (e) => {
+            changeCannonColor(parseInt(e.target.value.replace('#', '0x')));
+        });
+    }
 
     // --- 6. כדורים, שערים ואפקטי התנפצות ---
     const bullets = [];
@@ -245,8 +255,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     let gateIdCounter = 1;
-    // המרווח הוקטן מ-130 ל-75 כדי שיופיעו יותר שערים ברצף
-    for (let z = -100; z > -3200; z -= 75) {
+    for (let z = -100; z > -3200; z -= 80) {
         createGate(`g_${gateIdCounter++}`, -3.3, z, 'multiply', 2);
         createGate(`g_${gateIdCounter++}`, 3.3, z, 'add', 20);
     }
@@ -294,6 +303,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
+    const gateSpeed = 12.0; // מהירות התקדמות השערים לכיוון התותח
 
     function animate() {
         requestAnimationFrame(animate);
@@ -302,6 +312,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
 
         cannonGroup.position.z -= 20.0 * delta;
+
+        // התקדמות השערים לכיוון התותח בקצב מבוקר
+        for (let i = 0; i < gates.length; i++) {
+            gates[i].position.z += gateSpeed * delta;
+        }
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         const prevX = cannonGroup.position.x;
