@@ -272,7 +272,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. שערים (מוגבלים לתחום הגשר + מורחקים מנקודת הזינוק) ---
+    // --- 7. שערים ---
     function createGateTexture(label, colorHex) {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
@@ -339,10 +339,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     let gateIdCounter = 1;
-    // התחלה מ-z = -90 כדי לתת רווח בזינוק
     for (let z = -90; z > -2250; z -= 140) {
         const rand = Math.random();
-        
         if (rand < 0.6) {
             const multVal = Math.floor(Math.random() * 2) + 2;
             const addVal = (Math.floor(Math.random() * 3) + 1) * 10;
@@ -424,7 +422,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     }
 
-    // --- 10. רובוטים (מרוחקים מנקודת הזינוק) ---
+    // --- 10. רובוטים ---
     const robots = [];
     function createRobot(x, z, hp, speedX = 0) {
         const robotGroup = new THREE.Group();
@@ -460,7 +458,6 @@ window.addEventListener('DOMContentLoaded', () => {
         robots.push(robotGroup);
     }
 
-    // התחלה מ-z = -140 כדי שלא יעמדו צמוד לשער הראשון
     for (let z = -140; z > -2300; z -= 120) {
         const robotHp = Math.floor(Math.abs(z) / 12) + 20;
         const speed = (Math.random() > 0.5 ? 1 : -1) * (1.0 + Math.random() * 0.6);
@@ -494,7 +491,7 @@ window.addEventListener('DOMContentLoaded', () => {
     bossGroup.userData = { hp: 15000, maxHp: 15000 };
     scene.add(bossGroup);
 
-    // --- 12. Floating Damage Text & VFX ---
+    // --- 12. VFX ---
     const particles = [];
     const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
 
@@ -566,7 +563,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 13. כדורי אור כתומים (Orange Light Bullets) ---
+    // --- 13. כדורים ---
     const bullets = [];
     const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ 
@@ -626,7 +623,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    // --- 15. מנהל מצבי משחק ---
+    // --- 15. מצב משחק ---
     let gameStarted = false;
     let isPaused = false;
     let isGameOver = false;
@@ -715,6 +712,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // התקדמות התותח קדימה
         cannonGroup.position.z -= 18.5 * delta;
+
+        // מצלמה עוקבת אחרי התותח
+        camera.position.x = cannonGroup.position.x * 0.4;
+        camera.position.y = cannonGroup.position.y + 6.5;
+        camera.position.z = cannonGroup.position.z + 12.0;
+        camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 1.2, cannonGroup.position.z - 10);
+
+        if (shakeIntensity > 0) {
+            camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+            camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+            shakeIntensity = Math.max(0, shakeIntensity - delta * 2.0);
+        }
 
         updateCannonVisuals();
 
@@ -819,6 +828,42 @@ window.addEventListener('DOMContentLoaded', () => {
             const b = bullets[i];
             b.position.z -= 42 * delta;
 
+            if (b.position.z < bossZ - 50) {
+                scene.remove(b);
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            // שערים
+            for (let gIdx = 0; gIdx < gates.length; gIdx++) {
+                const gate = gates[gIdx];
+                if (!b.userData.passedGates.includes(gate.userData.id)) {
+                    if (Math.abs(b.position.z - gate.position.z) < 0.6 && Math.abs(b.position.x - gate.position.x) < 3.0) {
+                        b.userData.passedGates.push(gate.userData.id);
+                        
+                        if (gate.userData.type === 'multiply') {
+                            for (let m = 0; m < gate.userData.value - 1; m++) {
+                                spawnBullet(b.position.x, b.position.z, b.userData.passedGates);
+                            }
+                            playSound('gate');
+                        } else if (gate.userData.type === 'add') {
+                            for (let a = 0; a < 2; a++) {
+                                spawnBullet(b.position.x, b.position.z, b.userData.passedGates);
+                            }
+                            playSound('gate');
+                        } else if (gate.userData.type === 'sub' || gate.userData.type === 'divide') {
+                            playSound('bad_gate');
+                            scene.remove(b);
+                            bullets.splice(i, 1);
+                            i--;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (i < 0 || i >= bullets.length) continue;
+
             // פגיעה במכשולים
             let hitBarrier = false;
             for (let barIdx = barriers.length - 1; barIdx >= 0; barIdx--) {
@@ -867,7 +912,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                 createExplosionVFX(robots[r].position, 0xd97706, 15);
                                 scene.remove(robots[r]);
                                 robots.splice(r, 1);
-                                addScore(150);
+                                addScore(250);
                             }
                         }
 
@@ -885,125 +930,67 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // מעבר בשערים
-            gates.forEach((gate) => {
-                const gateId = gate.userData.id;
-                if (!b.userData.passedGates.includes(gateId)) {
-                    if (Math.abs(b.position.z - gate.position.z) < 1.0) {
-                        if (Math.abs(b.position.x - gate.position.x) < (trackWidth / 4)) {
-                            b.userData.passedGates.push(gateId);
-
-                            const newPassed = [...b.userData.passedGates];
-
-                            if (gate.userData.type === 'multiply') {
-                                playSound('gate');
-                                createExplosionVFX(b.position, 0x059669, 5);
-                                for (let k = 0; k < gate.userData.value - 1; k++) {
-                                    spawnBullet(b.position.x, b.position.z - 2.0, newPassed);
-                                }
-                                addScore(5);
-                            } else if (gate.userData.type === 'add') {
-                                playSound('gate');
-                                createExplosionVFX(b.position, 0xff6600, 5);
-                                for (let k = 0; k < gate.userData.value; k++) {
-                                    spawnBullet(b.position.x, b.position.z - 2.0, newPassed);
-                                }
-                                addScore(5);
-                            } else if (gate.userData.type === 'sub') {
-                                playSound('bad_gate');
-                                createExplosionVFX(b.position, 0xdc2626, 6);
-                                addScreenShake(0.1);
-                                spawnFloatingText(`-${gate.userData.value}`, b.position, "#dc2626");
-                                scene.remove(b);
-                                return;
-                            }
-                        }
-                    }
-                }
-            });
-
             // פגיעה ברובוטים
-            let bulletHit = false;
+            let hitRobot = false;
             for (let r = robots.length - 1; r >= 0; r--) {
                 const robot = robots[r];
                 if (b.position.distanceTo(robot.position) < 1.4) {
                     robot.userData.hp -= 1;
-                    bulletHit = true;
-                    createExplosionVFX(b.position, 0xff6600, 4);
+                    hitRobot = true;
+                    createExplosionVFX(b.position, 0x38bdf8, 3);
                     playSound('hit');
-                    addScore(2);
 
                     if (robot.userData.hp <= 0) {
-                        createExplosionVFX(robot.position, 0xd97706, 20);
-                        playSound('explosion');
-                        spawnFloatingText("+100", robot.position, "#ff8800");
+                        createExplosionVFX(robot.position, 0xd97706, 12);
+                        spawnFloatingText("+50", robot.position, "#38bdf8");
                         scene.remove(robot);
                         robots.splice(r, 1);
-                        addScore(100);
+                        addScore(50);
                     }
                     break;
                 }
             }
 
-            if (bulletHit) {
+            if (hitRobot) {
                 scene.remove(b);
                 bullets.splice(i, 1);
                 continue;
             }
 
             // פגיעה בבוס
-            if (bossGroup.userData.hp > 0 && b.position.distanceTo(bossGroup.position) < 4.2) {
+            if (b.position.distanceTo(bossGroup.position) < 4.5) {
                 bossGroup.userData.hp -= 1;
-                createExplosionVFX(b.position, 0xff6600, 5);
+                createExplosionVFX(b.position, 0x10b981, 3);
                 playSound('hit');
-                addScreenShake(0.04);
 
-                const hpPercent = Math.max(0, bossGroup.userData.hp / bossGroup.userData.maxHp);
-                hpBar.scale.x = hpPercent;
-                hpBar.position.x = (1 - hpPercent) * -2.7;
-
-                addScore(5);
-                scene.remove(b);
-                bullets.splice(i, 1);
+                const pct = Math.max(0, bossGroup.userData.hp / bossGroup.userData.maxHp);
+                hpBar.scale.x = pct;
 
                 if (bossGroup.userData.hp <= 0) {
-                    createExplosionVFX(bossGroup.position, 0xd97706, 60);
-                    addScore(25000);
+                    createExplosionVFX(bossGroup.position, 0x10b981, 100);
                     scene.remove(bossGroup);
+                    addScore(5000);
                     triggerGameOver(true);
                 }
-                continue;
-            }
 
-            if (b && b.position.z < cannonGroup.position.z - 120) {
                 scene.remove(b);
                 bullets.splice(i, 1);
             }
         }
 
-        // Screen Shake
-        let shakeX = 0;
-        let shakeY = 0;
-        if (shakeIntensity > 0) {
-            shakeX = (Math.random() - 0.5) * shakeIntensity;
-            shakeY = (Math.random() - 0.5) * shakeIntensity;
-            shakeIntensity = Math.max(0, shakeIntensity - delta * 1.5);
+        // בדיקת ניצחון/הגעה לבוס
+        if (cannonGroup.position.z <= bossZ + 15 && !isGameOver) {
+            triggerGameOver(bossGroup.userData.hp <= 0);
         }
-
-        // מצלמה עוקבת
-        camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x * 0.2, 0.08) + shakeX;
-        camera.position.y = 8.5 + shakeY;
-        camera.position.z = cannonGroup.position.z + 12;
-        camera.lookAt(cannonGroup.position.x * 0.08, 1, cannonGroup.position.z - 12);
 
         renderer.render(scene, camera);
     }
-
-    animate();
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    animate();
 });
