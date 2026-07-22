@@ -93,8 +93,8 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול מקורי והרים ---
-    const trackWidth = 10; // רוחב המסלול המקורי
+    // --- 4. מסלול מקורי והרים (ללא דשא בכלל) ---
+    const trackWidth = 10; 
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
 
