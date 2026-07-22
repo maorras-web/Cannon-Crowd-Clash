@@ -93,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול, דשא והרים ---
+    // --- 4. מסלול, דשא מדויק והרים ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
@@ -105,33 +105,31 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // הוספת משטחי דשא בצדדים (בין המסלול להרים)
-    const sideGroundWidth = 12;
-    const sideGroundGeo = new THREE.BoxGeometry(sideGroundWidth, 0.4, trackLength);
-    const sideGroundMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8, metalness: 0.1 }); // ירוק כהה ויפהפה
+    // משטחי דשא בפרופורציות מדויקות לחלל הריק (צר ומדויק יותר)
+    const sideGroundWidth = 5.0; 
+    const sideGroundGeo = new THREE.BoxGeometry(sideGroundWidth, 0.3, trackLength);
+    const sideGroundMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8, metalness: 0.1 });
 
-    // דשא צד שמאל
     const leftGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
-    leftGround.position.set(-(trackWidth / 2 + sideGroundWidth / 2), -0.3, -trackLength / 2 + 10);
+    leftGround.position.set(-(trackWidth / 2 + sideGroundWidth / 2), -0.28, -trackLength / 2 + 10);
     scene.add(leftGround);
 
-    // דשא צד ימין
     const rightGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
-    rightGround.position.set((trackWidth / 2 + sideGroundWidth / 2), -0.3, -trackLength / 2 + 10);
+    rightGround.position.set((trackWidth / 2 + sideGroundWidth / 2), -0.28, -trackLength / 2 + 10);
     scene.add(rightGround);
 
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = 16.0; // מותאם לרוחב החדש של הדשא
+        const safetyOffset = trackWidth / 2 + sideGroundWidth; // מתחיל בדיוק בקצה של הדשא
 
         for (let z = 200; z > -trackLength - 200; z -= 35) {
             const height = 30 + Math.random() * 40;
             const radius = 18 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, frontMat);
-            const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 0.9);
+            const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
@@ -142,7 +140,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const radius = 28 + Math.random() * 15;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, backMat);
-            const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 1.4);
+            const xPos = sideMultiplier * (safetyOffset + radius * 1.4);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
@@ -319,11 +317,18 @@ window.addEventListener('DOMContentLoaded', () => {
         createGate(`g_${gateIdCounter++}`, 3.3, z, 'add', 20);
     }
 
-    // --- 7. שליטה ---
-    let targetX = 0, isDragging = false, previousTouchX = 0;
+    // --- 7. שליטה וירי רק בנגיעה ---
+    let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
-    window.addEventListener('mousedown', (e) => { isDragging = true; previousTouchX = e.clientX; });
-    window.addEventListener('mouseup', () => { isDragging = false; });
+    window.addEventListener('mousedown', (e) => { 
+        isDragging = true; 
+        isFiring = true; 
+        previousTouchX = e.clientX; 
+    });
+    window.addEventListener('mouseup', () => { 
+        isDragging = false; 
+        isFiring = false; 
+    });
     window.addEventListener('mousemove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
             targetX += (e.clientX - previousTouchX) * 0.022;
@@ -331,8 +336,15 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('touchstart', (e) => { isDragging = true; previousTouchX = e.touches[0].clientX; });
-    window.addEventListener('touchend', () => { isDragging = false; });
+    window.addEventListener('touchstart', (e) => { 
+        isDragging = true; 
+        isFiring = true; 
+        previousTouchX = e.touches[0].clientX; 
+    });
+    window.addEventListener('touchend', () => { 
+        isDragging = false; 
+        isFiring = false; 
+    });
     window.addEventListener('touchmove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
             targetX += (e.touches[0].clientX - previousTouchX) * 0.022;
@@ -387,7 +399,8 @@ window.addEventListener('DOMContentLoaded', () => {
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 12.0);
 
         shootTimer += delta;
-        if (shootTimer >= 0.12) {
+        // ירי מתבצע אך ורק כאשר השחקן נוגע או לוחץ על המסך
+        if (isFiring && shootTimer >= 0.12) {
             spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
             spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
             playSound('shoot');
