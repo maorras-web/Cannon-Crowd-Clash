@@ -93,9 +93,9 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים ---
-    const trackWidth = 10; 
-    const maxBoundX = trackWidth / 2 - 1.0;
+    // --- 4. מסלול מורחב והרים מוקטנים ---
+    const trackWidth = 14; 
+    const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
@@ -109,11 +109,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
         
-        const safetyOffset = (trackWidth / 2) + 9.0;
+        const safetyOffset = (trackWidth / 2) + 6.0;
 
-        for (let z = 200; z > -trackLength - 200; z -= 40) {
-            const height = 40 + Math.random() * 40;
-            const radius = 14 + Math.random() * 8;
+        for (let z = 200; z > -trackLength - 200; z -= 35) {
+            const height = 30 + Math.random() * 30; 
+            const radius = 10 + Math.random() * 6;  
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, frontMat);
             const xPos = sideMultiplier * (safetyOffset + radius * 0.5);
@@ -122,12 +122,12 @@ window.addEventListener('DOMContentLoaded', () => {
             mountainGroup.add(mountain);
         }
 
-        for (let z = 200; z > -trackLength - 200; z -= 60) {
-            const height = 60 + Math.random() * 50;
-            const radius = 22 + Math.random() * 10;
+        for (let z = 200; z > -trackLength - 200; z -= 55) {
+            const height = 45 + Math.random() * 35; 
+            const radius = 15 + Math.random() * 8;  
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, backMat);
-            const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
+            const xPos = sideMultiplier * (safetyOffset + radius * 0.8);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
