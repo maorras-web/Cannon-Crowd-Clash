@@ -93,8 +93,8 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול מורחב קלות והרים מורחקים למניעת התנגשות ---
-    const trackWidth = 13; // מסלול רחב יותר במידה קלה
+    // --- 4. מסלול והרים מורחקים לחלוטין ---
+    const trackWidth = 11; 
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
 
@@ -108,11 +108,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = (trackWidth / 2) + 2.5; // מרווח ביטחון שמונע כל חדירה של ההרים במסלול
+        const safetyOffset = (trackWidth / 2) + 5.0; // הרחקה משמעותית שתמנע כל הסתרה או חסימה
 
-        for (let z = 200; z > -trackLength - 200; z -= 35) {
-            const height = 30 + Math.random() * 40;
-            const radius = 18 + Math.random() * 12;
+        for (let z = 200; z > -trackLength - 200; z -= 40) {
+            const height = 35 + Math.random() * 35;
+            const radius = 16 + Math.random() * 10;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, frontMat);
             const xPos = sideMultiplier * (safetyOffset + radius * 0.5);
@@ -121,9 +121,9 @@ window.addEventListener('DOMContentLoaded', () => {
             mountainGroup.add(mountain);
         }
 
-        for (let z = 200; z > -trackLength - 200; z -= 50) {
-            const height = 50 + Math.random() * 50;
-            const radius = 28 + Math.random() * 15;
+        for (let z = 200; z > -trackLength - 200; z -= 60) {
+            const height = 55 + Math.random() * 45;
+            const radius = 25 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, backMat);
             const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
@@ -281,7 +281,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createGate(id, x, z, type, value) {
         const gateGroup = new THREE.Group();
-        const gateWidth = trackWidth / 2 - 0.8;
+        const gateWidth = trackWidth / 2 - 0.6;
         let label = `+${value}`, colorHex = '#0284c7';
         if (type === 'multiply') { label = `x${value}`; colorHex = '#10b981'; }
 
@@ -299,8 +299,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let gateIdCounter = 1;
     for (let z = -60; z > -3200; z -= 80) {
-        createGate(`g_${gateIdCounter++}`, -2.8, z, 'multiply', 2);
-        createGate(`g_${gateIdCounter++}`, 2.8, z, 'add', 20);
+        createGate(`g_${gateIdCounter++}`, -2.4, z, 'multiply', 2);
+        createGate(`g_${gateIdCounter++}`, 2.4, z, 'add', 20);
     }
 
     // --- 7. שליטה וירי רק בנגיעה ---
@@ -358,7 +358,7 @@ window.addEventListener('DOMContentLoaded', () => {
     pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
     resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק ---
+    // --- 9. לולאת המשחק (זווית מצלמה מתוקנת ומרווחת) ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
@@ -379,9 +379,10 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        camera.position.x = cannonGroup.position.x * 0.35;
-        camera.position.y = cannonGroup.position.y + 9.5;
-        camera.position.z = cannonGroup.position.z + 14.0;
+        // מיקום מצלמה פתוח ונוח שרואה את כל המסלול בצורה נקייה
+        camera.position.x = cannonGroup.position.x * 0.3;
+        camera.position.y = cannonGroup.position.y + 11.0;
+        camera.position.z = cannonGroup.position.z + 16.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 12.0);
 
         shootTimer += delta;
