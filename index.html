@@ -21,7 +21,7 @@
     <!-- UI Overlay HUD -->
     <div id="ui-hud">
         
-        <!-- Top Bar (מוסתר בהתחלה) -->
+        <!-- Top Bar -->
         <div class="hud-top-bar">
             <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button>
             <div id="score-card" class="hud-card hidden">
@@ -29,11 +29,14 @@
                 <div class="high-score-small">👑 <span data-i18n="best">Best</span>: <span id="high-score-hud">0</span></div>
             </div>
         </div>
+
+        <!-- Powerup Banner -->
+        <div id="powerup-banner" class="hidden">⚡ RAPID FIRE ACTIVE! ⚡</div>
         
-        <!-- Instructions Banner (מוסתר בהתחלה) -->
+        <!-- Instructions Banner -->
         <div id="instructions" class="hidden" data-i18n="instructions">👈 Swipe left and right to move 👉</div>
 
-        <!-- Start Screen (מוצג ראשון) -->
+        <!-- Start Screen -->
         <div id="start-menu" class="status-popup">
             <h1>Cannon Crowd Clash</h1>
             <p data-i18n="subtitle">Destroy robots, pass through gates, and defeat the boss!</p>
@@ -52,14 +55,14 @@
             <button id="start-btn" type="button" class="main-btn" data-i18n="startGame">Start Game 🚀</button>
         </div>
 
-        <!-- Game Over / Victory Modal (מוסתר) -->
+        <!-- Game Over / Victory Modal -->
         <div id="game-status" class="status-popup hidden">
             <h2 id="status-title" data-i18n="victory">🏆 You Won!</h2>
             <p id="final-score-text"><span data-i18n="finalScore">Your Final Score</span>: 0</p>
             <button id="restart-btn" type="button" class="main-btn" data-i18n="playAgain">Play Again 🔄</button>
         </div>
 
-        <!-- Pause Screen (מוסתר) -->
+        <!-- Pause Screen -->
         <div id="pause-menu" class="status-popup hidden">
             <h2 data-i18n="gamePaused">Game Paused ⏸️</h2>
             <button id="resume-btn" type="button" class="main-btn" data-i18n="resumeGame">Resume Game ▶️</button>

@@ -120,6 +120,29 @@ canvas {
     transform: scale(0.92);
 }
 
+/* באנר Power-up פעיל */
+#powerup-banner {
+    position: absolute;
+    top: max(75px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(245, 158, 11, 0.9);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    padding: 6px 18px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+    pointer-events: none;
+    z-index: 15;
+    animation: flashPowerup 0.5s infinite alternate;
+}
+
+@keyframes flashPowerup {
+    from { transform: translateX(-50%) scale(1); }
+    to { transform: translateX(-50%) scale(1.08); }
+}
+
 /* ==========================================================================
    3. הוראות משחק
    ========================================================================== */
@@ -264,7 +287,7 @@ canvas {
 }
 
 /* ==========================================================================
-   6. מחלקה להסתרה (הכי חשוב!)
+   6. מחלקה להסתרה
    ========================================================================== */
 .hidden { 
     display: none !important; 
