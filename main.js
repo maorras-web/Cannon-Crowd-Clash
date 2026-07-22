@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו + שליטה בווליום בזמן אמת ---
+    // --- 2. מנוע אודיו + שליטה בווליום ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const audioBuffers = {};
     let audioCtx = null;
-    let masterVolume = 0.15; // עוצמת שמע התחלתית
+    let masterVolume = 0.15;
 
     function initAudio() {
         if (!audioCtx) {
@@ -65,7 +65,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // חיבור הסליידר המושתל בתפריט ההשהיה בלבד
     const volumeSlider = document.getElementById('volume-slider');
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
@@ -93,7 +92,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים אפורים ---
+    // --- 4. מסלול והרים (תוקנה התנגשות ההרים במסלול) ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3000;
@@ -104,6 +103,7 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
+    // תיקון: הרחקת ההרים הצידה כדי שלא יתנגשו או יחצו את המסלול
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const mountainMat = new THREE.MeshStandardMaterial({
@@ -113,13 +113,14 @@ window.addEventListener('DOMContentLoaded', () => {
             metalness: 0.1
         });
 
-        for (let z = 100; z > -trackLength; z -= 45) {
+        for (let z = 100; z > -trackLength; z -= 55) {
             const height = 25 + Math.random() * 35;
-            const radius = 18 + Math.random() * 15;
+            const radius = 16 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, mountainMat);
 
-            const xPos = sideMultiplier * (trackWidth / 2 + 25 + Math.random() * 20);
+            // מרחק בטוחX מרוחק מהמסלול: 35 יחידות לפחות
+            const xPos = sideMultiplier * (trackWidth / 2 + 35 + Math.random() * 15);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
@@ -130,25 +131,25 @@ window.addEventListener('DOMContentLoaded', () => {
     createMountainRange(1);
     createMountainRange(-1);
 
-    // --- 5. עיצוב תותח עגול ועתידני (ללא מרובעים) ---
+    // --- 5. עיצוב תותח עתידני (תוקן: הרמה קלה ומניעת חדירה לרצפה) ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    // בסיס עגול בעל שיפוע אירודינמי
+    // בסיס עגול
     const baseGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.8, 24);
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.rotation.x = Math.PI / 12;
     cannonMeshGroup.add(base);
 
-    // כיפה מעוגלת מעל הבסיס
+    // כיפה מעוגלת
     const domeGeo = new THREE.SphereGeometry(0.9, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1 });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.y = 0.3;
     cannonMeshGroup.add(dome);
 
-    // קנים מעוגלים ועתידניים
+    // קנים
     const barrelGeo = new THREE.CylinderGeometry(0.28, 0.38, 1.8, 20);
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
 
@@ -163,7 +164,8 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonMeshGroup.add(barrelRight);
 
     cannonGroup.add(cannonMeshGroup);
-    cannonGroup.position.set(0, 0.4, 0);
+    // תיקון: גובה בסיסי 0.65 (במקום 0.4) כדי שבהטיה התותח לעולם לא ייגע ברצפה
+    cannonGroup.position.set(0, 0.65, 0);
     scene.add(cannonGroup);
 
     // --- 6. כדורים ושערים ---
@@ -173,7 +175,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function spawnBullet(x, z, passedGates = []) {
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x, 0.35, z);
+        bullet.position.set(x, 0.55, z);
         bullet.userData = { passedGates: [...passedGates] };
         scene.add(bullet);
         bullets.push(bullet);
@@ -285,7 +287,8 @@ window.addEventListener('DOMContentLoaded', () => {
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.2);
         
         const moveDelta = cannonGroup.position.x - prevX;
-        cannonMeshGroup.rotation.z = -moveDelta * 2.2;
+        // מיתון קל של רדיוס הנטייה מ-2.2 ל-1.2 כדי שלא יירד מדי נמוך בזמן סיבוב
+        cannonMeshGroup.rotation.z = -moveDelta * 1.2;
 
         camera.position.x = cannonGroup.position.x * 0.35;
         camera.position.y = cannonGroup.position.y + 9.5;
