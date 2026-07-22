@@ -195,7 +195,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 5. מסלול וגבולות גשר קשיחים ---
     const trackWidth = 14;
-    const maxBoundX = trackWidth / 2 - 1.2; // גבול שדה המשחק המקסימלי
+    const maxBoundX = trackWidth / 2 - 1.2;
 
     const trackLength = 2400;
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
@@ -272,7 +272,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. שערים (מוגבלים לתחום הגשר) ---
+    // --- 7. שערים (מוגבלים לתחום הגשר + מורחקים מנקודת הזינוק) ---
     function createGateTexture(label, colorHex) {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
@@ -323,7 +323,6 @@ window.addEventListener('DOMContentLoaded', () => {
         frame.position.y = height / 2;
         gateGroup.add(frame);
 
-        // הגבלת מיקום התחלתי בתוך גבול הגשר
         const halfGate = gateWidth / 2;
         const boundedX = Math.max(-trackWidth / 2 + halfGate, Math.min(trackWidth / 2 - halfGate, x));
 
@@ -340,7 +339,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     let gateIdCounter = 1;
-    for (let z = -60; z > -2250; z -= 140) {
+    // התחלה מ-z = -90 כדי לתת רווח בזינוק
+    for (let z = -90; z > -2250; z -= 140) {
         const rand = Math.random();
         
         if (rand < 0.6) {
@@ -424,7 +424,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     }
 
-    // --- 10. רובוטים (מהירות מואטת באופן ניכר!) ---
+    // --- 10. רובוטים (מרוחקים מנקודת הזינוק) ---
     const robots = [];
     function createRobot(x, z, hp, speedX = 0) {
         const robotGroup = new THREE.Group();
@@ -447,7 +447,6 @@ window.addEventListener('DOMContentLoaded', () => {
         eyes.position.set(0, 2.25, -0.46);
         robotGroup.add(eyes);
 
-        // הגבלת מיקום התחלתי בגבול הגשר
         const boundedX = Math.max(-trackWidth / 2 + 0.9, Math.min(trackWidth / 2 - 0.9, x));
 
         robotGroup.position.set(boundedX, 0, z);
@@ -461,9 +460,10 @@ window.addEventListener('DOMContentLoaded', () => {
         robots.push(robotGroup);
     }
 
-    for (let z = -120; z > -2300; z -= 110) {
-        const robotHp = Math.floor(Math.abs(z) / 12) + 25;
-        const speed = (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 0.8);
+    // התחלה מ-z = -140 כדי שלא יעמדו צמוד לשער הראשון
+    for (let z = -140; z > -2300; z -= 120) {
+        const robotHp = Math.floor(Math.abs(z) / 12) + 20;
+        const speed = (Math.random() > 0.5 ? 1 : -1) * (1.0 + Math.random() * 0.6);
         createRobot(-3.2, z, robotHp, speed);
         createRobot(3.2, z, robotHp, -speed);
     }
@@ -569,7 +569,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 13. כדורי אור כתומים (Orange Light Bullets) ---
     const bullets = [];
     const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
-    // כדורי אור כתומים זוהרים ומוארים
     const bulletMat = new THREE.MeshStandardMaterial({ 
         color: 0xff6600, 
         emissive: 0xff4500, 
@@ -752,7 +751,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // תנועת שערים (עם הגבלת גבול הגשר)
+        // תנועת שערים
         gates.forEach((gate) => {
             if (gate.userData.isMoving) {
                 gate.position.x += gate.userData.moveSpeed * delta;
@@ -795,11 +794,10 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // תנועת רובוטים (התקדמות איטית בהרבה + הגבלת שולי גשר)
+        // תנועת רובוטים
         for (let r = robots.length - 1; r >= 0; r--) {
             const robot = robots[r];
             
-            // הרובוטים צועדים לאט בהרבה לכיוון השחקן
             robot.position.z += 0.6 * delta;
 
             if (robot.userData.speedX !== 0) {
