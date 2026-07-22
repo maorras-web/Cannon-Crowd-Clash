@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו (ברירת מחדל 25%) ---
+    // --- 2. מנוע אודיו ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -93,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים מורחקים לחלוטין ---
+    // --- 4. מסלול והרים ---
     const trackWidth = 11; 
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
@@ -108,7 +108,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = (trackWidth / 2) + 5.0; // הרחקה משמעותית שתמנע כל הסתרה או חסימה
+        const safetyOffset = (trackWidth / 2) + 5.0;
 
         for (let z = 200; z > -trackLength - 200; z -= 40) {
             const height = 35 + Math.random() * 35;
@@ -187,7 +187,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 6. יצירת טקסטורה חשמלית (כדור אנרגיה עם ברקים) ---
+    // --- 6. כדורים ואפקטים ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
@@ -303,7 +303,7 @@ window.addEventListener('DOMContentLoaded', () => {
         createGate(`g_${gateIdCounter++}`, 2.4, z, 'add', 20);
     }
 
-    // --- 7. שליטה וירי רק בנגיעה ---
+    // --- 7. שליטה ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { 
@@ -358,7 +358,7 @@ window.addEventListener('DOMContentLoaded', () => {
     pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
     resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק (זווית מצלמה מתוקנת ומרווחת) ---
+    // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
@@ -379,7 +379,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // מיקום מצלמה פתוח ונוח שרואה את כל המסלול בצורה נקייה
         camera.position.x = cannonGroup.position.x * 0.3;
         camera.position.y = cannonGroup.position.y + 11.0;
         camera.position.z = cannonGroup.position.z + 16.0;
