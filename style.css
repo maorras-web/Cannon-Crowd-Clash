@@ -20,6 +20,18 @@ canvas {
     height: 100vh;
 }
 
+/* שכבת רקע מלאה ואחידה למסך הפתיחה שתכסה את כל המסך בצורה נקייה */
+.start-bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0b0f19;
+    z-index: 5;
+    transition: opacity 0.4s ease;
+}
+
 #ui-hud {
     position: absolute;
     top: 0;

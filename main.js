@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', () => {
             personalBest: "Personal Best",
             startGame: "Start Game 🚀",
             victory: "🏆 You Won! Boss Defeated!",
-            defeat: "💥 Game Over! Robots reached the cannon!",
+            defeat: "💥 Game Over! Robot crashed into cannon!",
             finalScore: "Your Final Score",
             playAgain: "Play Again 🔄",
             gamePaused: "Game Paused ⏸️",
@@ -27,7 +27,7 @@ window.addEventListener('DOMContentLoaded', () => {
             personalBest: "שיא אישי",
             startGame: "התחל משחק 🚀",
             victory: "🏆 ניצחת! הבוס הובס!",
-            defeat: "💥 הפסדת! הרובוטים הגיעו לתותח!",
+            defeat: "💥 הפסדת! רובוט התנגש בתותח!",
             finalScore: "הניקוד הסופי שלך",
             playAgain: "שחק שוב 🔄",
             gamePaused: "משחק מושהה ⏸️",
@@ -43,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
             personalBest: "Mejor Personal",
             startGame: "Iniciar Juego 🚀",
             victory: "🏆 ¡Ganaste! ¡Jefe Derrotado!",
-            defeat: "💥 ¡Juego Terminado! ¡Los robots llegaron!",
+            defeat: "💥 ¡Juego Terminado! ¡Un robot chocó contra el cañón!",
             finalScore: "Tu Puntuación Final",
             playAgain: "Jugar de Nuevo 🔄",
             gamePaused: "En Pausa ⏸️",
@@ -100,7 +100,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
 
-        if (now - lastSoundTime < 0.025 && type === 'hit') return;
+        if (now - lastSoundTime < 0.015 && type === 'hit') return;
         lastSoundTime = now;
 
         const osc = audioCtx.createOscillator();
@@ -146,10 +146,11 @@ window.addEventListener('DOMContentLoaded', () => {
             osc.start(now);
             osc.stop(now + 0.2);
         } else if (type === 'hit') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(110, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + 0.03);
-            gain.gain.setValueAtTime(0.025, now);
+            // צליל פגיעה רך, עמוק ונעים לאוזן (Triangle wave בתדר נמוך)
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.exponentialRampToValueAtTime(220, now + 0.03);
+            gain.gain.setValueAtTime(0.05, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
             osc.start(now);
             osc.stop(now + 0.03);
@@ -635,6 +636,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const startBtn = document.getElementById('start-btn');
     const startMenu = document.getElementById('start-menu');
+    const startOverlay = document.getElementById('start-overlay');
     const pauseBtn = document.getElementById('pause-btn');
     const scoreCard = document.getElementById('score-card');
     const instructions = document.getElementById('instructions');
@@ -646,6 +648,10 @@ window.addEventListener('DOMContentLoaded', () => {
         initAudio();
         gameStarted = true;
         startMenu.classList.add('hidden');
+        if (startOverlay) {
+            startOverlay.style.opacity = '0';
+            setTimeout(() => startOverlay.classList.add('hidden'), 400);
+        }
         pauseBtn.classList.remove('hidden');
         scoreCard.classList.remove('hidden');
         instructions.classList.remove('hidden');
@@ -803,7 +809,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // תנועת רובוטים
+        // תנועת רובוטים ובדיקת התנגשות פיזית ישירה בלבד
         for (let r = robots.length - 1; r >= 0; r--) {
             const robot = robots[r];
             
@@ -817,7 +823,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (robot.position.z >= cannonGroup.position.z - 1.2) {
+            // Game Over מתרחש אך ורק בנגיעה פיזית ישירה בתותח (מרחק קטן מאוד ב-X, Y, Z)
+            const dx = Math.abs(cannonGroup.position.x - robot.position.x);
+            const dz = Math.abs(cannonGroup.position.z - robot.position.z);
+            if (dx < 1.2 && dz < 1.2) {
                 triggerGameOver(false);
                 return;
             }
