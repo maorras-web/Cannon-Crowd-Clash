@@ -73,12 +73,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. סצנה ותאורה ---
+    // --- 3. סצנה ותאורה (זווית רחבה יותר למובייל FOV: 62) ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
     scene.fog = new THREE.FogExp2(0x0f172a, 0.001);
 
-    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3000);
+    const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 3000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -93,9 +93,9 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים ---
-    const trackWidth = 11; 
-    const maxBoundX = trackWidth / 2 - 1.2;
+    // --- 4. מסלול והרים מותאמים למובייל ---
+    const trackWidth = 10; 
+    const maxBoundX = trackWidth / 2 - 1.0;
     const trackLength = 3500;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
@@ -299,11 +299,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let gateIdCounter = 1;
     for (let z = -60; z > -3200; z -= 80) {
-        createGate(`g_${gateIdCounter++}`, -2.4, z, 'multiply', 2);
-        createGate(`g_${gateIdCounter++}`, 2.4, z, 'add', 20);
+        createGate(`g_${gateIdCounter++}`, -2.2, z, 'multiply', 2);
+        createGate(`g_${gateIdCounter++}`, 2.2, z, 'add', 20);
     }
 
-    // --- 7. שליטה ---
+    // --- 7. שליטה חלקות מגע ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { 
@@ -358,7 +358,7 @@ window.addEventListener('DOMContentLoaded', () => {
     pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
     resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק ---
+    // --- 9. לולאת המשחק (מצלמה מרחבית ומאזנת) ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
@@ -379,10 +379,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        camera.position.x = cannonGroup.position.x * 0.3;
-        camera.position.y = cannonGroup.position.y + 11.0;
-        camera.position.z = cannonGroup.position.z + 16.0;
-        camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 12.0);
+        // מיקום מצלמה מותאם למובייל
+        camera.position.x = cannonGroup.position.x * 0.2;
+        camera.position.y = cannonGroup.position.y + 12.5;
+        camera.position.z = cannonGroup.position.z + 18.0;
+        camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
 
         shootTimer += delta;
         if (isFiring && shootTimer >= 0.12) {
