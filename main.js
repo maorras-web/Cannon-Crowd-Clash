@@ -93,36 +93,41 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול, דשא מדויק והרים ---
-    const trackWidth = 14;
+    // --- 4. מסלול רחב, דשא בחלל הצדדי, והרים ---
+    const trackWidth = 14; // המסלול המקורי והרחב
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
 
-    // מסלול ראשי
+    // מסלול ראשי (רחב)
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
     const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // משטחי דשא בפרופורציות מדויקות לחלל הריק (צר ומדויק יותר)
-    const sideGroundWidth = 5.0; 
-    const sideGroundGeo = new THREE.BoxGeometry(sideGroundWidth, 0.3, trackLength);
-    const sideGroundMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8, metalness: 0.1 });
+    // דשא שממלא בדיוק את החלל הריק שבין קצה המסלול להרים
+    const sideGroundWidth = 16.0; // רוחב רחב שיכסה את החלל השחור
+    const sideGroundGeo = new THREE.BoxGeometry(sideGroundWidth, 0.4, trackLength);
+    // שימוש ב-Flat Shading כדי לתת מראה של Low Poly לדשא
+    const sideGroundMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.9, metalness: 0.0, flatShading: true });
 
+    // מיקום הדשא השמאלי בדיוק מחוץ לקצה המסלול
     const leftGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
-    leftGround.position.set(-(trackWidth / 2 + sideGroundWidth / 2), -0.28, -trackLength / 2 + 10);
+    leftGround.position.set(-(trackWidth / 2 + sideGroundWidth / 2), -0.32, -trackLength / 2 + 10);
     scene.add(leftGround);
 
+    // מיקום הדשא הימני בדיוק מחוץ לקצה המסלול
     const rightGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
-    rightGround.position.set((trackWidth / 2 + sideGroundWidth / 2), -0.28, -trackLength / 2 + 10);
+    rightGround.position.set((trackWidth / 2 + sideGroundWidth / 2), -0.32, -trackLength / 2 + 10);
     scene.add(rightGround);
 
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = trackWidth / 2 + sideGroundWidth; // מתחיל בדיוק בקצה של הדשא
+        
+        // ההרים יושבים מעבר לשטחי הדשא
+        const safetyOffset = (trackWidth / 2) + sideGroundWidth;
 
         for (let z = 200; z > -trackLength - 200; z -= 35) {
             const height = 30 + Math.random() * 40;
@@ -399,7 +404,6 @@ window.addEventListener('DOMContentLoaded', () => {
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 12.0);
 
         shootTimer += delta;
-        // ירי מתבצע אך ורק כאשר השחקן נוגע או לוחץ על המסך
         if (isFiring && shootTimer >= 0.12) {
             spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
             spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
