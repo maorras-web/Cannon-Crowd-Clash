@@ -19,7 +19,10 @@
 
     <div id="ui-hud">
         <div class="hud-top-bar">
-            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button>
+            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button><div style="margin-top: 15px; text-align: center;">
+    <label for="volume-slider" data-i18n="volume" style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">עוצמת שמע</label>
+    <input type="range" id="volume-slider" min="0" max="0.5" step="0.01" value="0.15" style="width: 80%;">
+</div>
             <div id="score-card" class="hud-card hidden">
                 ⭐ <span data-i18n="score">Score</span>: <span id="score-val">0</span>
                 <div class="high-score-small">👑 <span data-i18n="best">Best</span>: <span id="high-score-hud">0</span></div>
