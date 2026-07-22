@@ -93,8 +93,8 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול מקורי והרים (ללא דשא בכלל) ---
-    const trackWidth = 10; 
+    // --- 4. מסלול מורחב קלות והרים מורחקים למניעת התנגשות ---
+    const trackWidth = 13; // מסלול רחב יותר במידה קלה
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
 
@@ -108,14 +108,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = trackWidth / 2;
+        const safetyOffset = (trackWidth / 2) + 2.5; // מרווח ביטחון שמונע כל חדירה של ההרים במסלול
 
         for (let z = 200; z > -trackLength - 200; z -= 35) {
             const height = 30 + Math.random() * 40;
             const radius = 18 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, frontMat);
-            const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
+            const xPos = sideMultiplier * (safetyOffset + radius * 0.5);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
@@ -126,7 +126,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const radius = 28 + Math.random() * 15;
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, backMat);
-            const xPos = sideMultiplier * (safetyOffset + radius * 1.4);
+            const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
@@ -281,7 +281,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createGate(id, x, z, type, value) {
         const gateGroup = new THREE.Group();
-        const gateWidth = trackWidth / 2 - 0.5;
+        const gateWidth = trackWidth / 2 - 0.8;
         let label = `+${value}`, colorHex = '#0284c7';
         if (type === 'multiply') { label = `x${value}`; colorHex = '#10b981'; }
 
@@ -299,8 +299,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let gateIdCounter = 1;
     for (let z = -60; z > -3200; z -= 80) {
-        createGate(`g_${gateIdCounter++}`, -2.2, z, 'multiply', 2);
-        createGate(`g_${gateIdCounter++}`, 2.2, z, 'add', 20);
+        createGate(`g_${gateIdCounter++}`, -2.8, z, 'multiply', 2);
+        createGate(`g_${gateIdCounter++}`, 2.8, z, 'add', 20);
     }
 
     // --- 7. שליטה וירי רק בנגיעה ---
