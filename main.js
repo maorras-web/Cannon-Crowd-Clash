@@ -83,7 +83,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.3;
     document.body.appendChild(renderer.domElement);
 
     const ambientLight = new THREE.AmbientLight(0x94a3b8, 0.9);
@@ -187,29 +187,55 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 6. כדורי אנרגיה חשמליים ואפקטי התנפצות ---
-    const bullets = [];
-    const coreGeo = new THREE.SphereGeometry(0.22, 16, 16);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // ליבה לבנה בוהקת
+    // --- 6. יצירת טקסטורה חשמלית (כדור אנרגיה עם ברקים כמו בתמונה) ---
+    function createLightningBallTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
 
-    const auraGeo = new THREE.SphereGeometry(0.42, 16, 16);
-    const auraMat = new THREE.MeshBasicMaterial({ color: 0xff8c00, transparent: true, opacity: 0.65 }); // הילה כתומה-אדומה
+        // רקע כתום-אדום בוהק
+        const gradient = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+        gradient.addColorStop(0, '#ffffff'); // מרכז מסנוור
+        gradient.addColorStop(0.3, '#ffaa00');
+        gradient.addColorStop(0.7, '#ff3300');
+        gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 256, 256);
+
+        // ציור ברקים יוצאים מהמרכז החוצה
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 16; i++) {
+            ctx.beginPath();
+            let x = 128, y = 128;
+            ctx.moveTo(x, y);
+            const angle = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+            const length = 80 + Math.random() * 40;
+            
+            for (let j = 0; j < 4; j++) {
+                x += Math.cos(angle) * (length / 4) + (Math.random() - 0.5) * 15;
+                y += Math.sin(angle) * (length / 4) + (Math.random() - 0.5) * 15;
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    const bulletGeo = new THREE.SphereGeometry(0.45, 16, 16);
+    const bulletMat = new THREE.MeshBasicMaterial({
+        map: createLightningBallTexture(),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+
+    const bullets = [];
 
     function spawnBullet(x, z) {
-        const energyBall = new THREE.Group();
-
-        // ליבה פנימית לבנה
-        const core = new THREE.Mesh(coreGeo, coreMat);
-        energyBall.add(core);
-
-        // הילה חיצונית זוהרת
-        const aura = new THREE.Mesh(auraGeo, auraMat);
-        energyBall.add(aura);
-
-        // אור אמיתי שמפיץ זוהר מסביב לכדור
-        const light = new THREE.PointLight(0xff5500, 2.5, 4);
-        energyBall.add(light);
-
+        const energyBall = new THREE.Mesh(bulletGeo, bulletMat);
         energyBall.position.set(x, 1.1, z);
         scene.add(energyBall);
         bullets.push(energyBall);
@@ -220,16 +246,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function triggerExplosion(pos, colorHex) {
         const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 15; i++) {
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
             p.position.x += (Math.random() - 0.5) * 3;
             p.position.y += Math.random() * 2;
 
             p.userData = {
-                vx: (Math.random() - 0.5) * 14,
-                vy: Math.random() * 12 + 4,
-                vz: (Math.random() - 0.5) * 14,
+                vx: (Math.random() - 0.5) * 12,
+                vy: Math.random() * 10 + 3,
+                vz: (Math.random() - 0.5) * 12,
                 life: 1.0
             };
             scene.add(p);
@@ -330,7 +356,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
-        // תנועת השערים
         for (let i = 0; i < gates.length; i++) {
             gates[i].position.z += gateSpeed * delta;
         }
@@ -342,49 +367,26 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // מיקום מצלמה
         camera.position.x = cannonGroup.position.x * 0.35;
         camera.position.y = cannonGroup.position.y + 9.5;
         camera.position.z = cannonGroup.position.z + 14.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 12.0);
 
-        // יריית כדורים
         shootTimer += delta;
-        if (shootTimer >= 0.11) {
+        if (shootTimer >= 0.12) {
             spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
             spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
             playSound('shoot');
             shootTimer = 0;
         }
 
-        // תנועת חלקיקים
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.userData.life -= delta * 2.0;
-            p.position.x += p.userData.vx * delta;
-            p.position.y += p.userData.vy * delta;
-            p.position.z += p.userData.vz * delta;
-            p.userData.vy -= 30 * delta;
-
-            p.scale.setScalar(Math.max(0, p.userData.life));
-
-            if (p.userData.life <= 0) {
-                scene.remove(p);
-                particles.splice(i, 1);
-            }
-        }
-
-        // כדורי אנרגיה והתנפצות
+        // ניהול כדורים והתנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 55 * delta;
-
-            // אפקט פעימה רנדומלי להילה החשמלית
-            const auraMesh = b.children[1];
-            if (auraMesh) {
-                const scale = 1 + (Math.random() - 0.5) * 0.25;
-                auraMesh.scale.set(scale, scale, scale);
-            }
+            
+            // אפקט סיבוב קל לכדור האנרגיה בזמן מעוף לתחושת חיים
+            b.rotation.z += delta * 3;
 
             if (b.position.z < cannonGroup.position.z - 120) {
                 scene.remove(b);
@@ -395,19 +397,19 @@ window.addEventListener('DOMContentLoaded', () => {
             for (let j = gates.length - 1; j >= 0; j--) {
                 const g = gates[j];
                 
-                if (Math.abs(b.position.z - g.position.z) < 1.2 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
+                if (Math.abs(b.position.z - g.position.z) < 1.5 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
                     playSound('gate');
                     score += 20;
                     document.getElementById('score-val').innerText = score;
 
                     if (g.userData.type === 'multiply') {
-                        const extraBullets = g.userData.value - 1;
-                        for (let k = 0; k < extraBullets; k++) {
-                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.8, b.position.z - (k * 0.5));
+                        const extra = Math.min(g.userData.value - 1, 2);
+                        for (let k = 0; k < extra; k++) {
+                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.5, b.position.z - (k * 0.4));
                         }
                     } else if (g.userData.type === 'add') {
-                        for (let k = 0; k < 3; k++) {
-                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.8, b.position.z - (k * 0.5));
+                        for (let k = 0; k < 2; k++) {
+                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.5, b.position.z - (k * 0.4));
                         }
                     }
 
@@ -419,6 +421,21 @@ window.addEventListener('DOMContentLoaded', () => {
                     bullets.splice(i, 1);
                     break;
                 }
+            }
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.userData.life -= delta * 2.5;
+            p.position.x += p.userData.vx * delta;
+            p.position.y += p.userData.vy * delta;
+            p.position.z += p.userData.vz * delta;
+            p.userData.vy -= 30 * delta;
+            p.scale.setScalar(Math.max(0, p.userData.life));
+
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                particles.splice(i, 1);
             }
         }
 
