@@ -93,22 +93,38 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים ---
+    // --- 4. מסלול, דשא והרים ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
 
+    // מסלול ראשי
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
     const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
+    // הוספת משטחי דשא בצדדים (בין המסלול להרים)
+    const sideGroundWidth = 12;
+    const sideGroundGeo = new THREE.BoxGeometry(sideGroundWidth, 0.4, trackLength);
+    const sideGroundMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8, metalness: 0.1 }); // ירוק כהה ויפהפה
+
+    // דשא צד שמאל
+    const leftGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
+    leftGround.position.set(-(trackWidth / 2 + sideGroundWidth / 2), -0.3, -trackLength / 2 + 10);
+    scene.add(leftGround);
+
+    // דשא צד ימין
+    const rightGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
+    rightGround.position.set((trackWidth / 2 + sideGroundWidth / 2), -0.3, -trackLength / 2 + 10);
+    scene.add(rightGround);
+
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = 4.0;
+        const safetyOffset = 16.0; // מותאם לרוחב החדש של הדשא
 
         for (let z = 200; z > -trackLength - 200; z -= 35) {
             const height = 30 + Math.random() * 40;
@@ -344,7 +360,7 @@ window.addEventListener('DOMContentLoaded', () => {
     pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
     resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק (מהירות שערים מוגברת ל-32.0) ---
+    // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
