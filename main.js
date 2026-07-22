@@ -93,41 +93,22 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול רחב, דשא בחלל הצדדי, והרים ---
-    const trackWidth = 14; // המסלול המקורי והרחב
+    // --- 4. מסלול מקורי והרים ---
+    const trackWidth = 10; // רוחב המסלול המקורי
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3500;
 
-    // מסלול ראשי (רחב)
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
     const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // דשא שממלא בדיוק את החלל הריק שבין קצה המסלול להרים
-    const sideGroundWidth = 16.0; // רוחב רחב שיכסה את החלל השחור
-    const sideGroundGeo = new THREE.BoxGeometry(sideGroundWidth, 0.4, trackLength);
-    // שימוש ב-Flat Shading כדי לתת מראה של Low Poly לדשא
-    const sideGroundMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.9, metalness: 0.0, flatShading: true });
-
-    // מיקום הדשא השמאלי בדיוק מחוץ לקצה המסלול
-    const leftGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
-    leftGround.position.set(-(trackWidth / 2 + sideGroundWidth / 2), -0.32, -trackLength / 2 + 10);
-    scene.add(leftGround);
-
-    // מיקום הדשא הימני בדיוק מחוץ לקצה המסלול
-    const rightGround = new THREE.Mesh(sideGroundGeo, sideGroundMat);
-    rightGround.position.set((trackWidth / 2 + sideGroundWidth / 2), -0.32, -trackLength / 2 + 10);
-    scene.add(rightGround);
-
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        
-        // ההרים יושבים מעבר לשטחי הדשא
-        const safetyOffset = (trackWidth / 2) + sideGroundWidth;
+        const safetyOffset = trackWidth / 2;
 
         for (let z = 200; z > -trackLength - 200; z -= 35) {
             const height = 30 + Math.random() * 40;
@@ -318,8 +299,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let gateIdCounter = 1;
     for (let z = -60; z > -3200; z -= 80) {
-        createGate(`g_${gateIdCounter++}`, -3.3, z, 'multiply', 2);
-        createGate(`g_${gateIdCounter++}`, 3.3, z, 'add', 20);
+        createGate(`g_${gateIdCounter++}`, -2.2, z, 'multiply', 2);
+        createGate(`g_${gateIdCounter++}`, 2.2, z, 'add', 20);
     }
 
     // --- 7. שליטה וירי רק בנגיעה ---
