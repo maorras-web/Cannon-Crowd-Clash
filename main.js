@@ -177,12 +177,17 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.setHex(hexColor);
     }
 
-    const colorPicker = document.getElementById('cannon-color-picker');
-    if (colorPicker) {
-        colorPicker.addEventListener('change', (e) => {
-            changeCannonColor(parseInt(e.target.value.replace('#', '0x')));
+    // חיבור כפתורי הפלטה המודרנית
+    const colorButtons = document.querySelectorAll('.color-btn');
+    colorButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            colorButtons.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const selectedColor = parseInt(e.target.getAttribute('data-color'));
+            changeCannonColor(selectedColor);
         });
-    }
+    });
 
     // --- 6. כדורים, שערים ואפקטי התנפצות ---
     const bullets = [];

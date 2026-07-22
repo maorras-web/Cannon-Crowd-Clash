@@ -53,16 +53,25 @@
             <button id="restart-btn" type="button" class="main-btn juicy-btn" data-i18n="playAgain">Play Again 🔄</button>
         </div>
 
-        <!-- תפריט עצירה (Pause Menu) - הווליום מוטמע כאן בלבד -->
-        <div id="pause-menu" class="status-popup hidden"><div class="setting-item">
-    <label data-i18n="cannonColor">צבע התותח 🎨</label>
-    <input type="color" id="cannon-color-picker" value="#dc2626">
-</div>
+        <!-- תפריט עצירה (Pause Menu) -->
+        <div id="pause-menu" class="status-popup hidden">
             <h2 data-i18n="gamePaused">Game Paused ⏸️</h2>
-            
+
+            <div class="setting-item">
+                <label data-i18n="cannonColor">צבע התותח 🎨</label>
+                <div class="color-palette" id="color-palette">
+                    <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
+                    <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
+                    <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
+                    <button class="color-btn" data-color="0xca8a04" style="background: #ca8a04;"></button>
+                    <button class="color-btn" data-color="0x9333ea" style="background: #9333ea;"></button>
+                    <button class="color-btn" data-color="0x0891b2" style="background: #0891b2;"></button>
+                </div>
+            </div>
+
             <div class="volume-container">
                 <label for="volume-slider" data-i18n="volume">עוצמת שמע 🔊</label>
-                <input type="range" id="volume-slider" min="0" max="0.5" step="0.01" value="0.15">
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
             </div>
 
             <button id="resume-btn" type="button" class="main-btn juicy-btn" data-i18n="resumeGame">Resume Game ▶️</button>
