@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0b0f19">
-    <title>Cannon Crowd Clash - Juicy Edition</title>
+    <title>Cannon Crowd Clash - Futuristic Edition</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,10 +19,7 @@
 
     <div id="ui-hud">
         <div class="hud-top-bar">
-            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button><div style="margin-top: 15px; text-align: center;">
-    <label for="volume-slider" data-i18n="volume" style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">עוצמת שמע</label>
-    <input type="range" id="volume-slider" min="0" max="0.5" step="0.01" value="0.15" style="width: 80%;">
-</div>
+            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button>
             <div id="score-card" class="hud-card hidden">
                 ⭐ <span data-i18n="score">Score</span>: <span id="score-val">0</span>
                 <div class="high-score-small">👑 <span data-i18n="best">Best</span>: <span id="high-score-hud">0</span></div>
@@ -32,6 +29,7 @@
         <div id="powerup-banner" class="hidden">⚡ RAPID FIRE ACTIVE! ⚡</div>
         <div id="instructions" class="hidden" data-i18n="instructions">👈 Swipe left and right to move 👉</div>
 
+        <!-- תפריט התחלה -->
         <div id="start-menu" class="status-popup">
             <h1 class="game-title">CANNON CLASH</h1>
             <p data-i18n="subtitle">Destroy robots, pass through gates, and defeat the boss!</p>
@@ -41,7 +39,6 @@
                 <select id="lang-select">
                     <option value="he" selected>עברית 🇮🇱</option>
                     <option value="en">English 🇬🇧</option>
-                    <option value="es">Español 🇪🇸</option>
                 </select>
             </div>
 
@@ -49,14 +46,22 @@
             <button id="start-btn" type="button" class="main-btn juicy-btn" data-i18n="startGame">Start Game 🚀</button>
         </div>
 
+        <!-- תפריט ניצחון / הפסד -->
         <div id="game-status" class="status-popup hidden">
             <h2 id="status-title" data-i18n="victory">🏆 You Won!</h2>
             <p id="final-score-text"><span data-i18n="finalScore">Your Final Score</span>: 0</p>
             <button id="restart-btn" type="button" class="main-btn juicy-btn" data-i18n="playAgain">Play Again 🔄</button>
         </div>
 
+        <!-- תפריט עצירה (Pause Menu) - הווליום מוטמע כאן בלבד -->
         <div id="pause-menu" class="status-popup hidden">
             <h2 data-i18n="gamePaused">Game Paused ⏸️</h2>
+            
+            <div class="volume-container">
+                <label for="volume-slider" data-i18n="volume">עוצמת שמע 🔊</label>
+                <input type="range" id="volume-slider" min="0" max="0.5" step="0.01" value="0.15">
+            </div>
+
             <button id="resume-btn" type="button" class="main-btn juicy-btn" data-i18n="resumeGame">Resume Game ▶️</button>
         </div>
     </div>

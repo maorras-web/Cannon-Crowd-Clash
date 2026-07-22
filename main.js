@@ -2,8 +2,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. שפות ותרגום ---
     const translations = {
-        en: { score: "Score", best: "Best", instructions: "👈 Swipe left/right to move 👉", subtitle: "Pass through gates and get the highest score!", language: "Language", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Game Paused ⏸️", resumeGame: "Resume Game ▶️", volume: "Sound Volume", dir: "ltr" },
-        he: { score: "ניקוד", best: "שיא", instructions: "👈 החלק ימינה ושמאלה כדי להזיז 👉", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "משחק מושהה ⏸️", resumeGame: "המשך משחק ▶️", volume: "עוצמת שמע", dir: "rtl" }
+        en: { score: "Score", best: "Best", instructions: "👈 Swipe left/right to move 👉", subtitle: "Pass through gates and get the highest score!", language: "Language", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Game Paused ⏸️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", dir: "ltr" },
+        he: { score: "ניקוד", best: "שיא", instructions: "👈 החלק ימינה ושמאלה כדי להזיז 👉", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "משחק מושהה ⏸️", volume: "עוצמת שמע 🔊", dir: "rtl" }
     };
 
     let currentLang = localStorage.getItem('ccc_language') || 'he';
@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו + שליטה בווליום ---
+    // --- 2. מנוע אודיו + שליטה בווליום בזמן אמת ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const audioBuffers = {};
     let audioCtx = null;
-    let masterVolume = 0.15; // עוצמת שמע ברירת מחדל
+    let masterVolume = 0.15; // עוצמת שמע התחלתית
 
     function initAudio() {
         if (!audioCtx) {
@@ -65,7 +65,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // שליטה בווליום מהממשק
+    // חיבור הסליידר המושתל בתפריט ההשהיה בלבד
     const volumeSlider = document.getElementById('volume-slider');
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
@@ -93,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים אפורים חדים בצדדים ---
+    // --- 4. מסלול והרים אפורים ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3000;
@@ -104,12 +104,11 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // יצירת הרים אפורים חדים (Low-Poly Sharp Mountains)
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const mountainMat = new THREE.MeshStandardMaterial({
-            color: 0x475569, // אפור ברור וחד
-            flatShading: true, // מעניק מראה מצולע וחד (Sharp)
+            color: 0x475569,
+            flatShading: true,
             roughness: 0.9,
             metalness: 0.1
         });
@@ -117,7 +116,7 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let z = 100; z > -trackLength; z -= 45) {
             const height = 25 + Math.random() * 35;
             const radius = 18 + Math.random() * 15;
-            const geo = new THREE.ConeGeometry(radius, height, 5); // 5 פאות למראה נקי וחד
+            const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, mountainMat);
 
             const xPos = sideMultiplier * (trackWidth / 2 + 25 + Math.random() * 20);
@@ -128,29 +127,39 @@ window.addEventListener('DOMContentLoaded', () => {
         scene.add(mountainGroup);
     }
 
-    createMountainRange(1);  // צד ימין
-    createMountainRange(-1); // צד שמאל
+    createMountainRange(1);
+    createMountainRange(-1);
 
-    // --- 5. תותח דינמי ---
+    // --- 5. עיצוב תותח עגול ועתידני (ללא מרובעים) ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    const baseGeo = new THREE.BoxGeometry(1.6, 0.8, 2.2);
+    // בסיס עגול בעל שיפוע אירודינמי
+    const baseGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.8, 24);
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
     const base = new THREE.Mesh(baseGeo, baseMat);
+    base.rotation.x = Math.PI / 12;
     cannonMeshGroup.add(base);
 
-    const barrelGeo = new THREE.CylinderGeometry(0.35, 0.45, 1.8, 16);
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1 });
+    // כיפה מעוגלת מעל הבסיס
+    const domeGeo = new THREE.SphereGeometry(0.9, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1 });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.y = 0.3;
+    cannonMeshGroup.add(dome);
+
+    // קנים מעוגלים ועתידניים
+    const barrelGeo = new THREE.CylinderGeometry(0.28, 0.38, 1.8, 20);
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
 
     const barrelLeft = new THREE.Mesh(barrelGeo, barrelMat);
     barrelLeft.rotation.x = Math.PI / 2;
-    barrelLeft.position.set(-0.4, 0.3, -1);
+    barrelLeft.position.set(-0.45, 0.35, -0.9);
     cannonMeshGroup.add(barrelLeft);
 
     const barrelRight = new THREE.Mesh(barrelGeo, barrelMat);
     barrelRight.rotation.x = Math.PI / 2;
-    barrelRight.position.set(0.4, 0.3, -1);
+    barrelRight.position.set(0.45, 0.35, -0.9);
     cannonMeshGroup.add(barrelRight);
 
     cannonGroup.add(cannonMeshGroup);
@@ -278,7 +287,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 2.2;
 
-        // מצלמה בגובה נוח
         camera.position.x = cannonGroup.position.x * 0.35;
         camera.position.y = cannonGroup.position.y + 9.5;
         camera.position.z = cannonGroup.position.z + 14.0;
@@ -286,8 +294,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         shootTimer += delta;
         if (shootTimer >= 0.11) {
-            spawnBullet(cannonGroup.position.x - 0.4, cannonGroup.position.z - 1.2);
-            spawnBullet(cannonGroup.position.x + 0.4, cannonGroup.position.z - 1.2);
+            spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
+            spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
             playSound('shoot');
             shootTimer = 0;
         }
