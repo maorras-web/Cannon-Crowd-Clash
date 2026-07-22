@@ -75,9 +75,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 3. סצנה ותאורה ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
-    scene.fog = new THREE.FogExp2(0x0f172a, 0.002);
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.001);
 
-    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1500);
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -92,10 +92,10 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים (בדיוק מהסרטון המקורי) ---
+    // --- 4. מסלול והרים (מורחקים מהמסלול) ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
-    const trackLength = 3000;
+    const trackLength = 3500;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
     const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
@@ -105,31 +105,47 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
-        const mountainMat = new THREE.MeshStandardMaterial({
-            color: 0x475569,
-            flatShading: true,
-            roughness: 0.9,
-            metalness: 0.1
-        });
+        
+        const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
+        const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
 
-        for (let z = 100; z > -trackLength; z -= 55) {
-            const height = 25 + Math.random() * 35;
-            const radius = 16 + Math.random() * 12;
+        // מרחק ביטחון בסיסי מקצה המסלול
+        const safetyOffset = 4.0;
+
+        // שכבה קדמית
+        for (let z = 200; z > -trackLength - 200; z -= 35) {
+            const height = 30 + Math.random() * 40;
+            const radius = 18 + Math.random() * 12;
             const geo = new THREE.ConeGeometry(radius, height, 5);
-            const mountain = new THREE.Mesh(geo, mountainMat);
+            const mountain = new THREE.Mesh(geo, frontMat);
 
-            const xPos = sideMultiplier * (trackWidth / 2 + radius * 0.85);
+            // חישוב המיקום כך שהבסיס של ההר יישאר מחוץ למסלול בכל מקרה
+            const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 0.9);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
         }
+
+        // שכבה אחורית
+        for (let z = 200; z > -trackLength - 200; z -= 50) {
+            const height = 50 + Math.random() * 50;
+            const radius = 28 + Math.random() * 15;
+            const geo = new THREE.ConeGeometry(radius, height, 5);
+            const mountain = new THREE.Mesh(geo, backMat);
+
+            const xPos = sideMultiplier * (trackWidth / 2 + safetyOffset + radius * 1.4);
+            mountain.position.set(xPos, height / 2 - 2, z);
+            mountain.rotation.y = Math.random() * Math.PI;
+            mountainGroup.add(mountain);
+        }
+
         scene.add(mountainGroup);
     }
 
     createMountainRange(1);
     createMountainRange(-1);
 
-    // --- 5. עיצוב תותח (מרחף בגובה 1.2 מעל הרצפה) ---
+    // --- 5. עיצוב תותח ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -159,7 +175,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonMeshGroup.add(barrelRight);
 
     cannonGroup.add(cannonMeshGroup);
-    cannonGroup.position.set(0, 1.2, 0); // ריחוף נקי מעל הרצפה
+    cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
     // --- 6. כדורים, שערים ואפקטי התנפצות ---
@@ -167,30 +183,28 @@ window.addEventListener('DOMContentLoaded', () => {
     const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xf59e0b, emissiveIntensity: 2.0 });
 
-    function spawnBullet(x, z, passedGates = []) {
+    function spawnBullet(x, z) {
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
         bullet.position.set(x, 1.1, z);
-        bullet.userData = { passedGates: [...passedGates] };
         scene.add(bullet);
         bullets.push(bullet);
     }
 
     const particles = [];
-    const particleGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+    const particleGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
 
-    // יצירת אפקט הריסה/התנפצות של שער
     function triggerExplosion(pos, colorHex) {
         const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
-        for (let i = 0; i < 22; i++) {
+        for (let i = 0; i < 25; i++) {
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
             p.position.x += (Math.random() - 0.5) * 3;
             p.position.y += Math.random() * 2;
 
             p.userData = {
-                vx: (Math.random() - 0.5) * 12,
-                vy: Math.random() * 10 + 4,
-                vz: (Math.random() - 0.5) * 12,
+                vx: (Math.random() - 0.5) * 14,
+                vy: Math.random() * 12 + 4,
+                vz: (Math.random() - 0.5) * 14,
                 life: 1.0
             };
             scene.add(p);
@@ -229,20 +243,18 @@ window.addEventListener('DOMContentLoaded', () => {
         gateGroup.add(frame);
 
         gateGroup.position.set(x, 0, z);
-        // HP - כמה יריות השער צריך לספוג עד להריסה
-        const maxHp = type === 'multiply' ? 8 : 12; 
-        gateGroup.userData = { id, type, value, hp: maxHp, colorHex };
+        gateGroup.userData = { id, type, value, colorHex };
         scene.add(gateGroup);
         gates.push(gateGroup);
     }
 
     let gateIdCounter = 1;
-    for (let z = -100; z > -2800; z -= 130) {
+    for (let z = -100; z > -3200; z -= 130) {
         createGate(`g_${gateIdCounter++}`, -3.3, z, 'multiply', 2);
         createGate(`g_${gateIdCounter++}`, 3.3, z, 'add', 20);
     }
 
-    // --- 7. שליטה בנגיעה / עכבר ---
+    // --- 7. שליטה ---
     let targetX = 0, isDragging = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { isDragging = true; previousTouchX = e.clientX; });
@@ -263,7 +275,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 8. ניהול מצבי משחק ---
+    // --- 8. מצבי משחק ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     document.getElementById('start-btn').addEventListener('click', () => {
@@ -280,15 +292,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const pauseMenu = document.getElementById('pause-menu');
     const resumeBtn = document.getElementById('resume-btn');
 
-    pauseBtn.addEventListener('click', () => {
-        isPaused = true;
-        pauseMenu.classList.remove('hidden');
-    });
-
-    resumeBtn.addEventListener('click', () => {
-        isPaused = false;
-        pauseMenu.classList.add('hidden');
-    });
+    pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
+    resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
 
     // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
@@ -321,14 +326,14 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
-        // עדכון תנועת חלקיקי ההתנפצות
+        // תנועת חלקיקים
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
-            p.userData.life -= delta * 1.8;
+            p.userData.life -= delta * 2.0;
             p.position.x += p.userData.vx * delta;
             p.position.y += p.userData.vy * delta;
             p.position.z += p.userData.vz * delta;
-            p.userData.vy -= 25 * delta; // כוח כבידה לחלקיקים
+            p.userData.vy -= 30 * delta;
 
             p.scale.setScalar(Math.max(0, p.userData.life));
 
@@ -338,44 +343,43 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // בדיקת פגיעת כדורים בשערים
+        // כדורים והתנפצות שערים
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 55 * delta;
 
             if (b.position.z < cannonGroup.position.z - 120) {
-                scene.remove(b); bullets.splice(i, 1); continue;
+                scene.remove(b);
+                bullets.splice(i, 1);
+                continue;
             }
 
             for (let j = gates.length - 1; j >= 0; j--) {
                 const g = gates[j];
-                if (!b.userData.passedGates.includes(g.userData.id) && Math.abs(b.position.z - g.position.z) < 0.8) {
-                    if (Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
-                        b.userData.passedGates.push(g.userData.id);
-                        playSound('gate');
-                        score += 10;
-                        document.getElementById('score-val').innerText = score;
+                
+                if (Math.abs(b.position.z - g.position.z) < 1.0 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
+                    playSound('gate');
+                    score += 20;
+                    document.getElementById('score-val').innerText = score;
 
-                        // יצירת כדורים נוספים מהשער
-                        if (g.userData.type === 'multiply') {
-                            const extraBullets = g.userData.value - 1;
-                            for (let k = 0; k < extraBullets; k++) {
-                                spawnBullet(b.position.x + (Math.random() - 0.5) * 0.6, b.position.z - 0.4, b.userData.passedGates);
-                            }
-                        } else if (g.userData.type === 'add') {
-                            for (let k = 0; k < 2; k++) {
-                                spawnBullet(b.position.x + (Math.random() - 0.5) * 0.6, b.position.z - 0.4, b.userData.passedGates);
-                            }
+                    if (g.userData.type === 'multiply') {
+                        const extraBullets = g.userData.value - 1;
+                        for (let k = 0; k < extraBullets; k++) {
+                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.8, b.position.z - (k * 0.5));
                         }
-
-                        // הפחתת HP והתנפצות השער במידת הצורך
-                        g.userData.hp -= 1;
-                        if (g.userData.hp <= 0) {
-                            triggerExplosion(g.position, g.userData.colorHex);
-                            scene.remove(g);
-                            gates.splice(j, 1);
+                    } else if (g.userData.type === 'add') {
+                        for (let k = 0; k < 3; k++) {
+                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.8, b.position.z - (k * 0.5));
                         }
                     }
+
+                    triggerExplosion(g.position, g.userData.colorHex);
+                    scene.remove(g);
+                    gates.splice(j, 1);
+
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    break;
                 }
             }
         }
