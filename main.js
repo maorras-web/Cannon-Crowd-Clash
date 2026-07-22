@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו ---
+    // --- 2. מנוע אודיו (ברירת מחדל 25%) ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -38,7 +38,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const audioBuffers = {};
     let audioCtx = null;
-    let masterVolume = 0.5;
+    let masterVolume = 0.25;
 
     function initAudio() {
         if (!audioCtx) {
@@ -187,23 +187,21 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 6. יצירת טקסטורה חשמלית (כדור אנרגיה עם ברקים כמו בתמונה) ---
+    // --- 6. יצירת טקסטורה חשמלית (כדור אנרגיה עם ברקים) ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
         const ctx = canvas.getContext('2d');
 
-        // רקע כתום-אדום בוהק
         const gradient = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
-        gradient.addColorStop(0, '#ffffff'); // מרכז מסנוור
+        gradient.addColorStop(0, '#ffffff');
         gradient.addColorStop(0.3, '#ffaa00');
         gradient.addColorStop(0.7, '#ff3300');
         gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 256, 256);
 
-        // ציור ברקים יוצאים מהמרכז החוצה
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3;
         for (let i = 0; i < 16; i++) {
@@ -346,9 +344,9 @@ window.addEventListener('DOMContentLoaded', () => {
     pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
     resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק ---
+    // --- 9. לולאת המשחק (מהירות שערים מוגברת ל-32.0) ---
     const clock = new THREE.Clock();
-    const gateSpeed = 22.0;
+    const gateSpeed = 32.0;
 
     function animate() {
         requestAnimationFrame(animate);
@@ -380,12 +378,9 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
-        // ניהול כדורים והתנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 55 * delta;
-            
-            // אפקט סיבוב קל לכדור האנרגיה בזמן מעוף לתחושת חיים
             b.rotation.z += delta * 3;
 
             if (b.position.z < cannonGroup.position.z - 120) {
