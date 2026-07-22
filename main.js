@@ -73,7 +73,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. סצנה ותאורה (זווית רחבה יותר למובייל FOV: 62) ---
+    // --- 3. סצנה ותאורה ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
     scene.fog = new THREE.FogExp2(0x0f172a, 0.001);
@@ -93,50 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים מותאמים למובייל ---
-    const trackWidth = 10; 
-    const maxBoundX = trackWidth / 2 - 1.0;
-    const trackLength = 3500;
-
-    const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
-    const track = new THREE.Mesh(trackGeo, trackMat);
-    track.position.set(0, -0.25, -trackLength / 2 + 10);
-    scene.add(track);
-
-    function createMountainRange(sideMultiplier) {
-        const mountainGroup = new THREE.Group();
-        const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
-        const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
-        const safetyOffset = (trackWidth / 2) + 5.0;
-
-        for (let z = 200; z > -trackLength - 200; z -= 40) {
-            const height = 35 + Math.random() * 35;
-            const radius = 16 + Math.random() * 10;
-            const geo = new THREE.ConeGeometry(radius, height, 5);
-            const mountain = new THREE.Mesh(geo, frontMat);
-            const xPos = sideMultiplier * (safetyOffset + radius * 0.5);
-            mountain.position.set(xPos, height / 2 - 2, z);
-            mountain.rotation.y = Math.random() * Math.PI;
-            mountainGroup.add(mountain);
-        }
-
-        for (let z = 200; z > -trackLength - 200; z -= 60) {
-            const height = 55 + Math.random() * 45;
-            const radius = 25 + Math.random() * 12;
-            const geo = new THREE.ConeGeometry(radius, height, 5);
-            const mountain = new THREE.Mesh(geo, backMat);
-            const xPos = sideMultiplier * (safetyOffset + radius * 0.9);
-            mountain.position.set(xPos, height / 2 - 2, z);
-            mountain.rotation.y = Math.random() * Math.PI;
-            mountainGroup.add(mountain);
-        }
-
-        scene.add(mountainGroup);
-    }
-
-    createMountainRange(1);
-    createMountainRange(-1);// --- 4. מסלול והרים מותאמים למובייל (הורחקנו את ההרים החוצה כדי שלא יתנגשו במסלול) ---
+    // --- 4. מסלול והרים ---
     const trackWidth = 10; 
     const maxBoundX = trackWidth / 2 - 1.0;
     const trackLength = 3500;
@@ -152,7 +109,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const frontMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
         const backMat = new THREE.MeshStandardMaterial({ color: 0x334155, flatShading: true, roughness: 1.0 });
         
-        // מרווח בטיחות מוגדל בהרבה כדי שההרים ישבו לגמרי מחוץ למסלול
         const safetyOffset = (trackWidth / 2) + 9.0;
 
         for (let z = 200; z > -trackLength - 200; z -= 40) {
@@ -348,7 +304,7 @@ window.addEventListener('DOMContentLoaded', () => {
         createGate(`g_${gateIdCounter++}`, 2.2, z, 'add', 20);
     }
 
-    // --- 7. שליטה חלקות מגע ---
+    // --- 7. שליטה ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { 
@@ -386,24 +342,33 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 8. מצבי משחק ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
-    document.getElementById('start-btn').addEventListener('click', () => {
-        initAudio();
-        gameStarted = true;
-        document.getElementById('start-menu').classList.add('hidden');
-        document.getElementById('start-overlay').style.opacity = '0';
-        setTimeout(() => document.getElementById('start-overlay').classList.add('hidden'), 500);
-        document.getElementById('pause-btn').classList.remove('hidden');
-        document.getElementById('score-card').classList.remove('hidden');
-    });
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            initAudio();
+            gameStarted = true;
+            const startMenu = document.getElementById('start-menu');
+            const startOverlay = document.getElementById('start-overlay');
+            if (startMenu) startMenu.classList.add('hidden');
+            if (startOverlay) {
+                startOverlay.style.opacity = '0';
+                setTimeout(() => startOverlay.classList.add('hidden'), 500);
+            }
+            const pauseBtn = document.getElementById('pause-btn');
+            const scoreCard = document.getElementById('score-card');
+            if (pauseBtn) pauseBtn.classList.remove('hidden');
+            if (scoreCard) scoreCard.classList.remove('hidden');
+        });
+    }
 
     const pauseBtn = document.getElementById('pause-btn');
     const pauseMenu = document.getElementById('pause-menu');
     const resumeBtn = document.getElementById('resume-btn');
 
-    pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu.classList.remove('hidden'); });
-    resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu.classList.add('hidden'); });
+    if (pauseBtn) pauseBtn.addEventListener('click', () => { isPaused = true; if (pauseMenu) pauseMenu.classList.remove('hidden'); });
+    if (resumeBtn) resumeBtn.addEventListener('click', () => { isPaused = false; if (pauseMenu) pauseMenu.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק (מצלמה מרחבית ומאזנת) ---
+    // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
@@ -424,7 +389,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // מיקום מצלמה מותאם למובייל
         camera.position.x = cannonGroup.position.x * 0.2;
         camera.position.y = cannonGroup.position.y + 12.5;
         camera.position.z = cannonGroup.position.z + 18.0;
@@ -455,7 +419,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (Math.abs(b.position.z - g.position.z) < 1.5 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
                     playSound('gate');
                     score += 20;
-                    document.getElementById('score-val').innerText = score;
+                    const scoreVal = document.getElementById('score-val');
+                    if (scoreVal) scoreVal.innerText = score;
 
                     if (g.userData.type === 'multiply') {
                         const extra = Math.min(g.userData.value - 1, 2);
