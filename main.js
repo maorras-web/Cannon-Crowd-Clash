@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage(currentLang);
 
-    // --- 2. מנוע אודיו + שליטה בווליום ---
+    // --- 2. מנוע אודיו ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -92,7 +92,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול והרים (תוקנה התנגשות ההרים במסלול) ---
+    // --- 4. מסלול והרים (בדיוק מהסרטון המקורי) ---
     const trackWidth = 14;
     const maxBoundX = trackWidth / 2 - 1.2;
     const trackLength = 3000;
@@ -103,7 +103,6 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    // תיקון: הרחקת ההרים הצידה כדי שלא יתנגשו או יחצו את המסלול
     function createMountainRange(sideMultiplier) {
         const mountainGroup = new THREE.Group();
         const mountainMat = new THREE.MeshStandardMaterial({
@@ -119,8 +118,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const geo = new THREE.ConeGeometry(radius, height, 5);
             const mountain = new THREE.Mesh(geo, mountainMat);
 
-            // מרחק בטוחX מרוחק מהמסלול: 35 יחידות לפחות
-            const xPos = sideMultiplier * (trackWidth / 2 + 35 + Math.random() * 15);
+            const xPos = sideMultiplier * (trackWidth / 2 + radius * 0.85);
             mountain.position.set(xPos, height / 2 - 2, z);
             mountain.rotation.y = Math.random() * Math.PI;
             mountainGroup.add(mountain);
@@ -131,25 +129,22 @@ window.addEventListener('DOMContentLoaded', () => {
     createMountainRange(1);
     createMountainRange(-1);
 
-    // --- 5. עיצוב תותח עתידני (תוקן: הרמה קלה ומניעת חדירה לרצפה) ---
+    // --- 5. עיצוב תותח (מרחף בגובה 1.2 מעל הרצפה) ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    // בסיס עגול
     const baseGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.8, 24);
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.rotation.x = Math.PI / 12;
     cannonMeshGroup.add(base);
 
-    // כיפה מעוגלת
     const domeGeo = new THREE.SphereGeometry(0.9, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1 });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.y = 0.3;
     cannonMeshGroup.add(dome);
 
-    // קנים
     const barrelGeo = new THREE.CylinderGeometry(0.28, 0.38, 1.8, 20);
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
 
@@ -164,21 +159,43 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonMeshGroup.add(barrelRight);
 
     cannonGroup.add(cannonMeshGroup);
-    // תיקון: גובה בסיסי 0.65 (במקום 0.4) כדי שבהטיה התותח לעולם לא ייגע ברצפה
-    cannonGroup.position.set(0, 0.65, 0);
+    cannonGroup.position.set(0, 1.2, 0); // ריחוף נקי מעל הרצפה
     scene.add(cannonGroup);
 
-    // --- 6. כדורים ושערים ---
+    // --- 6. כדורים, שערים ואפקטי התנפצות ---
     const bullets = [];
     const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xf59e0b, emissiveIntensity: 2.0 });
 
     function spawnBullet(x, z, passedGates = []) {
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x, 0.55, z);
+        bullet.position.set(x, 1.1, z);
         bullet.userData = { passedGates: [...passedGates] };
         scene.add(bullet);
         bullets.push(bullet);
+    }
+
+    const particles = [];
+    const particleGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+
+    // יצירת אפקט הריסה/התנפצות של שער
+    function triggerExplosion(pos, colorHex) {
+        const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
+        for (let i = 0; i < 22; i++) {
+            const p = new THREE.Mesh(particleGeo, particleMat);
+            p.position.copy(pos);
+            p.position.x += (Math.random() - 0.5) * 3;
+            p.position.y += Math.random() * 2;
+
+            p.userData = {
+                vx: (Math.random() - 0.5) * 12,
+                vy: Math.random() * 10 + 4,
+                vz: (Math.random() - 0.5) * 12,
+                life: 1.0
+            };
+            scene.add(p);
+            particles.push(p);
+        }
     }
 
     const gates = [];
@@ -212,7 +229,9 @@ window.addEventListener('DOMContentLoaded', () => {
         gateGroup.add(frame);
 
         gateGroup.position.set(x, 0, z);
-        gateGroup.userData = { id, type, value };
+        // HP - כמה יריות השער צריך לספוג עד להריסה
+        const maxHp = type === 'multiply' ? 8 : 12; 
+        gateGroup.userData = { id, type, value, hp: maxHp, colorHex };
         scene.add(gateGroup);
         gates.push(gateGroup);
     }
@@ -287,8 +306,7 @@ window.addEventListener('DOMContentLoaded', () => {
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.2);
         
         const moveDelta = cannonGroup.position.x - prevX;
-        // מיתון קל של רדיוס הנטייה מ-2.2 ל-1.2 כדי שלא יירד מדי נמוך בזמן סיבוב
-        cannonMeshGroup.rotation.z = -moveDelta * 1.2;
+        cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
         camera.position.x = cannonGroup.position.x * 0.35;
         camera.position.y = cannonGroup.position.y + 9.5;
@@ -303,6 +321,24 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
+        // עדכון תנועת חלקיקי ההתנפצות
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.userData.life -= delta * 1.8;
+            p.position.x += p.userData.vx * delta;
+            p.position.y += p.userData.vy * delta;
+            p.position.z += p.userData.vz * delta;
+            p.userData.vy -= 25 * delta; // כוח כבידה לחלקיקים
+
+            p.scale.setScalar(Math.max(0, p.userData.life));
+
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                particles.splice(i, 1);
+            }
+        }
+
+        // בדיקת פגיעת כדורים בשערים
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 55 * delta;
@@ -311,7 +347,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 scene.remove(b); bullets.splice(i, 1); continue;
             }
 
-            for (let g of gates) {
+            for (let j = gates.length - 1; j >= 0; j--) {
+                const g = gates[j];
                 if (!b.userData.passedGates.includes(g.userData.id) && Math.abs(b.position.z - g.position.z) < 0.8) {
                     if (Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
                         b.userData.passedGates.push(g.userData.id);
@@ -319,6 +356,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         score += 10;
                         document.getElementById('score-val').innerText = score;
 
+                        // יצירת כדורים נוספים מהשער
                         if (g.userData.type === 'multiply') {
                             const extraBullets = g.userData.value - 1;
                             for (let k = 0; k < extraBullets; k++) {
@@ -328,6 +366,14 @@ window.addEventListener('DOMContentLoaded', () => {
                             for (let k = 0; k < 2; k++) {
                                 spawnBullet(b.position.x + (Math.random() - 0.5) * 0.6, b.position.z - 0.4, b.userData.passedGates);
                             }
+                        }
+
+                        // הפחתת HP והתנפצות השער במידת הצורך
+                        g.userData.hp -= 1;
+                        if (g.userData.hp <= 0) {
+                            triggerExplosion(g.position, g.userData.colorHex);
+                            scene.remove(g);
+                            gates.splice(j, 1);
                         }
                     }
                 }
