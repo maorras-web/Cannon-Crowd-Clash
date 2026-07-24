@@ -1,40 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. שפות ותרגום ---
-    const translations = {
-        en: { 
-            score: "Score", best: "Best", subtitle: "Pass through gates and get the highest score!", language: "Language", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Settings & Pause ⚙️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", cannonColor: "Cannon Color 🎨", dir: "ltr" 
-        },
-        he: { 
-            score: "ניקוד", best: "שיא", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "הגדרות ופאוזה ⚙️", volume: "עוצמת שמע 🔊", cannonColor: "צבע התותח 🎨", dir: "rtl" 
-        }
-    };
-
-    let currentLang = localStorage.getItem('ccc_language') || 'he';
-
-    function setLanguage(lang) {
-        if (!translations[lang]) lang = 'he';
-        currentLang = lang;
-        localStorage.setItem('ccc_language', lang);
-        const t = translations[lang];
-
-        document.documentElement.setAttribute('dir', t.dir);
-        document.documentElement.setAttribute('lang', lang);
-
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if (t[key]) el.innerText = t[key];
-        });
-
-        const langSelect = document.getElementById('lang-select');
-        if (langSelect) langSelect.value = lang;
-    }
-
-    const langSelect = document.getElementById('lang-select');
-    if (langSelect) langSelect.addEventListener('change', (e) => setLanguage(e.target.value));
-    setLanguage(currentLang);
-
-    // --- 2. מנוע אודיו ---
+    // --- 1. מנוע אודיו ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
@@ -77,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. סצנה ותאורה ---
+    // --- 2. סצנה ותאורה ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050714);
     scene.fog = new THREE.FogExp2(0x050714, 0.0008);
@@ -98,7 +64,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
     dirLight.position.set(25, 50, 20);
     dirLight.castShadow = true;
-    // הגדלת ביצועים למובייל על ידי אופטימיזציית גודל מפת הצללים
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.near = 0.5;
@@ -111,9 +76,9 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // --- 4. מסלול ועולם החלל (הרחבת רוחב המסלול) ---
-    const trackWidth = 18; // מוגדל מ-16 ל-18
-    const maxBoundX = trackWidth / 2 - 1.2; // גבול התנועה עודכן ל-7.8
+    // --- 3. מסלול ועולם החלל ---
+    const trackWidth = 18; 
+    const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
@@ -150,7 +115,73 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 5. עיצוב תותח ומנועי דחף צדדיים ---
+    // --- מערכת כוכב נופל בשמיים (בכל 15 שניות - ימין/שמאל לסירוגין) ---
+    let shootingStarTimer = 0;
+    let shootingStarDirectionLeft = true; 
+    let activeShootingStar = null;
+
+    function createShootingStar(fromLeft) {
+        if (activeShootingStar) {
+            scene.remove(activeShootingStar.group);
+            activeShootingStar = null;
+        }
+
+        const starGroup = new THREE.Group();
+        const startX = fromLeft ? -150 : 150;
+        const endX = fromLeft ? 150 : -150;
+        const startY = 40 + Math.random() * 20;
+        const startZ = cannonGroup.position.z - (80 + Math.random() * 40);
+
+        // ראש הכוכב המנצנץ
+        const headGeo = new THREE.SphereGeometry(0.6, 8, 8);
+        const headMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const head = new THREE.Mesh(headGeo, headMat);
+        starGroup.add(head);
+
+        // זנב הכוכב
+        const tailGeo = new THREE.CylinderGeometry(0.05, 0.5, 12, 8);
+        const tailMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
+        const tail = new THREE.Mesh(tailGeo, tailMat);
+        tail.rotation.z = fromLeft ? -Math.PI / 3 : Math.PI / 3;
+        tail.position.set(fromLeft ? -5 : 5, 2, 0);
+        starGroup.add(tail);
+
+        starGroup.position.set(startX, startY, startZ);
+        scene.add(starGroup);
+
+        activeShootingStar = {
+            group: starGroup,
+            progress: 0,
+            startX,
+            endX,
+            startY,
+            endY: startY - 25,
+            duration: 1.8 // זמן החצייה של השמיים בשניות
+        };
+    }
+
+    function updateShootingStar(delta) {
+        shootingStarTimer += delta;
+        if (shootingStarTimer >= 15.0) {
+            shootingStarTimer = 0;
+            createShootingStar(shootingStarDirectionLeft);
+            shootingStarDirectionLeft = !shootingStarDirectionLeft; // החלפת כיוון בפעם הבאה
+        }
+
+        if (activeShootingStar) {
+            activeShootingStar.progress += delta / activeShootingStar.duration;
+            const p = activeShootingStar.progress;
+            if (p >= 1.0) {
+                scene.remove(activeShootingStar.group);
+                activeShootingStar = null;
+            } else {
+                activeShootingStar.group.position.x = THREE.MathUtils.lerp(activeShootingStar.startX, activeShootingStar.endX, p);
+                activeShootingStar.group.position.y = THREE.MathUtils.lerp(activeShootingStar.startY, activeShootingStar.endY, p);
+            }
+        }
+    }
+
+    // --- 4. עיצוב תותח ומנועי דחף צדדיים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -183,7 +214,7 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelRight.castShadow = true;
     cannonMeshGroup.add(barrelRight);
 
-    // --- יצירת מנועי דחף בצדדים ---
+    // --- יצירת מנועי דחף ---
     const thrusterGeo = new THREE.CylinderGeometry(0.2, 0.28, 0.7, 12);
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
 
@@ -197,19 +228,26 @@ window.addEventListener('DOMContentLoaded', () => {
     rightThruster.position.set(1.4, 0.2, 0);
     cannonMeshGroup.add(rightThruster);
 
-    // אפקט להבות המדחף (מתעדכן לפי צבע התותח)
-    const flameGeo = new THREE.ConeGeometry(0.22, 1.2, 12);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.95 });
+    // --- להבות מדחף מובלטות ומוגדלות ---
+    const flameGeo = new THREE.ConeGeometry(0.32, 1.6, 16);
+    // שימוש ב-MeshStandardMaterial עם Emissive חזק להבלטה מקסימלית של הלהבות
+    const flameMat = new THREE.MeshStandardMaterial({ 
+        color: 0xdc2626, 
+        emissive: 0xdc2626, 
+        emissiveIntensity: 2.5, 
+        transparent: true, 
+        opacity: 0.95 
+    });
 
     const leftFlame = new THREE.Mesh(flameGeo, flameMat);
     leftFlame.rotation.z = Math.PI / 2;
-    leftFlame.position.set(-2.2, 0.2, 0);
+    leftFlame.position.set(-2.4, 0.2, 0);
     leftFlame.visible = false;
     cannonMeshGroup.add(leftFlame);
 
     const rightFlame = new THREE.Mesh(flameGeo, flameMat);
     rightFlame.rotation.z = -Math.PI / 2;
-    rightFlame.position.set(2.2, 0.2, 0);
+    rightFlame.position.set(2.4, 0.2, 0);
     rightFlame.visible = false;
     cannonMeshGroup.add(rightFlame);
 
@@ -217,11 +255,12 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    // שינוי צבע התותח וגם צבע האש במדחפים
+    // שינוי צבע התותח ועדכון הלהבה המובלטת
     function changeCannonColor(hexColor) {
         baseMat.color.setHex(hexColor);
         domeMat.color.setHex(hexColor);
-        flameMat.color.setHex(hexColor); // מתאים את צבע הלהבות
+        flameMat.color.setHex(hexColor);
+        flameMat.emissive.setHex(hexColor); // עדכון הזוהר של הלהבה בהתאם
     }
 
     const colorButtons = document.querySelectorAll('.color-btn');
@@ -234,10 +273,10 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 6. כדורים ואפקטים ---
+    // --- 5. כדורים ואפקטים ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 128; canvas.height = 128; // הקטנת הרזולוציה לחסכון בזיכרון במובייל
+        canvas.width = 128; canvas.height = 128;
         const ctx = canvas.getContext('2d');
         const gradient = ctx.createRadialGradient(64, 64, 5, 64, 64, 64);
         gradient.addColorStop(0, '#ffffff');
@@ -265,7 +304,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function triggerExplosion(pos, colorHex) {
         const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
-        for (let i = 0; i < 10; i++) { // הקטנה מ-15 ל-10 חלקיקים לשיפור דרמטי בביצועים
+        for (let i = 0; i < 10; i++) {
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
             p.position.x += (Math.random() - 0.5) * 3;
@@ -276,7 +315,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- מערכת שערים (מותאמת לרוחב החדש) ---
+    // --- 6. מערכת שערים ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -301,7 +340,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createGate(id, x, z, type, value) {
         const gateGroup = new THREE.Group();
-        const gateWidth = trackWidth / 2 - 0.6; // מתאים אוטומטית לרוחב המסלול המורחב (8.4 יחידות)
+        const gateWidth = trackWidth / 2 - 0.6;
         let label = `+${value}`, colorHex = '#0284c7';
         if (type === 'multiply') { label = `x${value}`; colorHex = '#10b981'; }
 
@@ -317,7 +356,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnGatePairAt(z) {
-        const offset = trackWidth / 4; // מיקום מדויק של מרכז השער בנתיב הימני והשמאלי (4.5 יחידות)
+        const offset = trackWidth / 4;
         if (Math.random() > 0.5) {
             createGate(`g_${gateIdCounter++}`, -offset, z, 'multiply', 2);
             createGate(`g_${gateIdCounter++}`, offset, z, 'add', 20);
@@ -399,6 +438,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
+        // עדכון תנועת הכוכב הנופל
+        updateShootingStar(delta);
+
         for (let i = gates.length - 1; i >= 0; i--) {
             gates[i].position.z += gateSpeed * delta;
             if (gates[i].position.z > 20) {
@@ -417,15 +459,15 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // --- בקרת מנועי הדחף לפי כיוון התנועה ---
+        // בקרת מנועי הדחף
         if (moveDelta > 0.015) {
             leftFlame.visible = true;
             rightFlame.visible = false;
-            leftFlame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.4, 1);
+            leftFlame.scale.set(1.1 + Math.random() * 0.4, 1.2 + Math.random() * 0.5, 1.1);
         } else if (moveDelta < -0.015) {
             leftFlame.visible = false;
             rightFlame.visible = true;
-            rightFlame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.4, 1);
+            rightFlame.scale.set(1.1 + Math.random() * 0.4, 1.2 + Math.random() * 0.5, 1.1);
         } else {
             leftFlame.visible = false;
             rightFlame.visible = false;
@@ -485,7 +527,6 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // ניהול וניקוי זיכרון של חלקיקי הפיצוץ (מונע תקיעות במובייל)
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
             p.userData.life -= delta * 2.5;
