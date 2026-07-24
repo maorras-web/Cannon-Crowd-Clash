@@ -26,58 +26,60 @@ canvas {
     pointer-events: none !important;
 }
 
-/* === UI תוך כדי משחק === */
+/* === UI תוך כדי משחק (תצוגת הניקוד המקורית והנקייה) === */
 #ui-container {
-    position: absolute;
+    position: fixed;
     top: 20px;
     left: 0;
     width: 100%;
     padding: 0 20px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    z-index: 10;
+    align-items: flex-start;
+    z-index: 100;
     pointer-events: none;
 }
 
 #score-card {
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(8px);
-    padding: 10px 20px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: #0d1527;
+    padding: 10px 22px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .score-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #38bdf8;
-    font-weight: 700;
-    letter-spacing: 1px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    margin-bottom: 2px;
 }
 
 #score-val {
     font-size: 1.8rem;
     font-weight: 900;
+    line-height: 1;
 }
 
 .icon-btn {
     pointer-events: auto;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    font-size: 1.2rem;
+    background: #0d1527;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
     cursor: pointer;
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 /* === מסך פתיחה פנומנלי בפריסה מלאה (Full Screen) === */
@@ -87,8 +89,8 @@ canvas {
     left: 0;
     width: 100vw;
     height: 100vh;
-    height: 100dvh; /* דיוק למובייל */
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.7) 0%, rgba(5, 7, 20, 0.95) 100%);
+    height: 100dvh;
+    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.75) 0%, rgba(5, 7, 20, 0.98) 100%);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     z-index: 1000;
@@ -101,7 +103,7 @@ canvas {
 #start-menu {
     width: 100%;
     height: 100%;
-    max-width: 480px; /* רוחב נוח לקריאה במחשב, מתפרס מלא בטלפון */
+    max-width: 480px;
     padding: 40px 24px;
     display: flex;
     flex-direction: column;
@@ -183,7 +185,7 @@ canvas {
     font-size: 0.95rem;
 }
 
-/* כפתור התחל רחב ומרשים */
+/* כפתור התחל */
 .action-section {
     width: 100%;
     margin-bottom: 20px;

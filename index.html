@@ -13,13 +13,13 @@
 </head>
 <body>
 
-    <!-- תצוגת ניקוד וכפתור הפסקה תוך כדי משחק -->
+    <!-- תצוגת ניקוד וכפתור הפסקה (בסטייל המקורי הנקי) -->
     <div id="ui-container">
+        <button id="pause-btn" class="icon-btn hidden">⏸️</button>
         <div id="score-card" class="hidden">
             <span class="score-label">SCORE</span>
             <span id="score-val">0</span>
         </div>
-        <button id="pause-btn" class="icon-btn hidden">⏸️</button>
     </div>
 
     <!-- מסך פתיחה במבנה מסך מלא -->
@@ -27,29 +27,29 @@
         <div id="start-menu">
             <div class="header-section">
                 <h1 class="game-title">CANNON<br>CLASH</h1>
-                <p class="game-subtitle">Pass through gates, boost your firepower, and reach the top score!</p>
+                <p class="game-subtitle">Pass through gates, boost your firepower, land reach the top score</p>
             </div>
 
             <!-- בחירת צבע לתותח -->
             <div class="customization-section">
                 <span class="section-label">CHOOSE CANNON COLOR</span>
                 <div class="color-picker">
-                    <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
-                    <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
-                    <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
-                    <button class="color-btn" data-color="0xd97706" style="background: #d97706;"></button>
                     <button class="color-btn" data-color="0x9333ea" style="background: #9333ea;"></button>
+                    <button class="color-btn" data-color="0xd97706" style="background: #d97706;"></button>
+                    <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
+                    <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
+                    <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
                 </div>
             </div>
 
             <div class="stats-section">
                 <div class="best-badge">
-                    🏆 PERSONAL BEST: <span id="best-score-val">0</span>
+                    PERSONAL BEST: <span id="best-score-val">0</span> 🏆
                 </div>
             </div>
 
             <div class="action-section">
-                <button id="start-btn">START GAME 🚀</button>
+                <button id="start-btn">✏️ START GAME</button>
             </div>
         </div>
     </div>
