@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. שפות ותרגום (כולל שמות המפות) ---
+    // --- 1. שפות ותרגום ---
     const translations = {
         en: { 
             score: "Score", best: "Best", subtitle: "Pass through gates and get the highest score!", language: "Language", selectMap: "Select World 🌍", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Settings & Pause ⚙️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", cannonColor: "Cannon Color 🎨", 
@@ -99,7 +99,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול ומערכת עולמות עשירה ---
+    // --- 4. מסלול ומערכת עולמות ---
     const trackWidth = 14; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
@@ -117,9 +117,27 @@ window.addEventListener('DOMContentLoaded', () => {
     scene.add(snowParticlesGroup);
 
     const mapThemes = {
-        space: { bg: 0x050714, fog: 0x050714, track: 0x0f172a, light: 0xa5b4fc, type: 'space' },
-        desert: { bg: 0xd97706, fog: 0x92400e, track: 0x78350f, light: 0xfef08a, type: 'desert' },
-        snow: { bg: 0x1e3a8a, fog: 0x93c5fd, track: 0xf0fdf4, light: 0xffffff, type: 'snow' }
+        space: { 
+            bg: 0x050714, 
+            fog: 0x050714, 
+            track: 0x1d4ed8, // עולם החלל: מסלול תכלת כהה
+            light: 0xa5b4fc, 
+            type: 'space' 
+        },
+        desert: { 
+            bg: 0xd97706, 
+            fog: 0x92400e, 
+            track: 0x5c2c16, // עולם המדבר: מסלול חום אדמדם
+            light: 0xfef08a, 
+            type: 'desert' 
+        },
+        snow: { 
+            bg: 0xffffff,     // עולם השלג: רקע לבן מסביב
+            fog: 0xffffff,     // עולם השלג: ערפל לבן
+            track: 0x1e3a8a,   // עולם השלג: מסלול כחול כהה
+            light: 0xffffff, 
+            type: 'snow' 
+        }
     };
 
     function loadWorldMap(themeKey) {
@@ -162,6 +180,20 @@ window.addEventListener('DOMContentLoaded', () => {
                         environmentGroup.add(planet);
                     }
                 });
+            }
+
+            // הוספת כוכבים לבנים קטנים ברקע בצדדים
+            const starGeo = new THREE.SphereGeometry(0.2, 6, 6);
+            const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            for (let i = 0; i < 300; i++) {
+                const star = new THREE.Mesh(starGeo, starMat);
+                const side = Math.random() < 0.5 ? -1 : 1;
+                star.position.set(
+                    side * (safetyOffset + 5 + Math.random() * 50),
+                    Math.random() * 40 - 5,
+                    Math.random() * (-trackLength)
+                );
+                environmentGroup.add(star);
             }
         } 
         else if (theme.type === 'desert') {
@@ -228,7 +260,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             const flakeGeo = new THREE.SphereGeometry(0.15, 6, 6);
-            const flakeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const flakeMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
             for (let i = 0; i < 120; i++) {
                 const flake = new THREE.Mesh(flakeGeo, flakeMat);
                 flake.position.set((Math.random() - 0.5) * 40, Math.random() * 30, (Math.random() - 0.5) * 1500);
