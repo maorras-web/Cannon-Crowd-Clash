@@ -100,7 +100,8 @@ window.addEventListener('DOMContentLoaded', () => {
         const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const safetyOffset = (trackWidth / 2) + 3.0;
 
-        for (let i = 0; i < 3500; i++) {
+        // כוכבים ברקע
+        for (let i = 0; i < 3000; i++) {
             const star = new THREE.Mesh(starGeo, starMat);
             const side = Math.random() < 0.5 ? -1 : 1;
             
@@ -111,13 +112,46 @@ window.addEventListener('DOMContentLoaded', () => {
             );
             environmentGroup.add(star);
         }
+
+        // 1. אובייקטים מעוגלים מפוזרים במיקומים רנדומליים בצידי המסלול
+        const orbGeometries = [
+            new THREE.SphereGeometry(1.5, 16, 16),
+            new THREE.SphereGeometry(2.5, 16, 16),
+            new THREE.DodecahedronGeometry(2.0, 2)
+        ];
+
+        const orbColors = [0x38bdf8, 0x818cf8, 0xc084fc, 0x34d399, 0xf43f5e];
+
+        for (let i = 0; i < 180; i++) {
+            const geo = orbGeometries[Math.floor(Math.random() * orbGeometries.length)];
+            const color = orbColors[Math.floor(Math.random() * orbColors.length)];
+            const mat = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.2,
+                metalness: 0.7,
+                emissive: color,
+                emissiveIntensity: 0.2
+            });
+
+            const orb = new THREE.Mesh(geo, mat);
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const x = side * (trackWidth / 2 + 4 + Math.random() * 35);
+            const y = (Math.random() - 0.2) * 20;
+            const z = -Math.random() * (trackLength - 200);
+
+            orb.position.set(x, y, z);
+            const scale = 0.6 + Math.random() * 1.2;
+            orb.scale.set(scale, scale, scale);
+            environmentGroup.add(orb);
+        }
     }
 
     initSpaceWorld();
 
-    // --- UFO חייזרים ---
-    let ufoTimer = 55.0; 
+    // --- 2. UFO חייזרים (מופיעה אחרי 10 שניות + לייזר רק מעל המסלול) ---
+    let ufoTimer = 0.0; // ספירה מתחילת המשחק
     let activeUFO = null;
+    let ufoSpawnInterval = 10.0; // הופעה ראשונה אחרי 10 שניות
 
     function spawnUFO() {
         if (activeUFO) {
@@ -145,7 +179,8 @@ window.addEventListener('DOMContentLoaded', () => {
         ring.position.y = -0.3;
         ufoGroup.add(ring);
 
-        const beamGeo = new THREE.ConeGeometry(trackWidth * 0.7, 25, 16, 1, true);
+        // קרן הלייזר
+        const beamGeo = new THREE.ConeGeometry(trackWidth * 0.6, 25, 16, 1, true);
         const beamMat = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
             transparent: true,
@@ -156,10 +191,11 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         const laserBeam = new THREE.Mesh(beamGeo, beamMat);
         laserBeam.position.y = -12.5;
+        laserBeam.visible = false; // כבוי בברירת מחדל
         ufoGroup.add(laserBeam);
 
-        const startX = -35;
-        const endX = 35;
+        const startX = -45;
+        const endX = 45;
         const startY = 16;
         const startZ = cannonGroup.position.z - 30;
 
@@ -168,19 +204,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
         activeUFO = {
             group: ufoGroup,
+            laser: laserBeam,
             progress: 0,
             startX,
             endX,
             startY,
             startZ,
-            duration: 3.0
+            duration: 4.5
         };
     }
 
     function updateUFOSystem(delta) {
         ufoTimer += delta;
-        if (ufoTimer >= 60.0) {
+        
+        if (ufoTimer >= ufoSpawnInterval) {
             ufoTimer = 0;
+            ufoSpawnInterval = 20.0; // אחרי הפעם הראשונה (10 שניות), יופיע כל 20 שניות
             spawnUFO();
         }
 
@@ -192,14 +231,23 @@ window.addEventListener('DOMContentLoaded', () => {
                 scene.remove(activeUFO.group);
                 activeUFO = null;
             } else {
-                activeUFO.group.position.x = THREE.MathUtils.lerp(activeUFO.startX, activeUFO.endX, p);
+                const currentX = THREE.MathUtils.lerp(activeUFO.startX, activeUFO.endX, p);
+                activeUFO.group.position.x = currentX;
                 activeUFO.group.position.y = activeUFO.startY + Math.sin(p * Math.PI * 6) * 0.5;
                 activeUFO.group.rotation.y += delta * 4;
+
+                // 3. קרן הלייזר תופיע רק כאשר החללית נמצאת מעל המסלול
+                const halfTrack = trackWidth / 2;
+                if (currentX >= -halfTrack && currentX <= halfTrack) {
+                    activeUFO.laser.visible = true;
+                } else {
+                    activeUFO.laser.visible = false;
+                }
             }
         }
     }
 
-    // --- 4. תותח ומנועי דחף צדדיים (אש שממוקמת בדיוק בקצה הצינורות הצידיים) ---
+    // --- 4. תותח ומנועי דחף צדדיים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -237,20 +285,18 @@ window.addEventListener('DOMContentLoaded', () => {
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
 
     const leftThruster = new THREE.Mesh(thrusterGeo, thrusterMat);
-    leftThruster.rotation.z = Math.PI / 2; // פונה שמאלה
+    leftThruster.rotation.z = Math.PI / 2;
     leftThruster.position.set(-1.2, 0.1, 0);
     cannonMeshGroup.add(leftThruster);
 
     const rightThruster = new THREE.Mesh(thrusterGeo, thrusterMat);
-    rightThruster.rotation.z = -Math.PI / 2; // פונה ימינה
+    rightThruster.rotation.z = -Math.PI / 2;
     rightThruster.position.set(1.2, 0.1, 0);
     cannonMeshGroup.add(rightThruster);
 
-    // פונקציה ליצירת להבה צדדית הממוקמת בקצה המדחף
     function createThrusterFlame() {
         const flameGroup = new THREE.Group();
 
-        // להבה חיצונית
         const outerGeo = new THREE.ConeGeometry(0.25, 0.9, 12);
         outerGeo.translate(0, -0.45, 0); 
         const outerMat = new THREE.MeshBasicMaterial({
@@ -263,7 +309,6 @@ window.addEventListener('DOMContentLoaded', () => {
         outerFlame.rotation.z = Math.PI;
         flameGroup.add(outerFlame);
 
-        // ליבה פנימית
         const innerGeo = new THREE.ConeGeometry(0.12, 0.6, 12);
         innerGeo.translate(0, -0.3, 0);
         const innerMat = new THREE.MeshBasicMaterial({
@@ -490,7 +535,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // פעימות להבה ואפקט דחף בזמן תנועה
+        // פעימות להבה ואפקט דחף
         const flameTime = clock.getElapsedTime() * 20;
         const basePulse = 0.85 + Math.sin(flameTime) * 0.15;
         
