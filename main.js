@@ -79,7 +79,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. סצנה ותאורה ---
+    // --- 3. סצנה ותאורה מתקדמת עם צללים ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x070b19);
     scene.fog = new THREE.FogExp2(0x070b19, 0.0012);
@@ -90,13 +90,26 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.3;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0x94a3b8, 1.0);
+    const ambientLight = new THREE.AmbientLight(0x94a3b8, 1.2);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    dirLight.position.set(40, 80, 20);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    dirLight.position.set(25, 50, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 250;
+    const d = 25;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
     // --- 4. מסלול ומערכת עולמות ---
@@ -105,9 +118,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const trackLength = 3500;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.5 });
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.4 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
+    track.receiveShadow = true;
     scene.add(track);
 
     let environmentGroup = new THREE.Group();
@@ -120,22 +134,25 @@ window.addEventListener('DOMContentLoaded', () => {
         space: { 
             bg: 0x050714, 
             fog: 0x050714, 
-            track: 0x1d4ed8, // עולם החלל: מסלול תכלת כהה
+            track: 0x1d4ed8, 
             light: 0xa5b4fc, 
+            dirLightColor: 0xffffff,
             type: 'space' 
         },
         desert: { 
             bg: 0xd97706, 
             fog: 0x92400e, 
-            track: 0x5c2c16, // עולם המדבר: מסלול חום אדמדם
+            track: 0x5c2c16, 
             light: 0xfef08a, 
+            dirLightColor: 0xffedd5,
             type: 'desert' 
         },
         snow: { 
-            bg: 0xffffff,     // עולם השלג: רקע לבן מסביב
-            fog: 0xffffff,     // עולם השלג: ערפל לבן
-            track: 0x1e3a8a,   // עולם השלג: מסלול כחול כהה
+            bg: 0xffffff,     
+            fog: 0xffffff,     
+            track: 0x1e3a8a,   
             light: 0xffffff, 
+            dirLightColor: 0xe0f2fe,
             type: 'snow' 
         }
     };
@@ -147,6 +164,7 @@ window.addEventListener('DOMContentLoaded', () => {
         scene.fog.color.setHex(theme.fog);
         trackMat.color.setHex(theme.track);
         ambientLight.color.setHex(theme.light);
+        dirLight.color.setHex(theme.dirLightColor);
 
         while (environmentGroup.children.length > 0) {
             environmentGroup.remove(environmentGroup.children[0]);
@@ -169,11 +187,14 @@ window.addEventListener('DOMContentLoaded', () => {
                         const ast = new THREE.Mesh(new THREE.DodecahedronGeometry(radius, 1), astMat);
                         ast.position.set(side * (safetyOffset + radius), Math.random() * 25 - 5, z);
                         ast.rotation.set(Math.random(), Math.random(), Math.random());
+                        ast.castShadow = true;
+                        ast.receiveShadow = true;
                         environmentGroup.add(ast);
                     } else {
                         const pRadius = 6 + Math.random() * 5;
                         const planet = new THREE.Mesh(new THREE.SphereGeometry(pRadius, 16, 16), planetMat);
                         planet.position.set(side * (safetyOffset + pRadius + 5), 10 + Math.random() * 15, z);
+                        planet.castShadow = true;
                         const ring = new THREE.Mesh(new THREE.RingGeometry(pRadius + 2, pRadius + 6, 32), ringMat);
                         ring.rotation.x = Math.PI / 2.5;
                         planet.add(ring);
@@ -182,16 +203,16 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // הוספת כוכבים לבנים קטנים ברקע בצדדים
-            const starGeo = new THREE.SphereGeometry(0.2, 6, 6);
+            // כוכבים לבנים קטנים וצפופים בכל השטחים המתים והצדדים בחלל
+            const starGeo = new THREE.SphereGeometry(0.25, 6, 6);
             const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            for (let i = 0; i < 300; i++) {
+            for (let i = 0; i < 900; i++) {
                 const star = new THREE.Mesh(starGeo, starMat);
                 const side = Math.random() < 0.5 ? -1 : 1;
                 star.position.set(
-                    side * (safetyOffset + 5 + Math.random() * 50),
-                    Math.random() * 40 - 5,
-                    Math.random() * (-trackLength)
+                    side * (safetyOffset + 2 + Math.random() * 90),
+                    Math.random() * 70 - 15,
+                    (Math.random() - 0.5) * trackLength
                 );
                 environmentGroup.add(star);
             }
@@ -207,20 +228,25 @@ window.addEventListener('DOMContentLoaded', () => {
                         const pyramid = new THREE.Mesh(new THREE.ConeGeometry(size, size, 4), pyramidMat);
                         pyramid.position.set(side * (safetyOffset + size * 0.6), size / 2 - 2, z);
                         pyramid.rotation.y = Math.PI / 4;
+                        pyramid.castShadow = true;
+                        pyramid.receiveShadow = true;
                         environmentGroup.add(pyramid);
                     } else {
                         const cactusGroup = new THREE.Group();
                         const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 10, 8), cactusMat);
                         trunk.position.y = 5;
+                        trunk.castShadow = true;
                         cactusGroup.add(trunk);
                         
                         const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4, 6), cactusMat);
                         arm1.rotation.z = Math.PI / 2;
                         arm1.position.set(-1.2, 6, 0);
+                        arm1.castShadow = true;
                         cactusGroup.add(arm1);
 
                         const arm1Up = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3, 6), cactusMat);
                         arm1Up.position.set(-2.2, 7.5, 0);
+                        arm1Up.castShadow = true;
                         cactusGroup.add(arm1Up);
 
                         cactusGroup.position.set(side * (safetyOffset + 2), 0, z);
@@ -241,16 +267,20 @@ window.addEventListener('DOMContentLoaded', () => {
                         const radius = 6 + Math.random() * 6;
                         const iceberg = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 5), iceMat);
                         iceberg.position.set(side * (safetyOffset + radius * 0.5), height / 2 - 2, z);
+                        iceberg.castShadow = true;
+                        iceberg.receiveShadow = true;
                         environmentGroup.add(iceberg);
                     } else {
                         const treeGroup = new THREE.Group();
                         const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 3, 6), new THREE.MeshStandardMaterial({ color: 0x78350f }));
                         trunk.position.y = 1.5;
+                        trunk.castShadow = true;
                         treeGroup.add(trunk);
 
                         for (let l = 0; l < 3; l++) {
                             const layer = new THREE.Mesh(new THREE.ConeGeometry(3 - l * 0.6, 4, 6), l === 0 ? snowCapMat : pineLeavesMat);
                             layer.position.y = 3 + l * 2.2;
+                            layer.castShadow = true;
                             treeGroup.add(layer);
                         }
                         treeGroup.position.set(side * (safetyOffset + 3), 0, z);
@@ -295,7 +325,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 5. עיצוב תותח ושינוי צבעים ---
+    // --- 5. עיצוב תותח וצללים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -303,12 +333,14 @@ window.addEventListener('DOMContentLoaded', () => {
     const baseMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.8, roughness: 0.2 });
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.rotation.x = Math.PI / 12;
+    base.castShadow = true;
     cannonMeshGroup.add(base);
 
     const domeGeo = new THREE.SphereGeometry(0.9, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.9, roughness: 0.1 });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.y = 0.3;
+    dome.castShadow = true;
     cannonMeshGroup.add(dome);
 
     const barrelGeo = new THREE.CylinderGeometry(0.28, 0.38, 1.8, 20);
@@ -317,11 +349,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const barrelLeft = new THREE.Mesh(barrelGeo, barrelMat);
     barrelLeft.rotation.x = Math.PI / 2;
     barrelLeft.position.set(-0.45, 0.35, -0.9);
+    barrelLeft.castShadow = true;
     cannonMeshGroup.add(barrelLeft);
 
     const barrelRight = new THREE.Mesh(barrelGeo, barrelMat);
     barrelRight.rotation.x = Math.PI / 2;
     barrelRight.position.set(0.45, 0.35, -0.9);
+    barrelRight.castShadow = true;
     cannonMeshGroup.add(barrelRight);
 
     cannonGroup.add(cannonMeshGroup);
@@ -417,6 +451,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const frameMat = new THREE.MeshStandardMaterial({ map: createGateTexture(label, colorHex), transparent: true, opacity: 0.9 });
         const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.0, 0.2), frameMat);
         frame.position.y = 2.0;
+        frame.castShadow = true;
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
         gateGroup.userData = { id, type, value, colorHex };
