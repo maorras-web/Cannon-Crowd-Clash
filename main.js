@@ -1,15 +1,21 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. שפות ותרגום ---
+    // --- 1. שפות ותרגום (כולל שמות המפות) ---
     const translations = {
-        en: { score: "Score", best: "Best", instructions: "👈 Swipe left/right to move 👉", subtitle: "Pass through gates and get the highest score!", language: "Language", selectMap: "Select World 🌍", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Settings & Pause ⚙️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", cannonColor: "Cannon Color 🎨", dir: "ltr" },
-        he: { score: "ניקוד", best: "שיא", instructions: "👈 החלק ימינה ושמאלה כדי להזיז 👉", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", selectMap: "בחר עולם 🌍", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "הגדרות ופאוזה ⚙️", volume: "עוצמת שמע 🔊", cannonColor: "צבע התותח 🎨", dir: "rtl" }
+        en: { 
+            score: "Score", best: "Best", subtitle: "Pass through gates and get the highest score!", language: "Language", selectMap: "Select World 🌍", personalBest: "Personal Best", startGame: "Start Game 🚀", gamePaused: "Settings & Pause ⚙️", resumeGame: "Resume Game ▶️", volume: "Sound Volume 🔊", cannonColor: "Cannon Color 🎨", 
+            mapSpace: "Space World 🚀", mapDesert: "Desert World 🏜️", mapSnow: "Snow World ❄️", dir: "ltr" 
+        },
+        he: { 
+            score: "ניקוד", best: "שיא", subtitle: "עבור בשערים והגע לניקוד הגבוה ביותר!", language: "שפה", selectMap: "בחר עולם 🌍", personalBest: "שיא אישי", startGame: "התחל משחק 🚀", gamePaused: "הגדרות ופאוזה ⚙️", volume: "עוצמת שמע 🔊", cannonColor: "צבע התותח 🎨", 
+            mapSpace: "עולם החלל 🚀", mapDesert: "עולם המדבר 🏜️", mapSnow: "עולם השלג ❄️", dir: "rtl" 
+        }
     };
 
-    let currentLang = localStorage.getItem('ccc_language') || 'he';
+    let currentLang = localStorage.getItem('ccc_language') || 'en';
 
     function setLanguage(lang) {
-        if (!translations[lang]) lang = 'he';
+        if (!translations[lang]) lang = 'en';
         currentLang = lang;
         localStorage.setItem('ccc_language', lang);
         const t = translations[lang];
@@ -75,8 +81,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 3. סצנה ותאורה ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f172a);
-    scene.fog = new THREE.FogExp2(0x0f172a, 0.001);
+    scene.background = new THREE.Color(0x070b19);
+    scene.fog = new THREE.FogExp2(0x070b19, 0.0012);
 
     const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 3000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -86,14 +92,14 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.toneMappingExposure = 1.3;
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0x94a3b8, 0.9);
+    const ambientLight = new THREE.AmbientLight(0x94a3b8, 1.0);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
     dirLight.position.set(40, 80, 20);
     scene.add(dirLight);
 
-    // --- 4. מסלול ומערכת עולמות (מפות) ---
+    // --- 4. מסלול ומערכת עולמות עשירה ---
     const trackWidth = 14; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
@@ -107,29 +113,13 @@ window.addEventListener('DOMContentLoaded', () => {
     let environmentGroup = new THREE.Group();
     scene.add(environmentGroup);
 
-    // הגדרות עיצוב לכל עולם
+    let snowParticlesGroup = new THREE.Group();
+    scene.add(snowParticlesGroup);
+
     const mapThemes = {
-        space: {
-            bg: 0x070b19,
-            fog: 0x070b19,
-            track: 0x1e293b,
-            light: 0x94a3b8,
-            type: 'asteroids'
-        },
-        desert: {
-            bg: 0xd97706,
-            fog: 0xb45309,
-            track: 0x78350f,
-            light: 0xfef08a,
-            type: 'dunes'
-        },
-        snow: {
-            bg: 0x38bdf8,
-            fog: 0xbae6fd,
-            track: 0xe0f2fe,
-            light: 0xffffff,
-            type: 'icebergs'
-        }
+        space: { bg: 0x050714, fog: 0x050714, track: 0x0f172a, light: 0xa5b4fc, type: 'space' },
+        desert: { bg: 0xd97706, fog: 0x92400e, track: 0x78350f, light: 0xfef08a, type: 'desert' },
+        snow: { bg: 0x1e3a8a, fog: 0x93c5fd, track: 0xf0fdf4, light: 0xffffff, type: 'snow' }
     };
 
     function loadWorldMap(themeKey) {
@@ -140,59 +130,116 @@ window.addEventListener('DOMContentLoaded', () => {
         trackMat.color.setHex(theme.track);
         ambientLight.color.setHex(theme.light);
 
-        // ניקוי אלמנטים של העולם הקודם
         while (environmentGroup.children.length > 0) {
-            const obj = environmentGroup.children[0];
-            environmentGroup.remove(obj);
+            environmentGroup.remove(environmentGroup.children[0]);
+        }
+        while (snowParticlesGroup.children.length > 0) {
+            snowParticlesGroup.remove(snowParticlesGroup.children[0]);
         }
 
-        const safetyOffset = (trackWidth / 2) + 6.0;
+        const safetyOffset = (trackWidth / 2) + 7.0;
 
-        if (theme.type === 'asteroids') {
-            const astMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.8 });
+        if (theme.type === 'space') {
+            const astMat = new THREE.MeshStandardMaterial({ color: 0x475569, flatShading: true, roughness: 0.9 });
+            const planetMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.4, metalness: 0.2 });
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+
+            for (let z = 200; z > -trackLength; z -= 45) {
+                [-1, 1].forEach(side => {
+                    if (Math.random() < 0.5) {
+                        const radius = 5 + Math.random() * 6;
+                        const ast = new THREE.Mesh(new THREE.DodecahedronGeometry(radius, 1), astMat);
+                        ast.position.set(side * (safetyOffset + radius), Math.random() * 25 - 5, z);
+                        ast.rotation.set(Math.random(), Math.random(), Math.random());
+                        environmentGroup.add(ast);
+                    } else {
+                        const pRadius = 6 + Math.random() * 5;
+                        const planet = new THREE.Mesh(new THREE.SphereGeometry(pRadius, 16, 16), planetMat);
+                        planet.position.set(side * (safetyOffset + pRadius + 5), 10 + Math.random() * 15, z);
+                        const ring = new THREE.Mesh(new THREE.RingGeometry(pRadius + 2, pRadius + 6, 32), ringMat);
+                        ring.rotation.x = Math.PI / 2.5;
+                        planet.add(ring);
+                        environmentGroup.add(planet);
+                    }
+                });
+            }
+        } 
+        else if (theme.type === 'desert') {
+            const pyramidMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.8, flatShading: true });
+            const cactusMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+
             for (let z = 200; z > -trackLength; z -= 40) {
                 [-1, 1].forEach(side => {
-                    const radius = 6 + Math.random() * 8;
-                    const geo = new THREE.DodecahedronGeometry(radius, 1);
-                    const ast = new THREE.Mesh(geo, astMat);
-                    ast.position.set(side * (safetyOffset + radius), Math.random() * 20 - 5, z);
-                    ast.rotation.set(Math.random(), Math.random(), Math.random());
-                    environmentGroup.add(ast);
+                    if (Math.random() < 0.5) {
+                        const size = 14 + Math.random() * 10;
+                        const pyramid = new THREE.Mesh(new THREE.ConeGeometry(size, size, 4), pyramidMat);
+                        pyramid.position.set(side * (safetyOffset + size * 0.6), size / 2 - 2, z);
+                        pyramid.rotation.y = Math.PI / 4;
+                        environmentGroup.add(pyramid);
+                    } else {
+                        const cactusGroup = new THREE.Group();
+                        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 10, 8), cactusMat);
+                        trunk.position.y = 5;
+                        cactusGroup.add(trunk);
+                        
+                        const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4, 6), cactusMat);
+                        arm1.rotation.z = Math.PI / 2;
+                        arm1.position.set(-1.2, 6, 0);
+                        cactusGroup.add(arm1);
+
+                        const arm1Up = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3, 6), cactusMat);
+                        arm1Up.position.set(-2.2, 7.5, 0);
+                        cactusGroup.add(arm1Up);
+
+                        cactusGroup.position.set(side * (safetyOffset + 2), 0, z);
+                        environmentGroup.add(cactusGroup);
+                    }
                 });
             }
-        } else if (theme.type === 'dunes') {
-            const duneMat = new THREE.MeshStandardMaterial({ color: 0x92400e, flatShading: true, roughness: 0.9 });
+        } 
+        else if (theme.type === 'snow') {
+            const iceMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.3, flatShading: true });
+            const pineLeavesMat = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.8 });
+            const snowCapMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+
             for (let z = 200; z > -trackLength; z -= 35) {
                 [-1, 1].forEach(side => {
-                    const height = 15 + Math.random() * 20;
-                    const radius = 12 + Math.random() * 8;
-                    const geo = new THREE.ConeGeometry(radius, height, 6);
-                    const dune = new THREE.Mesh(geo, duneMat);
-                    dune.position.set(side * (safetyOffset + radius * 0.5), height / 2 - 2, z);
-                    environmentGroup.add(dune);
+                    if (Math.random() < 0.5) {
+                        const height = 18 + Math.random() * 15;
+                        const radius = 6 + Math.random() * 6;
+                        const iceberg = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 5), iceMat);
+                        iceberg.position.set(side * (safetyOffset + radius * 0.5), height / 2 - 2, z);
+                        environmentGroup.add(iceberg);
+                    } else {
+                        const treeGroup = new THREE.Group();
+                        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 3, 6), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+                        trunk.position.y = 1.5;
+                        treeGroup.add(trunk);
+
+                        for (let l = 0; l < 3; l++) {
+                            const layer = new THREE.Mesh(new THREE.ConeGeometry(3 - l * 0.6, 4, 6), l === 0 ? snowCapMat : pineLeavesMat);
+                            layer.position.y = 3 + l * 2.2;
+                            treeGroup.add(layer);
+                        }
+                        treeGroup.position.set(side * (safetyOffset + 3), 0, z);
+                        environmentGroup.add(treeGroup);
+                    }
                 });
             }
-        } else if (theme.type === 'icebergs') {
-            const iceMat = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, flatShading: true, roughness: 0.1, metalness: 0.1 });
-            for (let z = 200; z > -trackLength; z -= 35) {
-                [-1, 1].forEach(side => {
-                    const height = 25 + Math.random() * 25;
-                    const radius = 10 + Math.random() * 6;
-                    const geo = new THREE.ConeGeometry(radius, height, 4);
-                    const ice = new THREE.Mesh(geo, iceMat);
-                    ice.position.set(side * (safetyOffset + radius * 0.5), height / 2 - 2, z);
-                    ice.rotation.y = Math.random() * Math.PI;
-                    environmentGroup.add(ice);
-                });
+
+            const flakeGeo = new THREE.SphereGeometry(0.15, 6, 6);
+            const flakeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            for (let i = 0; i < 120; i++) {
+                const flake = new THREE.Mesh(flakeGeo, flakeMat);
+                flake.position.set((Math.random() - 0.5) * 40, Math.random() * 30, (Math.random() - 0.5) * 1500);
+                snowParticlesGroup.add(flake);
             }
         }
     }
 
-    // טעינת עולם ברירת מחדל
     let selectedMap = localStorage.getItem('ccc_map') || 'space';
     loadWorldMap(selectedMap);
 
-    // חיבור הסלקטורים ב-HTML
     const startMapSelect = document.getElementById('start-map-select');
     const pauseMapSelect = document.getElementById('pause-map-select');
 
@@ -259,7 +306,6 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', (e) => {
             colorButtons.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-            
             const selectedColor = parseInt(e.target.getAttribute('data-color'));
             changeCannonColor(selectedColor);
         });
@@ -268,10 +314,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 6. כדורים ואפקטים ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
+        canvas.width = 256; canvas.height = 256;
         const ctx = canvas.getContext('2d');
-
         const gradient = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
         gradient.addColorStop(0, '#ffffff');
         gradient.addColorStop(0.3, '#ffaa00');
@@ -279,35 +323,11 @@ window.addEventListener('DOMContentLoaded', () => {
         gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 256, 256);
-
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        for (let i = 0; i < 16; i++) {
-            ctx.beginPath();
-            let x = 128, y = 128;
-            ctx.moveTo(x, y);
-            const angle = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
-            const length = 80 + Math.random() * 40;
-            
-            for (let j = 0; j < 4; j++) {
-                x += Math.cos(angle) * (length / 4) + (Math.random() - 0.5) * 15;
-                y += Math.sin(angle) * (length / 4) + (Math.random() - 0.5) * 15;
-                ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-        }
-
         return new THREE.CanvasTexture(canvas);
     }
 
     const bulletGeo = new THREE.SphereGeometry(0.45, 16, 16);
-    const bulletMat = new THREE.MeshBasicMaterial({
-        map: createLightningBallTexture(),
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
-
+    const bulletMat = new THREE.MeshBasicMaterial({ map: createLightningBallTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     const bullets = [];
 
     function spawnBullet(x, z) {
@@ -327,22 +347,15 @@ window.addEventListener('DOMContentLoaded', () => {
             p.position.copy(pos);
             p.position.x += (Math.random() - 0.5) * 3;
             p.position.y += Math.random() * 2;
-
-            p.userData = {
-                vx: (Math.random() - 0.5) * 12,
-                vy: Math.random() * 10 + 3,
-                vz: (Math.random() - 0.5) * 12,
-                life: 1.0
-            };
+            p.userData = { vx: (Math.random() - 0.5) * 12, vy: Math.random() * 10 + 3, vz: (Math.random() - 0.5) * 12, life: 1.0 };
             scene.add(p);
             particles.push(p);
         }
     }
 
-    // --- מערכת שערים אינסופית ומניעת התנגשויות ---
+    // --- מערכת שערים ---
     const gates = [];
     let gateIdCounter = 1;
-
     const GATE_GAP = 50; 
     const SPAWN_LIMIT_Z = -800; 
 
@@ -369,12 +382,10 @@ window.addEventListener('DOMContentLoaded', () => {
         let label = `+${value}`, colorHex = '#0284c7';
         if (type === 'multiply') { label = `x${value}`; colorHex = '#10b981'; }
 
-        const frameGeo = new THREE.BoxGeometry(gateWidth, 4.0, 0.2);
         const frameMat = new THREE.MeshStandardMaterial({ map: createGateTexture(label, colorHex), transparent: true, opacity: 0.9 });
-        const frame = new THREE.Mesh(frameGeo, frameMat);
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.0, 0.2), frameMat);
         frame.position.y = 2.0;
         gateGroup.add(frame);
-
         gateGroup.position.set(x, 0, z);
         gateGroup.userData = { id, type, value, colorHex };
         scene.add(gateGroup);
@@ -382,8 +393,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnGatePairAt(z) {
-        const isLeftMultiply = Math.random() > 0.5;
-        if (isLeftMultiply) {
+        if (Math.random() > 0.5) {
             createGate(`g_${gateIdCounter++}`, -3.2, z, 'multiply', 2);
             createGate(`g_${gateIdCounter++}`, 3.2, z, 'add', 20);
         } else {
@@ -399,11 +409,8 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateGatesSystem() {
         let furthestZ = 0;
         for (let i = 0; i < gates.length; i++) {
-            if (gates[i].position.z < furthestZ) {
-                furthestZ = gates[i].position.z;
-            }
+            if (gates[i].position.z < furthestZ) furthestZ = gates[i].position.z;
         }
-
         while (furthestZ > SPAWN_LIMIT_Z) {
             furthestZ -= GATE_GAP;
             spawnGatePairAt(furthestZ);
@@ -413,15 +420,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 7. שליטה ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
-    window.addEventListener('mousedown', (e) => { 
-        isDragging = true; 
-        isFiring = true; 
-        previousTouchX = e.clientX; 
-    });
-    window.addEventListener('mouseup', () => { 
-        isDragging = false; 
-        isFiring = false; 
-    });
+    window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
+    window.addEventListener('mouseup', () => { isDragging = false; isFiring = false; });
     window.addEventListener('mousemove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
             targetX += (e.clientX - previousTouchX) * 0.022;
@@ -429,15 +429,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('touchstart', (e) => { 
-        isDragging = true; 
-        isFiring = true; 
-        previousTouchX = e.touches[0].clientX; 
-    });
-    window.addEventListener('touchend', () => { 
-        isDragging = false; 
-        isFiring = false; 
-    });
+    window.addEventListener('touchstart', (e) => { isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; });
+    window.addEventListener('touchend', () => { isDragging = false; isFiring = false; });
     window.addEventListener('touchmove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
             targetX += (e.touches[0].clientX - previousTouchX) * 0.022;
@@ -453,17 +446,14 @@ window.addEventListener('DOMContentLoaded', () => {
         startBtn.addEventListener('click', () => {
             initAudio();
             gameStarted = true;
-            const startMenu = document.getElementById('start-menu');
+            document.getElementById('start-menu')?.classList.add('hidden');
             const startOverlay = document.getElementById('start-overlay');
-            if (startMenu) startMenu.classList.add('hidden');
             if (startOverlay) {
                 startOverlay.style.opacity = '0';
                 setTimeout(() => startOverlay.classList.add('hidden'), 500);
             }
-            const pauseBtn = document.getElementById('pause-btn');
-            const scoreCard = document.getElementById('score-card');
-            if (pauseBtn) pauseBtn.classList.remove('hidden');
-            if (scoreCard) scoreCard.classList.remove('hidden');
+            document.getElementById('pause-btn')?.classList.remove('hidden');
+            document.getElementById('score-card')?.classList.remove('hidden');
         });
     }
 
@@ -471,8 +461,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const pauseMenu = document.getElementById('pause-menu');
     const resumeBtn = document.getElementById('resume-btn');
 
-    if (pauseBtn) pauseBtn.addEventListener('click', () => { isPaused = true; if (pauseMenu) pauseMenu.classList.remove('hidden'); });
-    if (resumeBtn) resumeBtn.addEventListener('click', () => { isPaused = false; if (pauseMenu) pauseMenu.classList.add('hidden'); });
+    if (pauseBtn) pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu?.classList.remove('hidden'); });
+    if (resumeBtn) resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu?.classList.add('hidden'); });
 
     // --- 9. לולאת המשחק ---
     const clock = new THREE.Clock();
@@ -484,9 +474,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
+        if (selectedMap === 'snow') {
+            snowParticlesGroup.children.forEach(flake => {
+                flake.position.y -= delta * 15;
+                flake.position.z += delta * 20;
+                if (flake.position.y < 0) flake.position.y = 30;
+                if (flake.position.z > cannonGroup.position.z + 20) flake.position.z = cannonGroup.position.z - 400;
+            });
+        }
+
         for (let i = gates.length - 1; i >= 0; i--) {
             gates[i].position.z += gateSpeed * delta;
-
             if (gates[i].position.z > 20) {
                 scene.remove(gates[i]);
                 gates.splice(i, 1);
@@ -528,7 +526,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
             for (let j = gates.length - 1; j >= 0; j--) {
                 const g = gates[j];
-                
                 if (Math.abs(b.position.z - g.position.z) < 1.5 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
                     playSound('gate');
                     score += 20;
@@ -549,7 +546,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     triggerExplosion(g.position, g.userData.colorHex);
                     scene.remove(g);
                     gates.splice(j, 1);
-
                     scene.remove(b);
                     bullets.splice(i, 1);
                     break;

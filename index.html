@@ -2,103 +2,103 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0b0f19">
-    <title>Cannon Crowd Clash - Futuristic Edition</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cannon Crowd Clash</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rubik', sans-serif; overflow: hidden; margin: 0; background: #070b19; user-select: none; }
+        .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform 0.2s; }
+        .color-btn.active { border-color: #ffffff; transform: scale(1.15); }
+    </style>
 </head>
 <body>
 
-    <div id="start-overlay" class="start-bg-overlay"></div>
+    <!-- כפתור פאוזה -->
+    <button id="pause-btn" class="hidden absolute top-4 left-4 z-20 bg-slate-800/80 hover:bg-slate-700 text-white p-3 rounded-full shadow-lg backdrop-blur border border-slate-600 transition">
+        ⚙️
+    </button>
 
-    <div id="ui-hud">
-        <div class="hud-top-bar">
-            <button id="pause-btn" type="button" class="hud-btn hidden" aria-label="Pause Game">⏸️</button>
-            <div id="score-card" class="hud-card hidden">
-                ⭐ <span data-i18n="score">Score</span>: <span id="score-val">0</span>
-                <div class="high-score-small">👑 <span data-i18n="best">Best</span>: <span id="high-score-hud">0</span></div>
-            </div>
-        </div>
+    <!-- תוצאת ניקוד -->
+    <div id="score-card" class="hidden absolute top-4 right-4 z-20 bg-slate-900/80 backdrop-blur border border-slate-700 px-5 py-2 rounded-2xl text-white font-bold text-xl shadow-xl flex items-center gap-3">
+        <span>⭐ <span data-i18n="score">ניקוד</span>: <span id="score-val">0</span></span>
+        <span class="text-yellow-400 text-sm">| 🏆 <span data-i18n="best">שיא</span>: <span id="best-val">0</span></span>
+    </div>
 
-        <div id="powerup-banner" class="hidden">⚡ RAPID FIRE ACTIVE! ⚡</div>
-        <div id="instructions" class="hidden" data-i18n="instructions">👈 Swipe left and right to move 👉</div>
+    <!-- מסך פתיחה -->
+    <div id="start-overlay" class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur-md transition-opacity duration-500">
+        <div id="start-menu" class="bg-slate-900/90 border border-slate-700 p-8 rounded-3xl shadow-2xl text-white text-center max-w-sm w-full mx-4">
+            <h1 class="text-4xl font-black mb-2 tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">CANNON CLASH</h1>
+            <p class="text-slate-400 text-sm mb-6" data-i18n="subtitle">עבור בשערים והגע לניקוד הגבוה ביותר!</p>
 
-        <!-- תפריט התחלה -->
-        <div id="start-menu" class="status-popup">
-            <h1 class="game-title">CANNON CLASH</h1>
-            <p data-i18n="subtitle">Destroy robots, pass through gates, and defeat the boss!</p>
-
-            <div class="lang-selector">
-                <span data-i18n="language">Language</span>:
-                <select id="lang-select">
-                    <option value="he" selected>עברית 🇮🇱</option>
-                    <option value="en">English 🇬🇧</option>
+            <div class="mb-4 text-start">
+                <label class="block text-sm font-medium mb-1 text-slate-300" data-i18n="language">שפה</label>
+                <select id="lang-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white outline-none focus:border-blue-500">
+                    <option value="he">עברית 🇮🇱</option>
+                    <option value="en">English 🇺🇸</option>
                 </select>
             </div>
 
-            <!-- בחירת מפה / עולם -->
-            <div class="setting-item">
-                <label data-i18n="selectMap">בחר עולם 🌍</label>
-                <select id="start-map-select" class="custom-select">
-                    <option value="space">🚀 חלל חיצוני</option>
-                    <option value="desert">🏜️ מדבר לוהט</option>
-                    <option value="snow">❄️ עולם השלג</option>
+            <div class="mb-6 text-start">
+                <label class="block text-sm font-medium mb-1 text-slate-300" data-i18n="selectMap">בחר עולם 🌍</label>
+                <select id="start-map-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white outline-none focus:border-blue-500">
+                    <option value="space" data-i18n="mapSpace">עולם החלל 🚀</option>
+                    <option value="desert" data-i18n="mapDesert">עולם המדבר 🏜️</option>
+                    <option value="snow" data-i18n="mapSnow">עולם השלג ❄️</option>
                 </select>
             </div>
 
-            <div class="high-score-box">🏆 <span data-i18n="personalBest">Personal Best</span>: <span id="start-high-score">0</span></div>
-            <button id="start-btn" type="button" class="main-btn juicy-btn" data-i18n="startGame">Start Game 🚀</button>
-        </div>
-
-        <!-- תפריט ניצחון / הפסד -->
-        <div id="game-status" class="status-popup hidden">
-            <h2 id="status-title" data-i18n="victory">🏆 You Won!</h2>
-            <p id="final-score-text"><span data-i18n="finalScore">Your Final Score</span>: 0</p>
-            <button id="restart-btn" type="button" class="main-btn juicy-btn" data-i18n="playAgain">Play Again 🔄</button>
-        </div>
-
-        <!-- תפריט עצירה (Pause Menu) -->
-        <div id="pause-menu" class="status-popup hidden">
-            <h2 data-i18n="gamePaused">Game Paused ⏸️</h2>
-
-            <div class="setting-item">
-                <label data-i18n="selectMap">החלף עולם 🌍</label>
-                <select id="pause-map-select" class="custom-select">
-                    <option value="space">🚀 חלל חיצוני</option>
-                    <option value="desert">🏜️ מדבר לוהט</option>
-                    <option value="snow">❄️ עולם השלג</option>
-                </select>
+            <div class="mb-6 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-yellow-400 font-bold">🏆 <span data-i18n="personalBest">שיא אישי</span>: <span id="menu-best-val">0</span></span>
             </div>
 
-            <div class="setting-item">
-                <label data-i18n="cannonColor">צבע התותח 🎨</label>
-                <div class="color-palette" id="color-palette">
-                    <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
-                    <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
-                    <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
-                    <button class="color-btn" data-color="0xca8a04" style="background: #ca8a04;"></button>
-                    <button class="color-btn" data-color="0x9333ea" style="background: #9333ea;"></button>
-                    <button class="color-btn" data-color="0x0891b2" style="background: #0891b2;"></button>
-                    <button class="color-btn" data-color="0xffffff" style="background: #ffffff;"></button>
-                    <button class="color-btn" data-color="0x18181b" style="background: #18181b;"></button>
-                </div>
-            </div>
-
-            <div class="volume-container">
-                <label for="volume-slider" data-i18n="volume">עוצמת שמע 🔊</label>
-                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
-            </div>
-
-            <button id="resume-btn" type="button" class="main-btn juicy-btn" data-i18n="resumeGame">Resume Game ▶️</button>
+            <button id="start-btn" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-600/30 transition transform active:scale-95" data-i18n="startGame">
+                התחל משחק 🚀
+            </button>
         </div>
     </div>
 
-    <script src="main.js" defer></script>
+    <!-- תפריט פאוזה והגדרות -->
+    <div id="pause-menu" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl text-white text-center max-w-sm w-full mx-4">
+            <h2 class="text-2xl font-black mb-6" data-i18n="gamePaused">הגדרות ופאוזה ⚙️</h2>
+
+            <div class="mb-4 text-start">
+                <label class="block text-sm font-medium mb-1 text-slate-300" data-i18n="selectMap">בחר עולם 🌍</label>
+                <select id="pause-map-select" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white outline-none focus:border-blue-500">
+                    <option value="space" data-i18n="mapSpace">עולם החלל 🚀</option>
+                    <option value="desert" data-i18n="mapDesert">עולם המדבר 🏜️</option>
+                    <option value="snow" data-i18n="mapSnow">עולם השלג ❄️</option>
+                </select>
+            </div>
+
+            <div class="mb-6 text-start">
+                <label class="block text-sm font-medium mb-2 text-slate-300" data-i18n="cannonColor">צבע התותח 🎨</label>
+                <div class="flex justify-between gap-2 px-2">
+                    <div class="color-btn active" style="background: #dc2626;" data-color="14431142"></div>
+                    <div class="color-btn" style="background: #2563eb;" data-color="2450923"></div>
+                    <div class="color-btn" style="background: #16a34a;" data-color="1487690"></div>
+                    <div class="color-btn" style="background: #9333ea;" data-color="9646570"></div>
+                    <div class="color-btn" style="background: #db2777;" data-color="14362487"></div>
+                    <div class="color-btn" style="background: #f59e0b;" data-color="16093451"></div>
+                </div>
+            </div>
+
+            <div class="mb-6 text-start">
+                <label class="block text-sm font-medium mb-1 text-slate-300" data-i18n="volume">עוצמת שמע 🔊</label>
+                <input id="volume-slider" type="range" min="0" max="1" step="0.05" value="0.25" class="w-full accent-blue-500 cursor-pointer">
+            </div>
+
+            <button id="resume-btn" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-2xl shadow-lg transition transform active:scale-95" data-i18n="resumeGame">
+                המשך משחק ▶️
+            </button>
+        </div>
+    </div>
+
+    <!-- קובץ הלוגיקה הראשי -->
+    <script src="main.js"></script>
 </body>
 </html>
