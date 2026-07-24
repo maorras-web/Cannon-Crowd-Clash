@@ -11,7 +11,7 @@ body, html {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #050811;
+    background-color: #030712;
 }
 
 canvas {
@@ -27,9 +27,9 @@ canvas {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+    background: radial-gradient(circle at center, #090d16 0%, #020617 100%);
     z-index: 100;
-    transition: opacity 0.5s ease, visibility 0.5s ease;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* --- ממשק המשחק (HUD) --- */
@@ -43,7 +43,7 @@ canvas {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 20px;
+    padding: 24px;
     z-index: 101;
 }
 
@@ -56,60 +56,62 @@ canvas {
 
 .hud-btn {
     pointer-events: auto;
-    background: linear-gradient(180deg, #1e293b, #0f172a);
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     border: 2px solid #38bdf8;
     color: #fff;
-    font-size: 22px;
-    padding: 10px 16px;
-    border-radius: 14px;
+    font-size: 20px;
+    padding: 10px 18px;
+    border-radius: 16px;
     cursor: pointer;
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
-    transition: transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .hud-btn:hover {
-    border-color: #0ea5e9;
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+    border-color: #38bdf8;
+    background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .hud-btn:active {
-    transform: scale(0.92);
+    transform: scale(0.90);
 }
 
 .hud-card {
-    background: rgba(15, 23, 42, 0.85);
+    background: rgba(15, 23, 42, 0.8);
     border: 2px solid #38bdf8;
     color: #f8fafc;
-    padding: 10px 22px;
+    padding: 10px 24px;
     border-radius: 20px;
     font-size: 20px;
     font-weight: 900;
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     text-align: center;
     animation: hudGlow 3s infinite alternate ease-in-out;
 }
 
 @keyframes hudGlow {
-    from { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
-    to { box-shadow: 0 0 25px rgba(56, 189, 248, 0.5); }
+    from { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+    to { box-shadow: 0 0 30px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 }
 
 .high-score-small {
     font-size: 13px;
     color: #facc15;
-    margin-top: 2px;
-    text-shadow: 0 0 8px rgba(250, 204, 21, 0.4);
+    margin-top: 3px;
+    text-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
 }
 
 /* --- סליידר הווליום המשודרג --- */
 .volume-container {
     margin: 16px 0;
     text-align: center;
-    background: rgba(30, 41, 59, 0.5);
-    padding: 10px;
+    background: rgba(30, 41, 59, 0.4);
+    padding: 12px;
     border-radius: 16px;
-    border: 1px solid rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.15);
 }
 
 .volume-container label {
@@ -122,24 +124,29 @@ canvas {
 
 .volume-container input[type="range"] {
     -webkit-appearance: none;
-    width: 85%;
+    width: 90%;
     height: 8px;
-    border-radius: 5px;
-    background: #0f172a;
+    border-radius: 6px;
+    background: #020617;
     outline: none;
-    border: 1px solid #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
 }
 
 .volume-container input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #38bdf8;
     cursor: pointer;
-    box-shadow: 0 0 10px #38bdf8;
-    transition: transform 0.1s ease;
+    box-shadow: 0 0 12px #38bdf8;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.volume-container input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    background: #7dd3fc;
 }
 
 /* --- פופאפים ותפריטים (מתוקן למובייל) --- */
@@ -149,46 +156,47 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(15, 23, 42, 0.95);
-    border: 3px solid #38bdf8;
-    border-radius: 24px;
-    padding: 20px 18px;
-    width: 92%;
-    max-width: 380px;
+    background: rgba(11, 18, 32, 0.92);
+    border: 2px solid #38bdf8;
+    border-radius: 28px;
+    padding: 24px 20px;
+    width: 90%;
+    max-width: 400px;
     text-align: center;
     color: #fff;
-    box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
-    backdrop-filter: blur(16px);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     z-index: 102;
     box-sizing: border-box;
-    animation: popupAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: popupAppear 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes popupAppear {
-    from { opacity: 0; transform: translate(-50%, -45%) scale(0.9); }
+    from { opacity: 0; transform: translate(-50%, -45%) scale(0.85); }
     to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .game-title {
-    font-family: 'Black Ops One', cursive;
-    font-size: 32px;
-    letter-spacing: 1px;
-    background: linear-gradient(180deg, #38bdf8, #2563eb);
+    font-family: 'Black Ops One', cursive, sans-serif;
+    font-size: 34px;
+    letter-spacing: 1.5px;
+    background: linear-gradient(180deg, #38bdf8 0%, #1d4ed8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 6px;
-    filter: drop-shadow(0 4px 10px rgba(37, 99, 235, 0.4));
+    margin-bottom: 8px;
+    filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.5));
 }
 
 .status-popup p {
-    font-size: 13px;
+    font-size: 14px;
     color: #94a3b8;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 /* --- בחירת שפה ועולמות --- */
 .lang-selector {
-    margin: 10px 0;
+    margin: 12px 0;
     font-size: 14px;
     display: flex;
     align-items: center;
@@ -200,28 +208,34 @@ canvas {
     background: #1e293b;
     color: #38bdf8;
     font-weight: 700;
-    border: 1px solid #38bdf8;
-    padding: 6px 12px;
-    border-radius: 10px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    padding: 8px 14px;
+    border-radius: 12px;
     font-size: 14px;
     cursor: pointer;
     outline: none;
-    transition: box-shadow 0.2s ease;
+    transition: all 0.2s ease;
     width: 100%;
-    max-width: 220px;
+    max-width: 240px;
     text-align: center;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .custom-select {
-    margin-top: 4px;
+    margin-top: 6px;
+}
+
+.lang-selector select:hover, .custom-select:hover {
+    border-color: #38bdf8;
 }
 
 .lang-selector select:focus, .custom-select:focus {
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    border-color: #38bdf8;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .setting-item {
-    margin: 10px 0;
+    margin: 12px 0;
 }
 
 .setting-item label {
@@ -229,20 +243,20 @@ canvas {
     color: #38bdf8;
     font-weight: 700;
     font-size: 14px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 /* --- תיבת שיא אישי --- */
 .high-score-box {
-    background: rgba(250, 204, 21, 0.1);
-    border: 1px solid #facc15;
+    background: rgba(250, 204, 21, 0.08);
+    border: 1px solid rgba(250, 204, 21, 0.4);
     color: #facc15;
-    padding: 8px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 14px;
     font-weight: 800;
-    font-size: 14px;
-    margin: 12px 0;
-    box-shadow: inset 0 0 12px rgba(250, 204, 21, 0.2);
+    font-size: 15px;
+    margin: 14px 0;
+    box-shadow: inset 0 0 15px rgba(250, 204, 21, 0.15), 0 0 10px rgba(250, 204, 21, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -253,58 +267,62 @@ canvas {
 .juicy-btn {
     position: relative;
     width: 100%;
-    background: linear-gradient(180deg, #0284c7, #1d4ed8);
+    background: linear-gradient(180deg, #0ea5e9 0%, #1d4ed8 100%);
     border: none;
-    border-bottom: 4px solid #1e40af;
+    border-bottom: 5px solid #1e40af;
     color: #fff;
-    padding: 12px;
-    border-radius: 14px;
-    font-size: 16px;
+    padding: 14px;
+    border-radius: 16px;
+    font-size: 17px;
     font-weight: 900;
     cursor: pointer;
     overflow: hidden;
-    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
+    box-shadow: 0 8px 25px rgba(14, 165, 233, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
     transition: transform 0.1s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
 
 .juicy-btn:hover {
-    filter: brightness(1.15);
-    box-shadow: 0 8px 25px rgba(2, 132, 199, 0.7);
+    filter: brightness(1.1);
+    box-shadow: 0 10px 30px rgba(14, 165, 233, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .juicy-btn:active {
-    transform: translateY(3px);
+    transform: translateY(4px);
     border-bottom-width: 1px;
+    box-shadow: 0 2px 10px rgba(14, 165, 233, 0.4);
 }
 
 /* --- באנרים והוראות --- */
 #powerup-banner {
     align-self: center;
-    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);
     color: #fff;
-    padding: 10px 28px;
-    border-radius: 30px;
+    padding: 12px 32px;
+    border-radius: 35px;
     font-weight: 900;
     font-size: 20px;
-    box-shadow: 0 0 25px rgba(245, 158, 11, 0.8);
-    animation: pulse 0.5s infinite alternate ease-in-out;
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.7);
+    animation: pulse 0.6s infinite alternate ease-in-out;
 }
 
 @keyframes pulse {
-    from { transform: scale(1); }
-    to { transform: scale(1.08); }
+    from { transform: scale(1); filter: brightness(1); }
+    to { transform: scale(1.06); filter: brightness(1.15); }
 }
 
 #instructions {
     align-self: center;
-    margin-bottom: 40px;
-    background: rgba(0, 0, 0, 0.75);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    color: #fff;
-    padding: 12px 28px;
+    margin-bottom: 30px;
+    background: rgba(3, 7, 18, 0.8);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #f8fafc;
+    padding: 12px 30px;
     border-radius: 30px;
     font-size: 16px;
     font-weight: 700;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .hidden {
@@ -314,28 +332,32 @@ canvas {
 /* --- פלטת צבעים מודרנית --- */
 .color-palette {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     justify-content: center;
-    margin-top: 6px;
+    margin-top: 8px;
 }
 
 .color-btn {
-    width: 26px !important;
-    height: 26px !important;
-    min-width: 26px !important;
-    min-height: 26px !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
     border-radius: 50% !important;
     padding: 0 !important;
     margin: 0 !important;
-    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    border: 2px solid rgba(255, 255, 255, 0.35) !important;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s ease;
     outline: none;
     box-sizing: border-box;
 }
 
+.color-btn:hover {
+    transform: scale(1.1);
+}
+
 .color-btn.active {
     border-color: #ffffff !important;
-    transform: scale(1.2);
-    box-shadow: 0 0 12px currentColor;
+    transform: scale(1.25);
+    box-shadow: 0 0 15px currentColor;
 }

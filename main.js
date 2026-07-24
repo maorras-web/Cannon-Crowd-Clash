@@ -127,8 +127,8 @@ window.addEventListener('DOMContentLoaded', () => {
     let environmentGroup = new THREE.Group();
     scene.add(environmentGroup);
 
-    let snowParticlesGroup = new THREE.Group();
-    scene.add(snowParticlesGroup);
+    let particlesGroup = new THREE.Group();
+    scene.add(particlesGroup);
 
     const mapThemes = {
         space: { 
@@ -142,7 +142,7 @@ window.addEventListener('DOMContentLoaded', () => {
         desert: { 
             bg: 0xd97706, 
             fog: 0x92400e, 
-            track: 0x5c2c16, 
+            track: 0x3d1c0a, // מסלול חום כהה עמוק
             light: 0xfef08a, 
             dirLightColor: 0xffedd5,
             type: 'desert' 
@@ -169,8 +169,8 @@ window.addEventListener('DOMContentLoaded', () => {
         while (environmentGroup.children.length > 0) {
             environmentGroup.remove(environmentGroup.children[0]);
         }
-        while (snowParticlesGroup.children.length > 0) {
-            snowParticlesGroup.remove(snowParticlesGroup.children[0]);
+        while (particlesGroup.children.length > 0) {
+            particlesGroup.remove(particlesGroup.children[0]);
         }
 
         const safetyOffset = (trackWidth / 2) + 7.0;
@@ -203,15 +203,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // כוכבים לבנים קטנים וצפופים בכל השטחים המתים והצדדים בחלל
-            const starGeo = new THREE.SphereGeometry(0.25, 6, 6);
+            // כוכבים לבנים קטנים וצפופים בכל השטחים המתים והפינות
+            const starGeo = new THREE.SphereGeometry(0.22, 6, 6);
             const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            for (let i = 0; i < 900; i++) {
+            for (let i = 0; i < 1200; i++) {
                 const star = new THREE.Mesh(starGeo, starMat);
                 const side = Math.random() < 0.5 ? -1 : 1;
                 star.position.set(
-                    side * (safetyOffset + 2 + Math.random() * 90),
-                    Math.random() * 70 - 15,
+                    side * (safetyOffset + 1 + Math.random() * 120),
+                    Math.random() * 90 - 20,
                     (Math.random() - 0.5) * trackLength
                 );
                 environmentGroup.add(star);
@@ -254,11 +254,21 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
+
+            // גרגירי חול מרחפים במדבר
+            const sandGeo = new THREE.SphereGeometry(0.15, 6, 6);
+            const sandMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+            for (let i = 0; i < 100; i++) {
+                const grain = new THREE.Mesh(sandGeo, sandMat);
+                grain.position.set((Math.random() - 0.5) * 40, Math.random() * 25, (Math.random() - 0.5) * 1500);
+                particlesGroup.add(grain);
+            }
         } 
         else if (theme.type === 'snow') {
             const iceMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.3, flatShading: true });
             const pineLeavesMat = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.8 });
             const snowCapMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+            const bushMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.9 });
 
             for (let z = 200; z > -trackLength; z -= 35) {
                 [-1, 1].forEach(side => {
@@ -286,6 +296,15 @@ window.addEventListener('DOMContentLoaded', () => {
                         treeGroup.position.set(side * (safetyOffset + 3), 0, z);
                         environmentGroup.add(treeGroup);
                     }
+
+                    // שיחי שלג קטנים וגבעות בשטחים המתים למילוי העין
+                    if (Math.random() < 0.7) {
+                        const bushSize = 0.8 + Math.random() * 1.2;
+                        const bush = new THREE.Mesh(new THREE.SphereGeometry(bushSize, 8, 8), bushMat);
+                        bush.position.set(side * (safetyOffset + 1.2 + Math.random() * 3), bushSize / 2, z + (Math.random() - 0.5) * 10);
+                        bush.castShadow = true;
+                        environmentGroup.add(bush);
+                    }
                 });
             }
 
@@ -294,7 +313,7 @@ window.addEventListener('DOMContentLoaded', () => {
             for (let i = 0; i < 120; i++) {
                 const flake = new THREE.Mesh(flakeGeo, flakeMat);
                 flake.position.set((Math.random() - 0.5) * 40, Math.random() * 30, (Math.random() - 0.5) * 1500);
-                snowParticlesGroup.add(flake);
+                particlesGroup.add(flake);
             }
         }
     }
@@ -377,7 +396,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 6. כדורים ואפקטים ---
+    // --- 6. כדורים ושובל זוהר (Trail / Glow) ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 256; canvas.height = 256;
@@ -541,12 +560,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
-        if (selectedMap === 'snow') {
-            snowParticlesGroup.children.forEach(flake => {
-                flake.position.y -= delta * 15;
-                flake.position.z += delta * 20;
-                if (flake.position.y < 0) flake.position.y = 30;
-                if (flake.position.z > cannonGroup.position.z + 20) flake.position.z = cannonGroup.position.z - 400;
+        // אנימציית חלקיקים (שלג/חול)
+        if (selectedMap === 'snow' || selectedMap === 'desert') {
+            particlesGroup.children.forEach(p => {
+                p.position.y -= delta * 12;
+                p.position.z += delta * 18;
+                if (p.position.y < 0) p.position.y = 30;
+                if (p.position.z > cannonGroup.position.z + 20) p.position.z = cannonGroup.position.z - 400;
             });
         }
 
