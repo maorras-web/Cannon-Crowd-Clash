@@ -3,7 +3,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 1. מנוע אודיו ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-        gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'
+        gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
+        hit: 'https://assets.mixkit.co/active_storage/sfx/2658/2658-preview.mp3'
     };
 
     const audioBuffers = {};
@@ -100,7 +101,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const safetyOffset = (trackWidth / 2) + 3.0;
 
-        // כוכבים ברקע
         for (let i = 0; i < 3000; i++) {
             const star = new THREE.Mesh(starGeo, starMat);
             const side = Math.random() < 0.5 ? -1 : 1;
@@ -113,7 +113,6 @@ window.addEventListener('DOMContentLoaded', () => {
             environmentGroup.add(star);
         }
 
-        // 1. אובייקטים מעוגלים מפוזרים במיקומים רנדומליים בצידי המסלול
         const orbGeometries = [
             new THREE.SphereGeometry(1.5, 16, 16),
             new THREE.SphereGeometry(2.5, 16, 16),
@@ -148,10 +147,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 2. UFO חייזרים (מופיעה אחרי 10 שניות + לייזר רק מעל המסלול) ---
-    let ufoTimer = 0.0; // ספירה מתחילת המשחק
+    // --- 4. UFO חייזרים ---
+    let ufoTimer = 0.0;
     let activeUFO = null;
-    let ufoSpawnInterval = 10.0; // הופעה ראשונה אחרי 10 שניות
+    let ufoSpawnInterval = 10.0;
 
     function spawnUFO() {
         if (activeUFO) {
@@ -179,7 +178,6 @@ window.addEventListener('DOMContentLoaded', () => {
         ring.position.y = -0.3;
         ufoGroup.add(ring);
 
-        // קרן הלייזר
         const beamGeo = new THREE.ConeGeometry(trackWidth * 0.6, 25, 16, 1, true);
         const beamMat = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
@@ -191,7 +189,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         const laserBeam = new THREE.Mesh(beamGeo, beamMat);
         laserBeam.position.y = -12.5;
-        laserBeam.visible = false; // כבוי בברירת מחדל
+        laserBeam.visible = false;
         ufoGroup.add(laserBeam);
 
         const startX = -45;
@@ -219,7 +217,7 @@ window.addEventListener('DOMContentLoaded', () => {
         
         if (ufoTimer >= ufoSpawnInterval) {
             ufoTimer = 0;
-            ufoSpawnInterval = 20.0; // אחרי הפעם הראשונה (10 שניות), יופיע כל 20 שניות
+            ufoSpawnInterval = 20.0;
             spawnUFO();
         }
 
@@ -236,7 +234,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeUFO.group.position.y = activeUFO.startY + Math.sin(p * Math.PI * 6) * 0.5;
                 activeUFO.group.rotation.y += delta * 4;
 
-                // 3. קרן הלייזר תופיע רק כאשר החללית נמצאת מעל המסלול
                 const halfTrack = trackWidth / 2;
                 if (currentX >= -halfTrack && currentX <= halfTrack) {
                     activeUFO.laser.visible = true;
@@ -247,7 +244,99 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 4. תותח ומנועי דחף צדדיים ---
+    // --- 5. אויבים: אנשי לטאות ירוקים ---
+    const lizards = [];
+    let lizardSpawnTimer = 0;
+    const lizardSpawnInterval = 2.5; // הופעת לטאה כל 2.5 שניות
+
+    function createLizardMesh() {
+        const lizardGroup = new THREE.Group();
+
+        // גוף ירוק
+        const bodyGeo = new THREE.CylinderGeometry(0.5, 0.7, 1.6, 8);
+        const lizardMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.5, metalness: 0.2 });
+        const body = new THREE.Mesh(bodyGeo, lizardMat);
+        body.position.y = 0.8;
+        lizardGroup.add(body);
+
+        // ראש
+        const headGeo = new THREE.SphereGeometry(0.55, 10, 10);
+        const head = new THREE.Mesh(headGeo, lizardMat);
+        head.position.y = 1.8;
+        lizardGroup.add(head);
+
+        // עיניים אדומות זוהרות
+        const eyeGeo = new THREE.SphereGeometry(0.12, 6, 6);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        
+        const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+        leftEye.position.set(-0.2, 1.9, 0.45);
+        lizardGroup.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+        rightEye.position.set(0.2, 1.9, 0.45);
+        lizardGroup.add(rightEye);
+
+        // זרועות/ציפורניים
+        const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
+        const leftArm = new THREE.Mesh(armGeo, lizardMat);
+        leftArm.position.set(-0.65, 1.0, 0.2);
+        leftArm.rotation.z = Math.PI / 6;
+        lizardGroup.add(leftArm);
+
+        const rightArm = new THREE.Mesh(armGeo, lizardMat);
+        rightArm.position.set(0.65, 1.0, 0.2);
+        rightArm.rotation.z = -Math.PI / 6;
+        lizardGroup.add(rightArm);
+
+        return lizardGroup;
+    }
+
+    function spawnLizard() {
+        const lizard = createLizardMesh();
+        const spawnX = (Math.random() - 0.5) * (trackWidth - 3);
+        const spawnZ = cannonGroup.position.z - 120 - Math.random() * 30; // מופיע רחוק קדימה
+
+        lizard.position.set(spawnX, 0, spawnZ);
+        scene.add(lizard);
+        lizards.push(lizard);
+    }
+
+    function updateLizards(delta) {
+        lizardSpawnTimer += delta;
+        if (lizardSpawnTimer >= lizardSpawnInterval) {
+            lizardSpawnTimer = 0;
+            spawnLizard();
+        }
+
+        const lizardSpeed = 16.0;
+
+        for (let i = lizards.length - 1; i >= 0; i--) {
+            const liz = lizards[i];
+            
+            // תנועה לכיוון התותח
+            liz.position.z += lizardSpeed * delta;
+            
+            // תנועת הליכה/קפיצה קלה
+            liz.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 10)) * 0.4;
+            liz.rotation.y = Math.sin(clock.getElapsedTime() * 8) * 0.15;
+
+            // בדיקת פגיעה בתותח (Game Over)
+            const distToCannon = liz.position.distanceTo(cannonGroup.position);
+            if (distToCannon < 1.8) {
+                gameOver();
+                return;
+            }
+
+            // ניקוי אם עברו את התותח
+            if (liz.position.z > cannonGroup.position.z + 10) {
+                scene.remove(liz);
+                lizards.splice(i, 1);
+            }
+        }
+    }
+
+    // --- 6. תותח ומנועי דחף צדדיים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -280,7 +369,6 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelRight.castShadow = true;
     cannonMeshGroup.add(barrelRight);
 
-    // מנועי דחף צדדיים
     const thrusterGeo = new THREE.CylinderGeometry(0.22, 0.3, 0.6, 16);
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
 
@@ -351,7 +439,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 5. כדורים ואפקטים ---
+    // --- 7. כדורים ואפקטים ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -382,10 +470,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function triggerExplosion(pos, colorHex) {
         const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 12; i++) {
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
-            p.position.x += (Math.random() - 0.5) * 3;
+            p.position.x += (Math.random() - 0.5) * 2;
             p.position.y += Math.random() * 2;
             p.userData = { vx: (Math.random() - 0.5) * 12, vy: Math.random() * 10 + 3, vz: (Math.random() - 0.5) * 12, life: 1.0, mat: particleMat };
             scene.add(p);
@@ -393,7 +481,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. מערכת שערים ---
+    // --- 8. מערכת שערים ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -459,7 +547,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. שליטה ---
+    // --- 9. שליטה ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
@@ -480,8 +568,14 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 8. מצבי משחק ---
+    // --- 10. מצבי משחק וסיום ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
+
+    function gameOver() {
+        gameStarted = false;
+        alert(`Game Over! האנשי לטאות פגעו בתותח!\nהניקוד שלך: ${score}`);
+        window.location.reload();
+    }
 
     const startBtn = document.getElementById('start-btn');
     if (startBtn) {
@@ -505,7 +599,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (pauseBtn) pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu?.classList.remove('hidden'); });
     if (resumeBtn) resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu?.classList.add('hidden'); });
 
-    // --- 9. לולאת המשחק ---
+    // --- 11. לולאת המשחק ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
@@ -516,6 +610,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
 
         updateUFOSystem(delta);
+        updateLizards(delta);
 
         for (let i = gates.length - 1; i >= 0; i--) {
             gates[i].position.z += gateSpeed * delta;
@@ -535,7 +630,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // פעימות להבה ואפקט דחף
         const flameTime = clock.getElapsedTime() * 20;
         const basePulse = 0.85 + Math.sin(flameTime) * 0.15;
         
@@ -558,17 +652,42 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
+        // ניהול כדורים + התנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 55 * delta;
             b.rotation.z += delta * 3;
 
-            if (b.position.z < cannonGroup.position.z - 120) {
+            if (b.position.z < cannonGroup.position.z - 130) {
                 scene.remove(b);
                 bullets.splice(i, 1);
                 continue;
             }
 
+            // 1. פגיעה באנשי לטאות
+            let bulletDestroyed = false;
+            for (let k = lizards.length - 1; k >= 0; k--) {
+                const liz = lizards[k];
+                if (b.position.distanceTo(liz.position) < 1.4) {
+                    playSound('hit');
+                    score += 30;
+                    const scoreVal = document.getElementById('score-val');
+                    if (scoreVal) scoreVal.innerText = score;
+
+                    triggerExplosion(liz.position, 0x16a34a); // פיצוץ ירוק
+                    scene.remove(liz);
+                    lizards.splice(k, 1);
+
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    bulletDestroyed = true;
+                    break;
+                }
+            }
+
+            if (bulletDestroyed) continue;
+
+            // 2. פגיעה בשערים
             for (let j = gates.length - 1; j >= 0; j--) {
                 const g = gates[j];
                 if (Math.abs(b.position.z - g.position.z) < 1.5 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
