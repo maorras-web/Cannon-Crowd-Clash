@@ -199,7 +199,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 4. תותח ומנועי דחף צדדיים (אש שיוצאת אך ורק הצידה החוצה) ---
+    // --- 4. תותח ומנועי דחף צדדיים (אש שממוקמת בדיוק בקצה הצינורות הצידיים) ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -233,7 +233,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonMeshGroup.add(barrelRight);
 
     // מנועי דחף צדדיים
-    const thrusterGeo = new THREE.CylinderGeometry(0.25, 0.35, 0.7, 16);
+    const thrusterGeo = new THREE.CylinderGeometry(0.22, 0.3, 0.6, 16);
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
 
     const leftThruster = new THREE.Mesh(thrusterGeo, thrusterMat);
@@ -246,11 +246,13 @@ window.addEventListener('DOMContentLoaded', () => {
     rightThruster.position.set(1.2, 0.1, 0);
     cannonMeshGroup.add(rightThruster);
 
-    // פונקציה ליצירת להבה שפועלת ונפלטת אך ורק החוצה לצדדים
-    function createSideFlame(direction) {
+    // פונקציה ליצירת להבה צדדית הממוקמת בקצה המדחף
+    function createThrusterFlame() {
         const flameGroup = new THREE.Group();
 
-        const outerGeo = new THREE.ConeGeometry(0.28, 1.1, 12);
+        // להבה חיצונית
+        const outerGeo = new THREE.ConeGeometry(0.25, 0.9, 12);
+        outerGeo.translate(0, -0.45, 0); 
         const outerMat = new THREE.MeshBasicMaterial({
             color: 0x00f0ff,
             transparent: true,
@@ -258,11 +260,12 @@ window.addEventListener('DOMContentLoaded', () => {
             blending: THREE.AdditiveBlending
         });
         const outerFlame = new THREE.Mesh(outerGeo, outerMat);
-        outerFlame.rotation.z = direction * (Math.PI / 2);
-        outerFlame.position.x = direction * 0.6;
+        outerFlame.rotation.z = Math.PI;
         flameGroup.add(outerFlame);
 
-        const innerGeo = new THREE.ConeGeometry(0.14, 0.7, 12);
+        // ליבה פנימית
+        const innerGeo = new THREE.ConeGeometry(0.12, 0.6, 12);
+        innerGeo.translate(0, -0.3, 0);
         const innerMat = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
@@ -270,17 +273,18 @@ window.addEventListener('DOMContentLoaded', () => {
             blending: THREE.AdditiveBlending
         });
         const innerFlame = new THREE.Mesh(innerGeo, innerMat);
-        innerFlame.rotation.z = direction * (Math.PI / 2);
-        innerFlame.position.x = direction * 0.4;
+        innerFlame.rotation.z = Math.PI;
         flameGroup.add(innerFlame);
 
         return flameGroup;
     }
 
-    const leftFlame = createSideFlame(-1);  // יוצא שמאלה
+    const leftFlame = createThrusterFlame();
+    leftFlame.position.set(0, 0.35, 0);
     leftThruster.add(leftFlame);
 
-    const rightFlame = createSideFlame(1);   // יוצא ימינה
+    const rightFlame = createThrusterFlame();
+    rightFlame.position.set(0, 0.35, 0);
     rightThruster.add(rightFlame);
 
     cannonGroup.add(cannonMeshGroup);
@@ -486,13 +490,12 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // פעימות אש דינמיות שנפלטות מהצדדים
+        // פעימות להבה ואפקט דחף בזמן תנועה
         const flameTime = clock.getElapsedTime() * 20;
-        const basePulse = 0.8 + Math.sin(flameTime) * 0.2;
+        const basePulse = 0.85 + Math.sin(flameTime) * 0.15;
         
-        // דחף חזק מהמנוע הנגדי בעת תנועה
-        let leftBonus = moveDelta > 0.01 ? Math.abs(moveDelta) * 12 : 0;
-        let rightBonus = moveDelta < -0.01 ? Math.abs(moveDelta) * 12 : 0;
+        let leftBonus = moveDelta > 0.01 ? Math.abs(moveDelta) * 8 : 0;
+        let rightBonus = moveDelta < -0.01 ? Math.abs(moveDelta) * 8 : 0;
 
         leftFlame.scale.set(basePulse + leftBonus, basePulse + leftBonus, basePulse + leftBonus);
         rightFlame.scale.set(basePulse + rightBonus, basePulse + rightBonus, basePulse + rightBonus);
