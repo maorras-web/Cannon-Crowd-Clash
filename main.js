@@ -113,6 +113,7 @@ window.addEventListener('DOMContentLoaded', () => {
             environmentGroup.add(star);
         }
 
+        // אובייקטים מעוגלים מפוזרים במיקומים רנדומליים בצידי המסלול
         const orbGeometries = [
             new THREE.SphereGeometry(1.5, 16, 16),
             new THREE.SphereGeometry(2.5, 16, 16),
@@ -150,7 +151,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 4. UFO חייזרים ---
     let ufoTimer = 0.0;
     let activeUFO = null;
-    let ufoSpawnInterval = 10.0;
+    let ufoSpawnInterval = 10.0; // מופיע לראשונה אחרי 10 שניות
 
     function spawnUFO() {
         if (activeUFO) {
@@ -178,6 +179,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ring.position.y = -0.3;
         ufoGroup.add(ring);
 
+        // קרן לייזר
         const beamGeo = new THREE.ConeGeometry(trackWidth * 0.6, 25, 16, 1, true);
         const beamMat = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
@@ -189,7 +191,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         const laserBeam = new THREE.Mesh(beamGeo, beamMat);
         laserBeam.position.y = -12.5;
-        laserBeam.visible = false;
+        laserBeam.visible = false; // מוצג רק מעל המסלול
         ufoGroup.add(laserBeam);
 
         const startX = -45;
@@ -217,7 +219,7 @@ window.addEventListener('DOMContentLoaded', () => {
         
         if (ufoTimer >= ufoSpawnInterval) {
             ufoTimer = 0;
-            ufoSpawnInterval = 20.0;
+            ufoSpawnInterval = 20.0; // אחרי הפעם הראשונה יופיע כל 20 שניות
             spawnUFO();
         }
 
@@ -244,50 +246,119 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. אויבים: אנשי לטאות ירוקים ---
+    // --- 5. אויבים: אנשי לטאות ירוקים, שריריים ומאיימים ---
     const lizards = [];
     let lizardSpawnTimer = 0;
-    const lizardSpawnInterval = 2.5; // הופעת לטאה כל 2.5 שניות
+    const lizardSpawnInterval = 3.0; // הופעת לטאה כל 3 שניות
 
     function createLizardMesh() {
         const lizardGroup = new THREE.Group();
 
-        // גוף ירוק
-        const bodyGeo = new THREE.CylinderGeometry(0.5, 0.7, 1.6, 8);
-        const lizardMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.5, metalness: 0.2 });
-        const body = new THREE.Mesh(bodyGeo, lizardMat);
-        body.position.y = 0.8;
-        lizardGroup.add(body);
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0x1e5622, roughness: 0.6, metalness: 0.1 });
+        const armorMat = new THREE.MeshStandardMaterial({ color: 0x143e17, roughness: 0.4, metalness: 0.3 });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 }); // עיניים זהובות
+        const spikeMat = new THREE.MeshStandardMaterial({ color: 0x0f2f11, roughness: 0.3 });
 
-        // ראש
-        const headGeo = new THREE.SphereGeometry(0.55, 10, 10);
-        const head = new THREE.Mesh(headGeo, lizardMat);
-        head.position.y = 1.8;
-        lizardGroup.add(head);
+        // 1. חזה וגוף שרירי
+        const chestGeo = new THREE.BoxGeometry(1.6, 1.4, 1.1);
+        const chest = new THREE.Mesh(chestGeo, skinMat);
+        chest.position.y = 2.2;
+        lizardGroup.add(chest);
 
-        // עיניים אדומות זוהרות
-        const eyeGeo = new THREE.SphereGeometry(0.12, 6, 6);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const waistGeo = new THREE.CylinderGeometry(0.65, 0.55, 1.0, 10);
+        const waist = new THREE.Mesh(waistGeo, skinMat);
+        waist.position.y = 1.1;
+        lizardGroup.add(waist);
+
+        // 2. כתפיים שריריות ושריון
+        const shoulderGeo = new THREE.SphereGeometry(0.55, 12, 12);
         
-        const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-        leftEye.position.set(-0.2, 1.9, 0.45);
-        lizardGroup.add(leftEye);
+        const leftShoulder = new THREE.Mesh(shoulderGeo, armorMat);
+        leftShoulder.position.set(-1.05, 2.6, 0);
+        lizardGroup.add(leftShoulder);
 
-        const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-        rightEye.position.set(0.2, 1.9, 0.45);
-        lizardGroup.add(rightEye);
+        const rightShoulder = new THREE.Mesh(shoulderGeo, armorMat);
+        rightShoulder.position.set(1.05, 2.6, 0);
+        lizardGroup.add(rightShoulder);
 
-        // זרועות/ציפורניים
-        const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
-        const leftArm = new THREE.Mesh(armGeo, lizardMat);
-        leftArm.position.set(-0.65, 1.0, 0.2);
-        leftArm.rotation.z = Math.PI / 6;
+        // 3. זרועות עבות
+        const armGeo = new THREE.CylinderGeometry(0.35, 0.28, 1.3, 10);
+        
+        const leftArm = new THREE.Mesh(armGeo, skinMat);
+        leftArm.position.set(-1.25, 1.8, 0.1);
+        leftArm.rotation.z = Math.PI / 12;
+        leftArm.rotation.x = -Math.PI / 8;
         lizardGroup.add(leftArm);
 
-        const rightArm = new THREE.Mesh(armGeo, lizardMat);
-        rightArm.position.set(0.65, 1.0, 0.2);
-        rightArm.rotation.z = -Math.PI / 6;
+        const rightArm = new THREE.Mesh(armGeo, skinMat);
+        rightArm.position.set(1.25, 1.8, 0.1);
+        rightArm.rotation.z = -Math.PI / 12;
+        rightArm.rotation.x = -Math.PI / 8;
         lizardGroup.add(rightArm);
+
+        // 4. ראש מוארך עם חרטום
+        const headGroup = new THREE.Group();
+        
+        const craniumGeo = new THREE.BoxGeometry(0.9, 0.7, 0.9);
+        const cranium = new THREE.Mesh(craniumGeo, skinMat);
+        cranium.position.y = 0.35;
+        headGroup.add(cranium);
+
+        const snoutGeo = new THREE.ConeGeometry(0.5, 1.1, 4);
+        const snout = new THREE.Mesh(snoutGeo, skinMat);
+        snout.rotation.x = -Math.PI / 2;
+        snout.rotation.y = Math.PI / 4;
+        snout.position.set(0, 0.25, 0.8);
+        headGroup.add(snout);
+
+        const eyeGeo = new THREE.SphereGeometry(0.12, 8, 8);
+        const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+        leftEye.position.set(-0.38, 0.45, 0.4);
+        headGroup.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+        rightEye.position.set(0.38, 0.45, 0.4);
+        headGroup.add(rightEye);
+
+        headGroup.position.set(0, 2.8, 0.1);
+        lizardGroup.add(headGroup);
+
+        // 5. קוצים בגב
+        for (let i = 0; i < 4; i++) {
+            const spikeGeo = new THREE.ConeGeometry(0.18, 0.6, 4);
+            const spike = new THREE.Mesh(spikeGeo, spikeMat);
+            spike.rotation.x = -Math.PI / 3;
+            spike.position.set(0, 2.7 - (i * 0.45), -0.65 - (i * 0.1));
+            lizardGroup.add(spike);
+        }
+
+        // 6. זנב ארוך
+        const tailGroup = new THREE.Group();
+        const tailSeg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.25, 1.2, 8), skinMat);
+        tailSeg1.rotation.x = -Math.PI / 3;
+        tailSeg1.position.set(0, 0, -0.5);
+        tailGroup.add(tailSeg1);
+
+        const tailSeg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.1, 1.2, 8), skinMat);
+        tailSeg2.rotation.x = -Math.PI / 6;
+        tailSeg2.position.set(0, -0.4, -1.3);
+        tailGroup.add(tailSeg2);
+
+        tailGroup.position.set(0, 0.8, 0);
+        lizardGroup.add(tailGroup);
+
+        // 7. רגליים
+        const legGeo = new THREE.CylinderGeometry(0.42, 0.3, 1.2, 10);
+        
+        const leftLeg = new THREE.Mesh(legGeo, skinMat);
+        leftLeg.position.set(-0.55, 0.6, 0);
+        lizardGroup.add(leftLeg);
+
+        const rightLeg = new THREE.Mesh(legGeo, skinMat);
+        rightLeg.position.set(0.55, 0.6, 0);
+        lizardGroup.add(rightLeg);
+
+        lizardGroup.scale.set(1.35, 1.35, 1.35);
 
         return lizardGroup;
     }
@@ -295,7 +366,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function spawnLizard() {
         const lizard = createLizardMesh();
         const spawnX = (Math.random() - 0.5) * (trackWidth - 3);
-        const spawnZ = cannonGroup.position.z - 120 - Math.random() * 30; // מופיע רחוק קדימה
+        const spawnZ = cannonGroup.position.z - 120 - Math.random() * 30;
 
         lizard.position.set(spawnX, 0, spawnZ);
         scene.add(lizard);
@@ -313,22 +384,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
         for (let i = lizards.length - 1; i >= 0; i--) {
             const liz = lizards[i];
-            
-            // תנועה לכיוון התותח
             liz.position.z += lizardSpeed * delta;
             
-            // תנועת הליכה/קפיצה קלה
+            // תנועת צעידה וקפיצות קלות
             liz.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 10)) * 0.4;
             liz.rotation.y = Math.sin(clock.getElapsedTime() * 8) * 0.15;
 
-            // בדיקת פגיעה בתותח (Game Over)
+            // בדיקת פגיעה בתותח
             const distToCannon = liz.position.distanceTo(cannonGroup.position);
             if (distToCannon < 1.8) {
                 gameOver();
                 return;
             }
 
-            // ניקוי אם עברו את התותח
             if (liz.position.z > cannonGroup.position.z + 10) {
                 scene.remove(liz);
                 lizards.splice(i, 1);
@@ -336,7 +404,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. תותח ומנועי דחף צדדיים ---
+    // --- 6. תותח ומנועי דחף ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -668,7 +736,7 @@ window.addEventListener('DOMContentLoaded', () => {
             let bulletDestroyed = false;
             for (let k = lizards.length - 1; k >= 0; k--) {
                 const liz = lizards[k];
-                if (b.position.distanceTo(liz.position) < 1.4) {
+                if (b.position.distanceTo(liz.position) < 1.6) {
                     playSound('hit');
                     score += 30;
                     const scoreVal = document.getElementById('score-val');
