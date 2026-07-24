@@ -77,7 +77,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. סצנה ותאורה מתקדמת ---
+    // --- 3. סצנה ותאורה ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050714);
     scene.fog = new THREE.FogExp2(0x050714, 0.0008);
@@ -110,8 +110,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // --- 4. מסלול ועולם החלל בלבד ---
-    // הגדלת רוחב המסלול מ-14 ל-16 (+2 סנטימטרים/יחידות)
+    // --- 4. מסלול ועולם החלל ---
     const trackWidth = 16; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
@@ -131,7 +130,6 @@ window.addEventListener('DOMContentLoaded', () => {
             environmentGroup.remove(environmentGroup.children[0]);
         }
 
-        // יצירת כמות ענקית של כוכבים לבנים קטנים בשטחים המתים (3,500 כוכבים)
         const starGeo = new THREE.SphereGeometry(0.18, 6, 6);
         const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const safetyOffset = (trackWidth / 2) + 3.0;
@@ -140,7 +138,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const star = new THREE.Mesh(starGeo, starMat);
             const side = Math.random() < 0.5 ? -1 : 1;
             
-            // פיזור רחב מאוד מסביב למסלול ולכל אורך החלל
             star.position.set(
                 side * (safetyOffset + Math.random() * 200),
                 (Math.random() - 0.5) * 160,
@@ -152,7 +149,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 5. עיצוב תותח וצללים ---
+    // --- 5. עיצוב תותח ומנועי דחף צדדיים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -184,6 +181,36 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelRight.position.set(0.45, 0.35, -0.9);
     barrelRight.castShadow = true;
     cannonMeshGroup.add(barrelRight);
+
+    // --- יצירת מנועי דחף בצדדים ---
+    const thrusterGeo = new THREE.CylinderGeometry(0.2, 0.28, 0.7, 12);
+    const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+
+    const leftThruster = new THREE.Mesh(thrusterGeo, thrusterMat);
+    leftThruster.rotation.z = Math.PI / 2;
+    leftThruster.position.set(-1.4, 0.2, 0);
+    cannonMeshGroup.add(leftThruster);
+
+    const rightThruster = new THREE.Mesh(thrusterGeo, thrusterMat);
+    rightThruster.rotation.z = -Math.PI / 2;
+    rightThruster.position.set(1.4, 0.2, 0);
+    cannonMeshGroup.add(rightThruster);
+
+    // אפקט להבות המדחף
+    const flameGeo = new THREE.ConeGeometry(0.22, 1.2, 12);
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.95 });
+
+    const leftFlame = new THREE.Mesh(flameGeo, flameMat);
+    leftFlame.rotation.z = Math.PI / 2;
+    leftFlame.position.set(-2.2, 0.2, 0);
+    leftFlame.visible = false;
+    cannonMeshGroup.add(leftFlame);
+
+    const rightFlame = new THREE.Mesh(flameGeo, flameMat);
+    rightFlame.rotation.z = -Math.PI / 2;
+    rightFlame.position.set(2.2, 0.2, 0);
+    rightFlame.visible = false;
+    cannonMeshGroup.add(rightFlame);
 
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
@@ -385,6 +412,23 @@ window.addEventListener('DOMContentLoaded', () => {
         
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
+
+        // --- בקרת מנועי הדחף לפי כיוון התנועה ---
+        if (moveDelta > 0.015) {
+            // התותח נע ימינה -> המנוע השמאלי פועל!
+            leftFlame.visible = true;
+            rightFlame.visible = false;
+            leftFlame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.4, 1);
+        } else if (moveDelta < -0.015) {
+            // התותח נע שמאלה -> המנוע הימני פועל!
+            leftFlame.visible = false;
+            rightFlame.visible = true;
+            rightFlame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.4, 1);
+        } else {
+            // התותח בעמידה/תנועה אפסית -> המדחפים כבויים
+            leftFlame.visible = false;
+            rightFlame.visible = false;
+        }
 
         camera.position.x = cannonGroup.position.x * 0.2;
         camera.position.y = cannonGroup.position.y + 12.5;
