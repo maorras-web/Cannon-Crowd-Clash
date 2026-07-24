@@ -64,7 +64,7 @@ canvas {
     border-radius: 16px;
     cursor: pointer;
     box-shadow: 0 0 15px rgba(56, 189, 248, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .hud-btn:hover {
@@ -124,6 +124,7 @@ canvas {
 
 .volume-container input[type="range"] {
     -webkit-appearance: none;
+    appearance: none;
     width: 90%;
     height: 8px;
     border-radius: 6px;
@@ -144,7 +145,19 @@ canvas {
     transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-.volume-container input[type="range"]::-webkit-slider-thumb:hover {
+.volume-container input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #38bdf8;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 12px #38bdf8;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.volume-container input[type="range"]::-webkit-slider-thumb:hover,
+.volume-container input[type="range"]::-moz-range-thumb:hover {
     transform: scale(1.15);
     background: #7dd3fc;
 }
@@ -178,7 +191,7 @@ canvas {
 }
 
 .game-title {
-    font-family: 'Black Ops One', cursive, sans-serif;
+    font-family: 'Black Ops One', 'Rubik', sans-serif;
     font-size: 34px;
     letter-spacing: 1.5px;
     background: linear-gradient(180deg, #38bdf8 0%, #1d4ed8 100%);
@@ -338,6 +351,7 @@ canvas {
 }
 
 .color-btn {
+    position: relative;
     width: 28px !important;
     height: 28px !important;
     min-width: 28px !important;
@@ -347,9 +361,19 @@ canvas {
     margin: 0 !important;
     border: 2px solid rgba(255, 255, 255, 0.35) !important;
     cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s ease, box-shadow 0.2s ease;
     outline: none;
     box-sizing: border-box;
+}
+
+/* הגדלת שטח הלחיצה למובייל בלי לפגוע במראה */
+.color-btn::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    left: -6px;
+    right: -6px;
 }
 
 .color-btn:hover {

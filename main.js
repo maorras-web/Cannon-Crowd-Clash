@@ -83,7 +83,7 @@ window.addEventListener('DOMContentLoaded', () => {
     scene.fog = new THREE.FogExp2(0x050714, 0.0008);
 
     const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 3000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -98,8 +98,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
     dirLight.position.set(25, 50, 20);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    // הגדלת ביצועים למובייל על ידי אופטימיזציית גודל מפת הצללים
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.near = 0.5;
     dirLight.shadow.camera.far = 250;
     const d = 25;
@@ -110,9 +111,9 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // --- 4. מסלול ועולם החלל ---
-    const trackWidth = 16; 
-    const maxBoundX = trackWidth / 2 - 1.2; 
+    // --- 4. מסלול ועולם החלל (הרחבת רוחב המסלול) ---
+    const trackWidth = 18; // מוגדל מ-16 ל-18
+    const maxBoundX = trackWidth / 2 - 1.2; // גבול התנועה עודכן ל-7.8
     const trackLength = 3500;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
@@ -196,9 +197,9 @@ window.addEventListener('DOMContentLoaded', () => {
     rightThruster.position.set(1.4, 0.2, 0);
     cannonMeshGroup.add(rightThruster);
 
-    // אפקט להבות המדחף
+    // אפקט להבות המדחף (מתעדכן לפי צבע התותח)
     const flameGeo = new THREE.ConeGeometry(0.22, 1.2, 12);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.95 });
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.95 });
 
     const leftFlame = new THREE.Mesh(flameGeo, flameMat);
     leftFlame.rotation.z = Math.PI / 2;
@@ -216,9 +217,11 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
+    // שינוי צבע התותח וגם צבע האש במדחפים
     function changeCannonColor(hexColor) {
         baseMat.color.setHex(hexColor);
         domeMat.color.setHex(hexColor);
+        flameMat.color.setHex(hexColor); // מתאים את צבע הלהבות
     }
 
     const colorButtons = document.querySelectorAll('.color-btn');
@@ -234,19 +237,19 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 6. כדורים ואפקטים ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 256; canvas.height = 256;
+        canvas.width = 128; canvas.height = 128; // הקטנת הרזולוציה לחסכון בזיכרון במובייל
         const ctx = canvas.getContext('2d');
-        const gradient = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+        const gradient = ctx.createRadialGradient(64, 64, 5, 64, 64, 64);
         gradient.addColorStop(0, '#ffffff');
         gradient.addColorStop(0.3, '#ffaa00');
         gradient.addColorStop(0.7, '#ff3300');
         gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillRect(0, 0, 128, 128);
         return new THREE.CanvasTexture(canvas);
     }
 
-    const bulletGeo = new THREE.SphereGeometry(0.45, 16, 16);
+    const bulletGeo = new THREE.SphereGeometry(0.45, 12, 12);
     const bulletMat = new THREE.MeshBasicMaterial({ map: createLightningBallTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     const bullets = [];
 
@@ -262,18 +265,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function triggerExplosion(pos, colorHex) {
         const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 10; i++) { // הקטנה מ-15 ל-10 חלקיקים לשיפור דרמטי בביצועים
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
             p.position.x += (Math.random() - 0.5) * 3;
             p.position.y += Math.random() * 2;
-            p.userData = { vx: (Math.random() - 0.5) * 12, vy: Math.random() * 10 + 3, vz: (Math.random() - 0.5) * 12, life: 1.0 };
+            p.userData = { vx: (Math.random() - 0.5) * 12, vy: Math.random() * 10 + 3, vz: (Math.random() - 0.5) * 12, life: 1.0, mat: particleMat };
             scene.add(p);
             particles.push(p);
         }
     }
 
-    // --- מערכת שערים ---
+    // --- מערכת שערים (מותאמת לרוחב החדש) ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -298,7 +301,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createGate(id, x, z, type, value) {
         const gateGroup = new THREE.Group();
-        const gateWidth = trackWidth / 2 - 0.6;
+        const gateWidth = trackWidth / 2 - 0.6; // מתאים אוטומטית לרוחב המסלול המורחב (8.4 יחידות)
         let label = `+${value}`, colorHex = '#0284c7';
         if (type === 'multiply') { label = `x${value}`; colorHex = '#10b981'; }
 
@@ -308,13 +311,13 @@ window.addEventListener('DOMContentLoaded', () => {
         frame.castShadow = true;
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
-        gateGroup.userData = { id, type, value, colorHex };
+        gateGroup.userData = { id, type, value, colorHex, mat: frameMat };
         scene.add(gateGroup);
         gates.push(gateGroup);
     }
 
     function spawnGatePairAt(z) {
-        const offset = trackWidth / 4;
+        const offset = trackWidth / 4; // מיקום מדויק של מרכז השער בנתיב הימני והשמאלי (4.5 יחידות)
         if (Math.random() > 0.5) {
             createGate(`g_${gateIdCounter++}`, -offset, z, 'multiply', 2);
             createGate(`g_${gateIdCounter++}`, offset, z, 'add', 20);
@@ -399,6 +402,7 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let i = gates.length - 1; i >= 0; i--) {
             gates[i].position.z += gateSpeed * delta;
             if (gates[i].position.z > 20) {
+                if (gates[i].userData.mat) gates[i].userData.mat.dispose();
                 scene.remove(gates[i]);
                 gates.splice(i, 1);
             }
@@ -415,17 +419,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // --- בקרת מנועי הדחף לפי כיוון התנועה ---
         if (moveDelta > 0.015) {
-            // התותח נע ימינה -> המנוע השמאלי פועל!
             leftFlame.visible = true;
             rightFlame.visible = false;
             leftFlame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.4, 1);
         } else if (moveDelta < -0.015) {
-            // התותח נע שמאלה -> המנוע הימני פועל!
             leftFlame.visible = false;
             rightFlame.visible = true;
             rightFlame.scale.set(1 + Math.random() * 0.3, 1 + Math.random() * 0.4, 1);
         } else {
-            // התותח בעמידה/תנועה אפסית -> המדחפים כבויים
             leftFlame.visible = false;
             rightFlame.visible = false;
         }
@@ -474,6 +475,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
 
                     triggerExplosion(g.position, g.userData.colorHex);
+                    if (g.userData.mat) g.userData.mat.dispose();
                     scene.remove(g);
                     gates.splice(j, 1);
                     scene.remove(b);
@@ -483,6 +485,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // ניהול וניקוי זיכרון של חלקיקי הפיצוץ (מונע תקיעות במובייל)
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
             p.userData.life -= delta * 2.5;
@@ -493,6 +496,7 @@ window.addEventListener('DOMContentLoaded', () => {
             p.scale.setScalar(Math.max(0, p.userData.life));
 
             if (p.userData.life <= 0) {
+                if (p.userData.mat) p.userData.mat.dispose();
                 scene.remove(p);
                 particles.splice(i, 1);
             }
