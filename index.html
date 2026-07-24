@@ -42,6 +42,16 @@
                 </select>
             </div>
 
+            <!-- בחירת מפה / עולם -->
+            <div class="setting-item">
+                <label data-i18n="selectMap">בחר עולם 🌍</label>
+                <select id="start-map-select" class="custom-select">
+                    <option value="space">🚀 חלל חיצוני</option>
+                    <option value="desert">🏜️ מדבר לוהט</option>
+                    <option value="snow">❄️ עולם השלג</option>
+                </select>
+            </div>
+
             <div class="high-score-box">🏆 <span data-i18n="personalBest">Personal Best</span>: <span id="start-high-score">0</span></div>
             <button id="start-btn" type="button" class="main-btn juicy-btn" data-i18n="startGame">Start Game 🚀</button>
         </div>
@@ -56,6 +66,15 @@
         <!-- תפריט עצירה (Pause Menu) -->
         <div id="pause-menu" class="status-popup hidden">
             <h2 data-i18n="gamePaused">Game Paused ⏸️</h2>
+
+            <div class="setting-item">
+                <label data-i18n="selectMap">החלף עולם 🌍</label>
+                <select id="pause-map-select" class="custom-select">
+                    <option value="space">🚀 חלל חיצוני</option>
+                    <option value="desert">🏜️ מדבר לוהט</option>
+                    <option value="snow">❄️ עולם השלג</option>
+                </select>
+            </div>
 
             <div class="setting-item">
                 <label data-i18n="cannonColor">צבע התותח 🎨</label>
