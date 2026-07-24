@@ -1,13 +1,13 @@
 * {
-    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
     font-family: 'Rubik', sans-serif;
 }
 
-body, html {
+html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -16,216 +16,244 @@ body, html {
 
 canvas {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
 }
 
 .hidden {
     display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
-/* --- HUD Top Controls --- */
-.hud-card {
+/* === UI תוך כדי משחק === */
+#ui-container {
     position: absolute;
     top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 10px 24px;
-    border-radius: 30px;
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 1.3rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    z-index: 10;
-}
-
-.hud-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.sub-hud {
-    font-size: 1rem;
-    color: #cbd5e1;
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
-    padding-left: 15px;
-}
-
-.icon-button {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 48px;
-    height: 48px;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    color: white;
-    font-size: 1.3rem;
-    cursor: pointer;
-    z-index: 10;
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-.icon-button:hover {
-    transform: scale(1.1);
-    background: rgba(30, 41, 59, 0.9);
-}
-
-/* --- Overlays & Screens --- */
-.overlay-screen {
-    position: absolute;
-    top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#score-card {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    padding: 10px 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.score-label {
+    font-size: 0.75rem;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+#score-val {
+    font-size: 1.8rem;
+    font-weight: 900;
+}
+
+.icon-btn {
+    pointer-events: auto;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: white;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.5) 0%, rgba(5, 7, 20, 0.92) 100%);
-    z-index: 100;
-    transition: opacity 0.5s ease;
 }
 
-/* Glassmorphism Card Design */
-.start-card, .modal-card {
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 28px;
-    padding: 40px 32px;
+/* === מסך פתיחה פנומנלי בפריסה מלאה (Full Screen) === */
+#start-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* דיוק למובייל */
+    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.7) 0%, rgba(5, 7, 20, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.4s ease;
+}
+
+#start-menu {
+    width: 100%;
+    height: 100%;
+    max-width: 480px; /* רוחב נוח לקריאה במחשב, מתפרס מלא בטלפון */
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
     text-align: center;
-    max-width: 420px;
-    width: 88%;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.25);
-    animation: floatIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header-section {
+    margin-top: 20px;
 }
 
 .game-title {
-    font-size: 2.8rem;
+    font-size: clamp(2.8rem, 10vw, 4.2rem);
     font-weight: 900;
-    color: #ffffff;
-    letter-spacing: 2px;
-    margin-bottom: 8px;
-    text-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
-}
-
-.game-title .highlight {
-    color: #38bdf8;
-    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+    line-height: 0.95;
+    background: linear-gradient(180deg, #ffffff 0%, #38bdf8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
+    letter-spacing: -1px;
 }
 
 .game-subtitle {
     color: #94a3b8;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    margin-bottom: 24px;
+    font-size: 1rem;
+    margin-top: 15px;
+    line-height: 1.4;
+    padding: 0 10px;
 }
 
-.stats-preview {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 8px 18px;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 30px;
-    font-size: 0.9rem;
-    color: #e2e8f0;
-}
-
-/* --- Buttons & Inputs --- */
-.glow-button {
+/* בחירת צבע התותח */
+.customization-section {
     width: 100%;
-    padding: 16px 24px;
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: #ffffff;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    border: none;
-    border-radius: 16px;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.glow-button:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 15px 35px rgba(37, 99, 235, 0.6), 0 0 20px rgba(56, 189, 248, 0.8);
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-}
-
-.glow-button:active {
-    transform: translateY(1px) scale(0.98);
-}
-
-.glow-button.secondary {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    box-shadow: 0 10px 25px rgba(5, 150, 105, 0.4);
-}
-
-.modal-card h2 {
-    color: #ffffff;
-    font-size: 1.8rem;
-    margin-bottom: 25px;
-}
-
-.setting-group {
-    margin-bottom: 22px;
-    text-align: left;
-}
-
-.setting-group label {
+.section-label {
     display: block;
-    color: #cbd5e1;
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-bottom: 10px;
+    color: #38bdf8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
 }
 
 .color-picker {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 12px;
 }
 
 .color-btn {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    border: 3px solid transparent;
+    border: 2px solid transparent;
     cursor: pointer;
     transition: transform 0.2s, border-color 0.2s;
 }
 
-.color-btn.active, .color-btn:hover {
-    transform: scale(1.15);
+.color-btn.active {
+    transform: scale(1.2);
     border-color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
 }
 
-input[type="range"] {
+/* שיא אישי */
+.best-badge {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: #e0f2fe;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+/* כפתור התחל רחב ומרשים */
+.action-section {
     width: 100%;
-    accent-color: #38bdf8;
-    height: 6px;
-    border-radius: 3px;
+    margin-bottom: 20px;
 }
 
-@keyframes floatIn {
-    0% { opacity: 0; transform: translateY(30px) scale(0.95); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+#start-btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #ffffff;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4), 0 0 20px rgba(56, 189, 248, 0.2);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+#start-btn:active {
+    transform: scale(0.97);
+}
+
+/* === תפריט עצירה === */
+#pause-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(5, 7, 20, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pause-card {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 24px;
+    text-align: center;
+    width: 90%;
+    max-width: 360px;
+    color: white;
+}
+
+.pause-card h2 {
+    margin-bottom: 20px;
+    color: #38bdf8;
+}
+
+.volume-control {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: right;
+}
+
+#resume-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
 }

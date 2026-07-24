@@ -115,73 +115,99 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- מערכת כוכב נופל בשמיים (בכל 15 שניות - ימין/שמאל לסירוגין) ---
-    let shootingStarTimer = 0;
-    let shootingStarDirectionLeft = true; 
-    let activeShootingStar = null;
+    // --- מערכת צלחת מעופפת (UFO) עם סריקת לייזר ירוקה (כל 60 שניות, 3 שניות משך) ---
+    let ufoTimer = 55.0; // יופיע לראשונה כ-5 שניות לאחר תחילת המשחק
+    let activeUFO = null;
 
-    function createShootingStar(fromLeft) {
-        if (activeShootingStar) {
-            scene.remove(activeShootingStar.group);
-            activeShootingStar = null;
+    function spawnUFO() {
+        if (activeUFO) {
+            scene.remove(activeUFO.group);
+            activeUFO = null;
         }
 
-        const starGroup = new THREE.Group();
-        const startX = fromLeft ? -150 : 150;
-        const endX = fromLeft ? 150 : -150;
-        const startY = 40 + Math.random() * 20;
-        const startZ = cannonGroup.position.z - (80 + Math.random() * 40);
+        const ufoGroup = new THREE.Group();
 
-        // ראש הכוכב המנצנץ
-        const headGeo = new THREE.SphereGeometry(0.6, 8, 8);
-        const headMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const head = new THREE.Mesh(headGeo, headMat);
-        starGroup.add(head);
+        // 1. גוף הצלחת המעופפת (מתכת כסופה)
+        const bodyGeo = new THREE.CylinderGeometry(2.5, 3.5, 0.8, 16);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.1 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        ufoGroup.add(body);
 
-        // זנב הכוכב
-        const tailGeo = new THREE.CylinderGeometry(0.05, 0.5, 12, 8);
-        const tailMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
-        const tail = new THREE.Mesh(tailGeo, tailMat);
-        tail.rotation.z = fromLeft ? -Math.PI / 3 : Math.PI / 3;
-        tail.position.set(fromLeft ? -5 : 5, 2, 0);
-        starGroup.add(tail);
+        // 2. כיפת זכוכית עליונה זוהרת
+        const domeGeo = new THREE.SphereGeometry(1.6, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+        const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.8, transparent: true, opacity: 0.8 });
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        dome.position.y = 0.3;
+        ufoGroup.add(dome);
 
-        starGroup.position.set(startX, startY, startZ);
-        scene.add(starGroup);
+        // 3. אורות היקפיים תחתונים
+        const ringGeo = new THREE.TorusGeometry(3.2, 0.15, 8, 24);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = -0.3;
+        ufoGroup.add(ring);
 
-        activeShootingStar = {
-            group: starGroup,
+        // 4. אלומת לייזר ירוקה רחבה לסריקת המסלול
+        const beamGeo = new THREE.ConeGeometry(trackWidth * 0.7, 25, 16, 1, true);
+        const beamMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const laserBeam = new THREE.Mesh(beamGeo, beamMat);
+        laserBeam.position.y = -12.5;
+        ufoGroup.add(laserBeam);
+
+        // מיקום התחלתי בשמיים מעל המסלול
+        const startX = -35;
+        const endX = 35;
+        const startY = 16;
+        const startZ = cannonGroup.position.z - 30;
+
+        ufoGroup.position.set(startX, startY, startZ);
+        scene.add(ufoGroup);
+
+        activeUFO = {
+            group: ufoGroup,
             progress: 0,
             startX,
             endX,
             startY,
-            endY: startY - 25,
-            duration: 1.8 // זמן החצייה של השמיים בשניות
+            startZ,
+            duration: 3.0 // נשאר 3 שניות בדיוק על המסלול
         };
     }
 
-    function updateShootingStar(delta) {
-        shootingStarTimer += delta;
-        if (shootingStarTimer >= 15.0) {
-            shootingStarTimer = 0;
-            createShootingStar(shootingStarDirectionLeft);
-            shootingStarDirectionLeft = !shootingStarDirectionLeft; // החלפת כיוון בפעם הבאה
+    function updateUFOSystem(delta) {
+        ufoTimer += delta;
+        if (ufoTimer >= 60.0) { // כל דקה (60 שניות)
+            ufoTimer = 0;
+            spawnUFO();
         }
 
-        if (activeShootingStar) {
-            activeShootingStar.progress += delta / activeShootingStar.duration;
-            const p = activeShootingStar.progress;
+        if (activeUFO) {
+            activeUFO.progress += delta / activeUFO.duration;
+            const p = activeUFO.progress;
+
             if (p >= 1.0) {
-                scene.remove(activeShootingStar.group);
-                activeShootingStar = null;
+                scene.remove(activeUFO.group);
+                activeUFO = null;
             } else {
-                activeShootingStar.group.position.x = THREE.MathUtils.lerp(activeShootingStar.startX, activeShootingStar.endX, p);
-                activeShootingStar.group.position.y = THREE.MathUtils.lerp(activeShootingStar.startY, activeShootingStar.endY, p);
+                // תנועת חצייה חלקה של המסלול
+                activeUFO.group.position.x = THREE.MathUtils.lerp(activeUFO.startX, activeUFO.endX, p);
+                // רטט קל בגובה לחוויית טיפוף חייזרית
+                activeUFO.group.position.y = activeUFO.startY + Math.sin(p * Math.PI * 6) * 0.5;
+                // הצלחת מסתובבת תוך כדי תנועה
+                activeUFO.group.rotation.y += delta * 4;
             }
         }
     }
 
-    // --- 4. עיצוב תותח ומנועי דחף צדדיים ---
+    // --- 4. עיצוב תותח ומנועי דחף צדדיים משודרגים ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -214,9 +240,9 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelRight.castShadow = true;
     cannonMeshGroup.add(barrelRight);
 
-    // --- יצירת מנועי דחף ---
-    const thrusterGeo = new THREE.CylinderGeometry(0.2, 0.28, 0.7, 12);
-    const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+    // --- מנועי דחף בצדדים ---
+    const thrusterGeo = new THREE.CylinderGeometry(0.22, 0.32, 0.7, 16);
+    const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
 
     const leftThruster = new THREE.Mesh(thrusterGeo, thrusterMat);
     leftThruster.rotation.z = Math.PI / 2;
@@ -228,39 +254,57 @@ window.addEventListener('DOMContentLoaded', () => {
     rightThruster.position.set(1.4, 0.2, 0);
     cannonMeshGroup.add(rightThruster);
 
-    // --- להבות מדחף מובלטות ומוגדלות ---
-    const flameGeo = new THREE.ConeGeometry(0.32, 1.6, 16);
-    // שימוש ב-MeshStandardMaterial עם Emissive חזק להבלטה מקסימלית של הלהבות
-    const flameMat = new THREE.MeshStandardMaterial({ 
-        color: 0xdc2626, 
-        emissive: 0xdc2626, 
-        emissiveIntensity: 2.5, 
-        transparent: true, 
-        opacity: 0.95 
-    });
+    // --- להבות מדחף משודרגות ויזואלית (דו-שכבתיות עם אפקט זרימה לוהט) ---
+    function createAdvancedFlame() {
+        const flameGroup = new THREE.Group();
 
-    const leftFlame = new THREE.Mesh(flameGeo, flameMat);
-    leftFlame.rotation.z = Math.PI / 2;
-    leftFlame.position.set(-2.4, 0.2, 0);
-    leftFlame.visible = false;
-    cannonMeshGroup.add(leftFlame);
+        // 1. מעטפת להבה חיצונית (ציאן / ניאון זוהר)
+        const outerGeo = new THREE.ConeGeometry(0.4, 1.8, 16);
+        const outerMat = new THREE.MeshBasicMaterial({
+            color: 0x00f0ff,
+            transparent: true,
+            opacity: 0.75,
+            blending: THREE.AdditiveBlending
+        });
+        const outerFlame = new THREE.Mesh(outerGeo, outerMat);
+        outerFlame.position.y = -0.9;
+        flameGroup.add(outerFlame);
 
-    const rightFlame = new THREE.Mesh(flameGeo, flameMat);
-    rightFlame.rotation.z = -Math.PI / 2;
-    rightFlame.position.set(2.4, 0.2, 0);
-    rightFlame.visible = false;
-    cannonMeshGroup.add(rightFlame);
+        // 2. ליבת להבה פנימית חמה (לבן-כחול בוהק)
+        const innerGeo = new THREE.ConeGeometry(0.22, 1.3, 16);
+        const innerMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending
+        });
+        const innerFlame = new THREE.Mesh(innerGeo, innerMat);
+        innerFlame.position.y = -0.65;
+        flameGroup.add(innerFlame);
+
+        return { group: flameGroup, outerMat, innerMat };
+    }
+
+    const leftFlameData = createAdvancedFlame();
+    leftFlameData.group.rotation.z = Math.PI / 2;
+    leftFlameData.group.position.set(-1.75, 0.2, 0);
+    leftFlameData.group.visible = false;
+    cannonMeshGroup.add(leftFlameData.group);
+
+    const rightFlameData = createAdvancedFlame();
+    rightFlameData.group.rotation.z = -Math.PI / 2;
+    rightFlameData.group.position.set(1.75, 0.2, 0);
+    rightFlameData.group.visible = false;
+    cannonMeshGroup.add(rightFlameData.group);
 
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    // שינוי צבע התותח ועדכון הלהבה המובלטת
+    // שינוי צבע התותח
     function changeCannonColor(hexColor) {
         baseMat.color.setHex(hexColor);
         domeMat.color.setHex(hexColor);
-        flameMat.color.setHex(hexColor);
-        flameMat.emissive.setHex(hexColor); // עדכון הזוהר של הלהבה בהתאם
     }
 
     const colorButtons = document.querySelectorAll('.color-btn');
@@ -438,8 +482,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
-        // עדכון תנועת הכוכב הנופל
-        updateShootingStar(delta);
+        // עדכון צלחת מעופפת והלייזר הירוק
+        updateUFOSystem(delta);
 
         for (let i = gates.length - 1; i >= 0; i--) {
             gates[i].position.z += gateSpeed * delta;
@@ -459,18 +503,22 @@ window.addEventListener('DOMContentLoaded', () => {
         const moveDelta = cannonGroup.position.x - prevX;
         cannonMeshGroup.rotation.z = -moveDelta * 0.6;
 
-        // בקרת מנועי הדחף
+        // בקרת מנועי הדחף בצידי התותח + אפקט רטט וריצוד דינמי
         if (moveDelta > 0.015) {
-            leftFlame.visible = true;
-            rightFlame.visible = false;
-            leftFlame.scale.set(1.1 + Math.random() * 0.4, 1.2 + Math.random() * 0.5, 1.1);
+            leftFlameData.group.visible = true;
+            rightFlameData.group.visible = false;
+            
+            const flicker = 1.0 + (Math.random() - 0.5) * 0.35;
+            leftFlameData.group.scale.set(flicker, 1.2 + Math.random() * 0.4, flicker);
         } else if (moveDelta < -0.015) {
-            leftFlame.visible = false;
-            rightFlame.visible = true;
-            rightFlame.scale.set(1.1 + Math.random() * 0.4, 1.2 + Math.random() * 0.5, 1.1);
+            leftFlameData.group.visible = false;
+            rightFlameData.group.visible = true;
+            
+            const flicker = 1.0 + (Math.random() - 0.5) * 0.35;
+            rightFlameData.group.scale.set(flicker, 1.2 + Math.random() * 0.4, flicker);
         } else {
-            leftFlame.visible = false;
-            rightFlame.visible = false;
+            leftFlameData.group.visible = false;
+            rightFlameData.group.visible = false;
         }
 
         camera.position.x = cannonGroup.position.x * 0.2;

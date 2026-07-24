@@ -1,73 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cannon Clash</title>
-    <!-- Google Fonts -->
+    <link rel="stylesheet" href="style.css">
+    <!-- פונט גיימינג מודרני -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800;900&display=swap" rel="stylesheet">
-    <!-- Three.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- UI - Top HUD -->
-    <div id="score-card" class="hud-card hidden">
-        <div class="hud-item">
-            <span class="hud-icon">🚀</span>
+    <!-- תצוגת ניקוד וכפתור הפסקה תוך כדי משחק -->
+    <div id="ui-container">
+        <div id="score-card" class="hidden">
+            <span class="score-label">SCORE</span>
             <span id="score-val">0</span>
         </div>
-        <div class="hud-item sub-hud">
-            <span class="hud-icon">🏆</span>
-            <span id="best-val">0</span>
-        </div>
+        <button id="pause-btn" class="icon-btn hidden">⏸️</button>
     </div>
 
-    <button id="pause-btn" class="icon-button hidden">⚙️</button>
-
-    <!-- Overlay: Start Screen -->
-    <div id="start-overlay" class="overlay-screen">
-        <div class="start-card">
-            <h1 class="game-title">CANNON <span class="highlight">CLASH</span></h1>
-            <p class="game-subtitle">Pass through gates, boost your firepower, and reach the top score!</p>
-            
-            <div class="stats-preview">
-                <span class="trophy-icon">🏆</span>
-                <span class="best-text">PERSONAL BEST: <strong id="menu-best-score">0</strong></span>
+    <!-- מסך פתיחה במבנה מסך מלא -->
+    <div id="start-overlay">
+        <div id="start-menu">
+            <div class="header-section">
+                <h1 class="game-title">CANNON<br>CLASH</h1>
+                <p class="game-subtitle">Pass through gates, boost your firepower, and reach the top score!</p>
             </div>
 
-            <button id="start-btn" class="glow-button">
-                <span>START GAME</span>
-                <span class="rocket-icon">🚀</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Overlay: Settings & Pause Menu -->
-    <div id="pause-menu" class="overlay-screen hidden">
-        <div class="modal-card">
-            <h2>Settings & Pause ⚙️</h2>
-            
-            <div class="setting-group">
-                <label>Cannon Color 🎨</label>
+            <!-- בחירת צבע לתותח -->
+            <div class="customization-section">
+                <span class="section-label">CHOOSE CANNON COLOR</span>
                 <div class="color-picker">
-                    <button class="color-btn active" data-color="0xdc2626" style="background-color: #dc2626;"></button>
-                    <button class="color-btn" data-color="0x16a34a" style="background-color: #16a34a;"></button>
-                    <button class="color-btn" data-color="0x2563eb" style="background-color: #2563eb;"></button>
-                    <button class="color-btn" data-color="0xdb2777" style="background-color: #db2777;"></button>
-                    <button class="color-btn" data-color="0xca8a04" style="background-color: #ca8a04;"></button>
+                    <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
+                    <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
+                    <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
+                    <button class="color-btn" data-color="0xd97706" style="background: #d97706;"></button>
+                    <button class="color-btn" data-color="0x9333ea" style="background: #9333ea;"></button>
                 </div>
             </div>
 
-            <div class="setting-group">
-                <label>Sound Volume 🔊</label>
+            <div class="stats-section">
+                <div class="best-badge">
+                    🏆 PERSONAL BEST: <span id="best-score-val">0</span>
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button id="start-btn">START GAME 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- תפריט הפסקה (Pause) -->
+    <div id="pause-menu" class="hidden">
+        <div class="pause-card">
+            <h2>GAME PAUSED</h2>
+            
+            <div class="volume-control">
+                <label for="volume-slider">🔊 Sound Volume</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
             </div>
 
-            <button id="resume-btn" class="glow-button secondary">Resume Game ▶</button>
+            <button id="resume-btn">RESUME</button>
         </div>
     </div>
 
