@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. מנוע אודיו נקי (ללא רעשי רוח/רקע סינתטיים) ---
+    // --- 1. Clean Audio Engine (No synthetic background/wind noise) ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
@@ -55,7 +55,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 2. סצנה ותאורה ---
+    // --- 2. Scene & Lighting ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050714);
     scene.fog = new THREE.FogExp2(0x050714, 0.0008);
@@ -88,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // --- 3. מסלול ועולם החלל ---
+    // --- 3. Track & Space World ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
@@ -158,7 +158,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 4. UFO חייזרים ---
+    // --- 4. UFO System ---
     let ufoTimer = 0.0;
     let activeUFO = null;
     let ufoSpawnInterval = 10.0;
@@ -255,7 +255,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. אויבים: אנשי לטאות דמויי-אדם ---
+    // --- 5. Enemies: Humanoid Lizardmen ---
     const lizards = [];
     let lizardSpawnTimer = 0;
     const lizardSpawnInterval = 3.0;
@@ -417,7 +417,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. תותח ומנועי דחף ---
+    // --- 6. Cannon & Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -520,7 +520,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 7. כדורים ואפקטים ---
+    // --- 7. Bullets & Effects ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -562,7 +562,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 8. מערכת שערים ---
+    // --- 8. Gates System ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -578,7 +578,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.lineWidth = 12;
         ctx.strokeRect(8, 8, 240, 240);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 80px Rubik';
+        ctx.font = '900 80px Rubik, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(label, 128, 128);
@@ -628,7 +628,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. שליטה ---
+    // --- 9. Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
@@ -649,12 +649,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. מצבי משחק וסיום ---
+    // --- 10. Game States & Game Over ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function gameOver() {
         gameStarted = false;
-        alert(`Game Over! האנשי לטאות פגעו בתותח!\nהניקוד שלך: ${score}`);
+        alert(`Game Over! The lizardmen reached your cannon!\nYour Score: ${score}`);
         window.location.reload();
     }
 
@@ -680,7 +680,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (pauseBtn) pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu?.classList.remove('hidden'); });
     if (resumeBtn) resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu?.classList.add('hidden'); });
 
-    // --- 11. לולאת המשחק ---
+    // --- 11. Game Loop ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
