@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -32,9 +32,9 @@
         /* UI overlay elements */
         .hud-container {
             position: absolute;
-            top: 15px;
-            left: 15px;
-            right: 15px;
+            top: 12px;
+            left: 12px;
+            right: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -42,16 +42,16 @@
             pointer-events: none;
         }
 
-        /* HP Bar Container */
+        /* HP Bar Container - קומפקטי ומוקטן */
         #hp-container {
             position: relative;
-            width: 200px;
-            height: 26px;
+            width: 120px;
+            height: 20px;
             background-color: rgba(15, 23, 42, 0.85);
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 8px;
+            border: 1.5px solid rgba(255, 255, 255, 0.8);
+            border-radius: 6px;
             overflow: hidden;
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(4px);
         }
 
@@ -59,7 +59,7 @@
             width: 100%;
             height: 100%;
             background-color: #22c55e;
-            box-shadow: 0 0 12px #22c55e;
+            box-shadow: 0 0 8px #22c55e;
             transition: width 0.25s ease-out, background-color 0.3s ease, box-shadow 0.3s ease;
         }
 
@@ -70,45 +70,54 @@
             transform: translate(-50%, -50%);
             color: #ffffff;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 11px;
             text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.9);
             letter-spacing: 0.5px;
+        }
+
+        /* כפתור הפסקה במרכז למעלה */
+        .icon-btn {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1.5px solid rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            width: 38px;
+            height: 38px;
+            font-size: 1rem;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
         }
 
         /* Score Card */
         #score-card {
             background: rgba(15, 23, 42, 0.85);
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            padding: 6px 16px;
-            border-radius: 8px;
+            border: 1.5px solid rgba(255, 255, 255, 0.8);
+            padding: 4px 12px;
+            border-radius: 6px;
             color: #ffffff;
-            font-size: 18px;
-            font-weight: bold;
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-        }
-
-        /* Controls / Audio Menu */
-        .audio-control {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 10;
-            background: rgba(15, 23, 42, 0.8);
-            padding: 8px 12px;
-            border-radius: 8px;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 10px;
             font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            min-width: 80px;
+            text-align: center;
         }
 
         /* Overlay Menus */
         .overlay {
             position: absolute;
             inset: 0;
-            background: rgba(5, 7, 20, 0.85);
+            background: rgba(5, 7, 20, 0.88);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -116,6 +125,40 @@
             z-index: 20;
             color: #fff;
             transition: opacity 0.4s ease;
+        }
+
+        .pause-card {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 24px 30px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            min-width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .volume-control-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .volume-control-menu label {
+            font-size: 14px;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        .volume-control-menu input[type="range"] {
+            width: 100%;
+            accent-color: #2563eb;
+            cursor: pointer;
         }
 
         .hidden {
@@ -126,14 +169,13 @@
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             border: none;
-            padding: 14px 36px;
-            font-size: 20px;
+            padding: 12px 32px;
+            font-size: 18px;
             font-weight: bold;
-            border-radius: 30px;
+            border-radius: 25px;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
             transition: transform 0.1s, background 0.2s;
-            margin-top: 20px;
         }
 
         .btn:active {
@@ -153,29 +195,34 @@
             <span id="hp-text">500 / 500</span>
         </div>
 
-        <!-- Score -->
-        <div id="score-card" class="hidden">
-            ניקוד: <span id="score-val">0</span>
-        </div>
-    </div>
+        <!-- Pause Button -->
+        <button id="pause-btn" class="icon-btn" aria-label="Pause Game">⏸️</button>
 
-    <!-- Volume Control -->
-    <div class="audio-control">
-        <label for="volume-slider">ווליום:</label>
-        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
+        <!-- Score -->
+        <div id="score-card">
+            SCORE: <span id="score-val">0</span>
+        </div>
     </div>
 
     <!-- Start Overlay -->
     <div id="start-overlay" class="overlay">
-        <h1 style="font-size: 36px; margin-bottom: 10px;">Cannon Crowd Clash</h1>
-        <p style="font-size: 16px; color: #cbd5e1;">גרור את המסך כדי להזיז את התותח</p>
-        <button id="start-btn" class="btn">התחל משחק</button>
+        <h1 style="font-size: 32px; margin-bottom: 8px;">Cannon Crowd Clash</h1>
+        <p style="font-size: 15px; color: #cbd5e1; margin-bottom: 12px;">Drag screen to move the cannon</p>
+        <button id="start-btn" class="btn">START GAME</button>
     </div>
 
-    <!-- Pause Overlay -->
+    <!-- Pause Overlay (Includes Volume Slider) -->
     <div id="pause-menu" class="overlay hidden">
-        <h2>משחק מוקפא</h2>
-        <button id="resume-btn" class="btn">המשך</button>
+        <div class="pause-card">
+            <h2>GAME PAUSED</h2>
+            
+            <div class="volume-control-menu">
+                <label for="volume-slider">Volume</label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
+            </div>
+
+            <button id="resume-btn" class="btn">RESUME</button>
+        </div>
     </div>
 
     <script src="main.js"></script>
