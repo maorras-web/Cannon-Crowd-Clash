@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. Pure Synthetic Audio Engine (Zero Wind / Zero Files) ---
+    // --- 1. Pure Synthetic Audio Engine ---
     let audioCtx = null;
     let masterGainNode = null;
     let masterVolume = 0.25;
@@ -25,7 +25,6 @@ window.addEventListener('DOMContentLoaded', () => {
         gain.connect(masterGainNode);
 
         if (type === 'shoot') {
-            // צליל ירייה קצר, לייזרי ונקי
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(600, now);
             osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
@@ -35,7 +34,6 @@ window.addEventListener('DOMContentLoaded', () => {
             osc.start(now);
             osc.stop(now + 0.08);
         } else if (type === 'hit') {
-            // צליל פגיעה בלטאה (Pop)
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(150, now);
             osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
@@ -45,7 +43,6 @@ window.addEventListener('DOMContentLoaded', () => {
             osc.start(now);
             osc.stop(now + 0.1);
         } else if (type === 'gate') {
-            // צליל מעבר בשער (Ding קצר)
             osc.type = 'sine';
             osc.frequency.setValueAtTime(880, now);
             osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
@@ -171,7 +168,32 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 4. Enemies: Humanoid Lizardmen ---
+    // --- 4. HP Health Bar Mechanics ---
+    const maxHp = 500;
+    let currentHp = 500;
+
+    function updateHpBar() {
+        const hpBar = document.getElementById('hp-bar');
+        const hpText = document.getElementById('hp-text');
+        if (!hpBar || !hpText) return;
+
+        const percentage = Math.max(0, (currentHp / maxHp) * 100);
+        hpBar.style.width = `${percentage}%`;
+        hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
+
+        // שינוי צבע ואור בהתאם לאחוז החיים שנשאר
+        let colorHex = '#22c55e'; // ירוק מלא
+        if (percentage < 30) {
+            colorHex = '#ef4444'; // אדום קריטי
+        } else if (percentage < 60) {
+            colorHex = '#eab308'; // צהוב אזהרה
+        }
+
+        hpBar.style.backgroundColor = colorHex;
+        hpBar.style.boxShadow = `0 0 12px ${colorHex}`;
+    }
+
+    // --- 5. Enemies: Humanoid Lizardmen ---
     const lizards = [];
     let lizardSpawnTimer = 0;
     const lizardSpawnInterval = 3.0;
@@ -320,10 +342,23 @@ window.addEventListener('DOMContentLoaded', () => {
             liz.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 10)) * 0.35;
             liz.rotation.y = Math.sin(clock.getElapsedTime() * 8) * 0.12;
 
+            // בדיקת פגיעה בתותח
             const distToCannon = liz.position.distanceTo(cannonGroup.position);
             if (distToCannon < 1.8) {
-                gameOver();
-                return;
+                currentHp -= 100; // הורדת נזק מהחיים
+                updateHpBar();
+
+                triggerExplosion(liz.position, 0xef4444);
+                playSound('hit');
+
+                scene.remove(liz);
+                lizards.splice(i, 1);
+
+                if (currentHp <= 0) {
+                    gameOver();
+                    return;
+                }
+                continue;
             }
 
             if (liz.position.z > cannonGroup.position.z + 10) {
@@ -333,7 +368,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. Cannon & Thrusters ---
+    // --- 6. Cannon & Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -421,22 +456,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    function changeCannonColor(hexColor) {
-        baseMat.color.setHex(hexColor);
-        domeMat.color.setHex(hexColor);
-    }
-
-    const colorButtons = document.querySelectorAll('.color-btn');
-    colorButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            colorButtons.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            const selectedColor = parseInt(e.target.getAttribute('data-color'));
-            changeCannonColor(selectedColor);
-        });
-    });
-
-    // --- 6. Bullets & Particle Effects ---
+    // --- 7. Bullets & Particle Effects ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -478,7 +498,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. Gates System ---
+    // --- 8. Gates System ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -544,7 +564,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 8. Touch & Mouse Controls ---
+    // --- 9. Touch & Mouse Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     function stopInput() {
@@ -572,13 +592,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 9. Game States & Loop ---
+    // --- 10. Game States & Main Loop ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function gameOver() {
         gameStarted = false;
         stopInput();
-        alert(`Game Over! The lizardmen reached your cannon!\nYour Score: ${score}`);
+        alert(`Game Over! התותח שלך הושמד!\nהניקוד שלך: ${score}`);
         window.location.reload();
     }
 
@@ -587,26 +607,19 @@ window.addEventListener('DOMContentLoaded', () => {
         startBtn.addEventListener('click', () => {
             initAudio();
             gameStarted = true;
+            updateHpBar();
             const startOverlay = document.getElementById('start-overlay');
             if (startOverlay) {
                 startOverlay.style.opacity = '0';
                 setTimeout(() => startOverlay.classList.add('hidden'), 400);
             }
-            document.getElementById('pause-btn')?.classList.remove('hidden');
             document.getElementById('score-card')?.classList.remove('hidden');
         });
     }
 
-    const pauseBtn = document.getElementById('pause-btn');
     const pauseMenu = document.getElementById('pause-menu');
     const resumeBtn = document.getElementById('resume-btn');
 
-    if (pauseBtn) pauseBtn.addEventListener('click', () => { 
-        isPaused = true; 
-        stopInput();
-        pauseMenu?.classList.remove('hidden'); 
-    });
-    
     if (resumeBtn) resumeBtn.addEventListener('click', () => { 
         isPaused = false; 
         pauseMenu?.classList.add('hidden'); 

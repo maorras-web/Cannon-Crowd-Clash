@@ -38,15 +38,51 @@ canvas {
     padding: 0 20px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     z-index: 100;
     pointer-events: none;
 }
 
+/* === מד חיים חדש לתותח (HP Bar) === */
+#hp-container {
+    position: relative;
+    width: 180px;
+    height: 28px;
+    background-color: rgba(13, 21, 39, 0.85);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#hp-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #22c55e; /* ירוק התחלתי */
+    box-shadow: 0 0 14px #22c55e; /* הילת אור ניאונית */
+    transition: width 0.25s ease-out, background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+}
+
+/* === כרטיס ניקוד === */
 #score-card {
     background: #0d1527;
-    padding: 10px 22px;
-    border-radius: 18px;
+    padding: 8px 20px;
+    border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: #ffffff;
     display: flex;
@@ -56,7 +92,7 @@ canvas {
 }
 
 .score-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #38bdf8;
     font-weight: 800;
     letter-spacing: 1.5px;
@@ -64,7 +100,7 @@ canvas {
 }
 
 #score-val {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 900;
     line-height: 1;
 }
@@ -74,8 +110,8 @@ canvas {
     background: #0d1527;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
-    width: 46px;
-    height: 46px;
+    width: 44px;
+    height: 44px;
     font-size: 1.1rem;
     cursor: pointer;
     color: white;
@@ -248,7 +284,7 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    text-align: left; /* תוקן לשמאל עקב המעבר לממשק באנגלית */
+    text-align: right;
 }
 
 #resume-btn {
