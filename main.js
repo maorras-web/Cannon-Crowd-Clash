@@ -1,13 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. Clean Audio Engine ---
-    const soundURLs = {
-        shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
-        gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
-        hit: 'https://assets.mixkit.co/active_storage/sfx/2658/2658-preview.mp3'
-    };
-
-    const audioBuffers = {};
+    // --- 1. Pure Synthetic Audio Engine (Zero Wind / Zero Files) ---
     let audioCtx = null;
     let masterGainNode = null;
     let masterVolume = 0.25;
@@ -15,33 +8,52 @@ window.addEventListener('DOMContentLoaded', () => {
     function initAudio() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
             masterGainNode = audioCtx.createGain();
             masterGainNode.gain.value = masterVolume;
             masterGainNode.connect(audioCtx.destination);
-
-            Object.keys(soundURLs).forEach(key => {
-                fetch(soundURLs[key])
-                    .then(res => res.arrayBuffer())
-                    .then(buffer => audioCtx.decodeAudioData(buffer))
-                    .then(decoded => { audioBuffers[key] = decoded; })
-                    .catch(() => {});
-            });
         }
     }
 
-    function playSound(name) {
-        if (audioCtx && audioBuffers[name] && masterVolume > 0 && !isPaused) {
-            const source = audioCtx.createBufferSource();
-            source.buffer = audioBuffers[name];
-            source.loop = false;
-            
-            const soundGain = audioCtx.createGain();
-            soundGain.gain.value = (name === 'shoot') ? 0.35 : 1.0;
-            
-            source.connect(soundGain);
-            soundGain.connect(masterGainNode);
-            source.start(0);
+    function playSound(type) {
+        if (!audioCtx || isPaused || masterVolume <= 0) return;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.connect(gain);
+        gain.connect(masterGainNode);
+
+        if (type === 'shoot') {
+            // צליל ירייה קצר, לייזרי ונקי
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+
+            osc.start(now);
+            osc.stop(now + 0.08);
+        } else if (type === 'hit') {
+            // צליל פגיעה בלטאה (Pop)
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'gate') {
+            // צליל מעבר בשער (Ding קצר)
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+
+            osc.start(now);
+            osc.stop(now + 0.12);
         }
     }
 
