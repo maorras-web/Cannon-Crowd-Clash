@@ -11,6 +11,8 @@ window.addEventListener('DOMContentLoaded', () => {
             masterGainNode = audioCtx.createGain();
             masterGainNode.gain.value = masterVolume;
             masterGainNode.connect(audioCtx.destination);
+        } else if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
     }
 
@@ -181,12 +183,11 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.width = `${percentage}%`;
         hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
 
-        // שינוי צבע ואור בהתאם לאחוז החיים שנשאר
-        let colorHex = '#22c55e'; // ירוק מלא
+        let colorHex = '#22c55e';
         if (percentage < 30) {
-            colorHex = '#ef4444'; // אדום קריטי
+            colorHex = '#ef4444';
         } else if (percentage < 60) {
-            colorHex = '#eab308'; // צהוב אזהרה
+            colorHex = '#eab308';
         }
 
         hpBar.style.backgroundColor = colorHex;
@@ -342,10 +343,9 @@ window.addEventListener('DOMContentLoaded', () => {
             liz.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 10)) * 0.35;
             liz.rotation.y = Math.sin(clock.getElapsedTime() * 8) * 0.12;
 
-            // בדיקת פגיעה בתותח
             const distToCannon = liz.position.distanceTo(cannonGroup.position);
             if (distToCannon < 1.8) {
-                currentHp -= 100; // הורדת נזק מהחיים
+                currentHp -= 100;
                 updateHpBar();
 
                 triggerExplosion(liz.position, 0xef4444);
@@ -592,7 +592,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. Game States & Main Loop ---
+    // --- 10. UI & Game Logic Connections ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function gameOver() {
@@ -603,12 +603,12 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     const startBtn = document.getElementById('start-btn');
+    const startOverlay = document.getElementById('start-overlay');
     if (startBtn) {
         startBtn.addEventListener('click', () => {
             initAudio();
             gameStarted = true;
             updateHpBar();
-            const startOverlay = document.getElementById('start-overlay');
             if (startOverlay) {
                 startOverlay.style.opacity = '0';
                 setTimeout(() => startOverlay.classList.add('hidden'), 400);
@@ -617,14 +617,26 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const pauseBtn = document.getElementById('pause-btn');
     const pauseMenu = document.getElementById('pause-menu');
     const resumeBtn = document.getElementById('resume-btn');
 
-    if (resumeBtn) resumeBtn.addEventListener('click', () => { 
-        isPaused = false; 
-        pauseMenu?.classList.add('hidden'); 
-    });
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+            if (!gameStarted) return;
+            isPaused = true;
+            pauseMenu?.classList.remove('hidden');
+        });
+    }
 
+    if (resumeBtn) {
+        resumeBtn.addEventListener('click', () => { 
+            isPaused = false; 
+            pauseMenu?.classList.add('hidden'); 
+        });
+    }
+
+    // --- 11. Main Loop ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
