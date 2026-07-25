@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. Clean Audio Engine (No synthetic background/wind noise) ---
+    // --- 1. Clean Audio Engine ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
@@ -628,14 +628,14 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Controls ---
+    // --- 9. Mobile Touch Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
     window.addEventListener('mouseup', () => { isDragging = false; isFiring = false; });
     window.addEventListener('mousemove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
-            targetX += (e.clientX - previousTouchX) * 0.022;
+            targetX += (e.clientX - previousTouchX) * 0.035;
             previousTouchX = e.clientX;
         }
     });
@@ -644,7 +644,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('touchend', () => { isDragging = false; isFiring = false; });
     window.addEventListener('touchmove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
-            targetX += (e.touches[0].clientX - previousTouchX) * 0.022;
+            targetX += (e.touches[0].clientX - previousTouchX) * 0.035;
             previousTouchX = e.touches[0].clientX;
         }
     });

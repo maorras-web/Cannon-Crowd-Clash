@@ -12,12 +12,15 @@ html, body {
     height: 100%;
     overflow: hidden;
     background-color: #050714;
+    /* מונע מחוות גלילה ורענון בדפדפן הנייד בזמן מגע */
+    touch-action: none;
 }
 
 canvas {
     display: block;
     width: 100vw;
     height: 100vh;
+    touch-action: none;
 }
 
 .hidden {
@@ -26,7 +29,7 @@ canvas {
     pointer-events: none !important;
 }
 
-/* === UI תוך כדי משחק (תצוגת הניקוד המקורית והנקייה) === */
+/* === UI תוך כדי משחק === */
 #ui-container {
     position: fixed;
     top: 20px;
@@ -245,7 +248,7 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    text-align: right;
+    text-align: left; /* תוקן לשמאל עקב המעבר לממשק באנגלית */
 }
 
 #resume-btn {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -15,7 +15,7 @@
 </head>
 <body>
 
-    <!-- UI תוך כדי משחק -->
+    <!-- HUD Elements -->
     <div id="ui-container">
         <div id="score-card" class="hidden">
             <span class="score-label">SCORE</span>
@@ -24,17 +24,17 @@
         <button id="pause-btn" class="icon-btn hidden">❚❚</button>
     </div>
 
-    <!-- מסך פתיחה פנומנלי -->
+    <!-- Start Overlay (English UI) -->
     <div id="start-overlay">
         <div id="start-menu">
             <div class="header-section">
                 <h1 class="game-title">CANNON<br>CLASH</h1>
-                <p class="game-subtitle">השמד שערים, חסל אנשי לטאות והגע לשיא חדש!</p>
+                <p class="game-subtitle">Destroy gates, eliminate lizardmen & set a high score!</p>
             </div>
 
-            <!-- בחירת צבע התותח -->
+            <!-- Cannon Color Picker -->
             <div class="customization-section">
-                <span class="section-label">בחר צבע תותח</span>
+                <span class="section-label">Select Cannon Color</span>
                 <div class="color-picker">
                     <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
                     <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
@@ -43,25 +43,26 @@
                 </div>
             </div>
 
-            <!-- כפתור התחלה -->
+            <!-- Start Button -->
             <div class="action-section">
-                <button id="start-btn">התחל משחק</button>
+                <button id="start-btn">START GAME</button>
             </div>
         </div>
     </div>
 
-    <!-- תפריט עצירה -->
+    <!-- Pause Menu -->
     <div id="pause-menu" class="hidden">
         <div class="pause-card">
-            <h2>משחק מושהה</h2>
+            <h2>GAME PAUSED</h2>
             <div class="volume-control">
-                <label for="volume-slider">עוצמת שמע 🔊</label>
+                <label for="volume-slider">Volume 🔊</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.25">
             </div>
-            <button id="resume-btn">המשך משחק</button>
+            <button id="resume-btn">RESUME</button>
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <!-- The v=3 forces mobile browsers to clear cache and load fresh JS -->
+    <script src="main.js?v=3"></script>
 </body>
 </html>
