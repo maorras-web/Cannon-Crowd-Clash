@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. מנוע אודיו מתוקן (השתקה מוחלטת ב-0%) ---
+    // --- 1. מנוע אודיו נקי (ללא רעשי רוח/רקע סינתטיים) ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
@@ -31,7 +31,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function playSound(name) {
-        if (audioCtx && audioBuffers[name] && masterVolume > 0.01) {
+        if (audioCtx && audioBuffers[name] && masterVolume > 0) {
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffers[name];
             
@@ -50,7 +50,7 @@ window.addEventListener('DOMContentLoaded', () => {
         volumeSlider.addEventListener('input', (e) => {
             masterVolume = parseFloat(e.target.value);
             if (masterGainNode) {
-                masterGainNode.gain.value = masterVolume < 0.01 ? 0 : masterVolume;
+                masterGainNode.gain.value = masterVolume;
             }
         });
     }

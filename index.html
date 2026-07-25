@@ -1,74 +1,51 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Cannon Clash</title>
     <link rel="stylesheet" href="style.css">
-    <!-- פונט גיימינג מודרני -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <!-- תצוגת ניקוד וכפתור הפסקה -->
-    <div id="ui-container">
-        <button id="pause-btn" class="icon-btn hidden">⏸️</button>
+    <div id="game-ui">
+        <!-- Score Card -->
         <div id="score-card" class="hidden">
-            <span class="score-label">SCORE</span>
-            <span id="score-val">0</span>
+            <span>SCORE</span>
+            <div id="score-val">0</div>
         </div>
+
+        <!-- Pause Button -->
+        <button id="pause-btn" class="hidden">❚❚</button>
     </div>
 
-    <!-- מסך פתיחה במסך מלא -->
+    <!-- Start Overlay -->
     <div id="start-overlay">
-        <div id="start-menu">
-            <div class="header-section">
-                <h1 class="game-title">CANNON<br>CLASH</h1>
-                <p class="game-subtitle">Pass through gates, boost your firepower, land reach the top score</p>
-            </div>
-
-            <!-- בחירת צבע לתותח -->
-            <div class="customization-section">
-                <span class="section-label">CHOOSE CANNON COLOR</span>
-                <div class="color-picker">
-                    <button class="color-btn" data-color="0x9333ea" style="background: #9333ea;"></button>
-                    <button class="color-btn" data-color="0xd97706" style="background: #d97706;"></button>
-                    <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
-                    <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
-                    <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
-                </div>
-            </div>
-
-            <div class="stats-section">
-                <div class="best-badge">
-                    PERSONAL BEST: <span id="best-score-val">0</span> 🏆
-                </div>
-            </div>
-
-            <div class="action-section">
-                <button id="start-btn">✏️ START GAME</button>
-            </div>
+        <h1>CANNON CLASH</h1>
+        <p>Choose Cannon Color</p>
+        <div class="color-picker">
+            <button class="color-btn active" data-color="0xdc2626" style="background: #dc2626;"></button>
+            <button class="color-btn" data-color="0x2563eb" style="background: #2563eb;"></button>
+            <button class="color-btn" data-color="0x16a34a" style="background: #16a34a;"></button>
+            <button class="color-btn" data-color="0x9333ea" style="background: #9333ea;"></button>
         </div>
+        <button id="start-btn">TAP TO PLAY</button>
     </div>
 
-    <!-- תפריט הפסקה (Pause) -->
+    <!-- Pause Menu Overlay -->
     <div id="pause-menu" class="hidden">
-        <div class="pause-card">
+        <div class="menu-box">
             <h2>GAME PAUSED</h2>
-            
-            <div class="volume-control">
-                <label for="volume-slider">🔊 Sound Volume</label>
-                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
+            <div class="setting-item">
+                <label for="volume-slider">Sound Volume 🔊</label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.25">
             </div>
-
             <button id="resume-btn">RESUME</button>
         </div>
     </div>
 
-    <!-- טעינת ה-JavaScript (פעם אחת בלבד ובסדר הנכון) -->
     <script src="main.js"></script>
 </body>
 </html>
