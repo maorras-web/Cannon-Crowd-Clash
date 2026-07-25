@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. Clean Audio Engine (No Wind / No Loops) ---
+    // --- 1. Clean Audio Engine ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
@@ -159,106 +159,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 4. UFO System (Silent & Disposed) ---
-    let ufoTimer = 0.0;
-    let activeUFO = null;
-    let ufoSpawnInterval = 10.0;
-
-    function cleanupUFO() {
-        if (activeUFO) {
-            activeUFO.laser.visible = false;
-            if (activeUFO.laser.geometry) activeUFO.laser.geometry.dispose();
-            if (activeUFO.laser.material) activeUFO.laser.material.dispose();
-            scene.remove(activeUFO.group);
-            activeUFO = null;
-        }
-    }
-
-    function spawnUFO() {
-        cleanupUFO();
-
-        const ufoGroup = new THREE.Group();
-
-        const bodyGeo = new THREE.CylinderGeometry(2.5, 3.5, 0.8, 16);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.1 });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        ufoGroup.add(body);
-
-        const domeGeo = new THREE.SphereGeometry(1.6, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-        const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.8, transparent: true, opacity: 0.8 });
-        const dome = new THREE.Mesh(domeGeo, domeMat);
-        dome.position.y = 0.3;
-        ufoGroup.add(dome);
-
-        const ringGeo = new THREE.TorusGeometry(3.2, 0.15, 8, 24);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = -0.3;
-        ufoGroup.add(ring);
-
-        const beamGeo = new THREE.ConeGeometry(trackWidth * 0.6, 25, 16, 1, true);
-        const beamMat = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.35,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        const laserBeam = new THREE.Mesh(beamGeo, beamMat);
-        laserBeam.position.y = -12.5;
-        laserBeam.visible = false;
-        ufoGroup.add(laserBeam);
-
-        const startX = -45;
-        const endX = 45;
-        const startY = 16;
-        const startZ = cannonGroup.position.z - 30;
-
-        ufoGroup.position.set(startX, startY, startZ);
-        scene.add(ufoGroup);
-
-        activeUFO = {
-            group: ufoGroup,
-            laser: laserBeam,
-            progress: 0,
-            startX,
-            endX,
-            startY,
-            startZ,
-            duration: 4.5
-        };
-    }
-
-    function updateUFOSystem(delta) {
-        ufoTimer += delta;
-        
-        if (ufoTimer >= ufoSpawnInterval) {
-            ufoTimer = 0;
-            ufoSpawnInterval = 20.0;
-            spawnUFO();
-        }
-
-        if (activeUFO) {
-            activeUFO.progress += delta / activeUFO.duration;
-            const p = activeUFO.progress;
-
-            if (p >= 1.0) {
-                cleanupUFO();
-            } else {
-                const currentX = THREE.MathUtils.lerp(activeUFO.startX, activeUFO.endX, p);
-                activeUFO.group.position.x = currentX;
-                activeUFO.group.position.y = activeUFO.startY + Math.sin(p * Math.PI * 6) * 0.5;
-                activeUFO.group.rotation.y += delta * 4;
-
-                const halfTrack = trackWidth / 2;
-                activeUFO.laser.visible = (currentX >= -halfTrack && currentX <= halfTrack);
-            }
-        }
-    }
-
-    // --- 5. Enemies: Humanoid Lizardmen ---
+    // --- 4. Enemies: Humanoid Lizardmen ---
     const lizards = [];
     let lizardSpawnTimer = 0;
     const lizardSpawnInterval = 3.0;
@@ -420,7 +321,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. Cannon & Thrusters ---
+    // --- 5. Cannon & Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -523,7 +424,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 7. Bullets & Particle Effects ---
+    // --- 6. Bullets & Particle Effects ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -565,7 +466,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 8. Gates System ---
+    // --- 7. Gates System ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -631,7 +532,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Touch & Mouse Controls ---
+    // --- 8. Touch & Mouse Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     function stopInput() {
@@ -659,7 +560,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. Game States & Loop ---
+    // --- 9. Game States & Loop ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function gameOver() {
@@ -708,7 +609,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
 
-        updateUFOSystem(delta);
         updateLizards(delta);
 
         for (let i = gates.length - 1; i >= 0; i--) {
