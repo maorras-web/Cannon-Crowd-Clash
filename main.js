@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. מנוע אודיו (מופחת תדרים נמוכים למניעת רעשי רוח) ---
+    // --- 1. מנוע אודיו מתוקן (השתקה מוחלטת ב-0%) ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
@@ -9,11 +9,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const audioBuffers = {};
     let audioCtx = null;
+    let masterGainNode = null;
     let masterVolume = 0.25;
 
     function initAudio() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            masterGainNode = audioCtx.createGain();
+            masterGainNode.gain.value = masterVolume;
+            masterGainNode.connect(audioCtx.destination);
+
             Object.keys(soundURLs).forEach(key => {
                 fetch(soundURLs[key])
                     .then(res => res.arrayBuffer())
@@ -25,13 +31,15 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function playSound(name) {
-        if (audioCtx && audioBuffers[name] && masterVolume > 0) {
+        if (audioCtx && audioBuffers[name] && masterVolume > 0.01) {
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffers[name];
-            const gain = audioCtx.createGain();
-            gain.gain.value = (name === 'shoot') ? masterVolume * 0.35 : masterVolume;
-            source.connect(gain);
-            gain.connect(audioCtx.destination);
+            
+            const soundGain = audioCtx.createGain();
+            soundGain.gain.value = (name === 'shoot') ? 0.35 : 1.0;
+            
+            source.connect(soundGain);
+            soundGain.connect(masterGainNode);
             source.start(0);
         }
     }
@@ -41,6 +49,9 @@ window.addEventListener('DOMContentLoaded', () => {
         volumeSlider.value = masterVolume;
         volumeSlider.addEventListener('input', (e) => {
             masterVolume = parseFloat(e.target.value);
+            if (masterGainNode) {
+                masterGainNode.gain.value = masterVolume < 0.01 ? 0 : masterVolume;
+            }
         });
     }
 
@@ -244,7 +255,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. אויבים: אנשי לטאות בעיצוב דמוי-אדם (הומנואידי) מעוגל ---
+    // --- 5. אויבים: אנשי לטאות דמויי-אדם ---
     const lizards = [];
     let lizardSpawnTimer = 0;
     const lizardSpawnInterval = 3.0;
@@ -257,9 +268,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
         const spikeMat = new THREE.MeshStandardMaterial({ color: 0x0f2f11, roughness: 0.3 });
 
-        // 1. טורסו דמוי-אדם (חזה מתרחב ומותניים צרות)
         const torsoGroup = new THREE.Group();
-        
         const chestGeo = new THREE.CylinderGeometry(0.75, 0.45, 1.3, 16);
         const chest = new THREE.Mesh(chestGeo, skinMat);
         chest.position.y = 1.95;
@@ -272,54 +281,41 @@ window.addEventListener('DOMContentLoaded', () => {
 
         lizardGroup.add(torsoGroup);
 
-        // 2. כתפיים וזרועות אנושיות (פרקים מעוגלים)
         const shoulderGeo = new THREE.SphereGeometry(0.35, 12, 12);
         const upperArmGeo = new THREE.CylinderGeometry(0.22, 0.18, 0.8, 12);
         const forearmGeo = new THREE.CylinderGeometry(0.18, 0.12, 0.8, 12);
 
-        // זרוע שמאל
         const leftArmGroup = new THREE.Group();
         leftArmGroup.position.set(-0.82, 2.3, 0);
-        
         const leftShoulder = new THREE.Mesh(shoulderGeo, armorMat);
         leftArmGroup.add(leftShoulder);
-
         const leftUpperArm = new THREE.Mesh(upperArmGeo, skinMat);
         leftUpperArm.position.set(-0.15, -0.4, 0.1);
         leftUpperArm.rotation.z = Math.PI / 10;
         leftUpperArm.rotation.x = -Math.PI / 12;
         leftArmGroup.add(leftUpperArm);
-
         const leftForearm = new THREE.Mesh(forearmGeo, skinMat);
         leftForearm.position.set(-0.25, -1.0, 0.3);
         leftForearm.rotation.x = -Math.PI / 4;
         leftArmGroup.add(leftForearm);
-
         lizardGroup.add(leftArmGroup);
 
-        // זרוע ימין
         const rightArmGroup = new THREE.Group();
         rightArmGroup.position.set(0.82, 2.3, 0);
-
         const rightShoulder = new THREE.Mesh(shoulderGeo, armorMat);
         rightArmGroup.add(rightShoulder);
-
         const rightUpperArm = new THREE.Mesh(upperArmGeo, skinMat);
         rightUpperArm.position.set(0.15, -0.4, 0.1);
         rightUpperArm.rotation.z = -Math.PI / 10;
         rightUpperArm.rotation.x = -Math.PI / 12;
         rightArmGroup.add(rightUpperArm);
-
         const rightForearm = new THREE.Mesh(forearmGeo, skinMat);
         rightForearm.position.set(0.25, -1.0, 0.3);
         rightForearm.rotation.x = -Math.PI / 4;
         rightArmGroup.add(rightForearm);
-
         lizardGroup.add(rightArmGroup);
 
-        // 3. ראש אנושי-לטאי (צוואר, גולגולת מעוגלת וחרטום עדין)
         const headGroup = new THREE.Group();
-        
         const neckGeo = new THREE.CylinderGeometry(0.2, 0.25, 0.35, 10);
         const neck = new THREE.Mesh(neckGeo, skinMat);
         neck.position.y = 2.65;
@@ -341,14 +337,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
         leftEye.position.set(-0.22, 3.02, 0.32);
         headGroup.add(leftEye);
-
         const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
         rightEye.position.set(0.22, 3.02, 0.32);
         headGroup.add(rightEye);
-
         lizardGroup.add(headGroup);
 
-        // 4. קוצים מעוגלים לגב
         for (let i = 0; i < 4; i++) {
             const spikeGeo = new THREE.ConeGeometry(0.12, 0.45, 8);
             const spike = new THREE.Mesh(spikeGeo, spikeMat);
@@ -357,36 +350,27 @@ window.addEventListener('DOMContentLoaded', () => {
             lizardGroup.add(spike);
         }
 
-        // 5. רגליים אנושיות (ירכיים + שוקיים)
         const thighGeo = new THREE.CylinderGeometry(0.28, 0.22, 0.85, 12);
         const shinGeo = new THREE.CylinderGeometry(0.2, 0.15, 0.85, 12);
 
-        // רגל שמאל
         const leftLegGroup = new THREE.Group();
         leftLegGroup.position.set(-0.35, 1.1, 0);
-
         const leftThigh = new THREE.Mesh(thighGeo, skinMat);
         leftThigh.position.set(0, -0.35, 0);
         leftLegGroup.add(leftThigh);
-
         const leftShin = new THREE.Mesh(shinGeo, skinMat);
         leftShin.position.set(0, -1.0, -0.05);
         leftLegGroup.add(leftShin);
-
         lizardGroup.add(leftLegGroup);
 
-        // רגל ימין
         const rightLegGroup = new THREE.Group();
         rightLegGroup.position.set(0.35, 1.1, 0);
-
         const rightThigh = new THREE.Mesh(thighGeo, skinMat);
         rightThigh.position.set(0, -0.35, 0);
         rightLegGroup.add(rightThigh);
-
         const rightShin = new THREE.Mesh(shinGeo, skinMat);
         rightShin.position.set(0, -1.0, -0.05);
         rightLegGroup.add(rightShin);
-
         lizardGroup.add(rightLegGroup);
 
         lizardGroup.scale.set(1.2, 1.2, 1.2);
