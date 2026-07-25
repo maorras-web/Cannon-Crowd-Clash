@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. Clean Audio Engine ---
+    // --- 1. Clean Audio Engine (No Wind / No Loops) ---
     const soundURLs = {
         shoot: 'https://assets.mixkit.co/active_storage/sfx/1671/1671-preview.mp3',
         gate: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
@@ -34,6 +34,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (audioCtx && audioBuffers[name] && masterVolume > 0 && !isPaused) {
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffers[name];
+            source.loop = false;
             
             const soundGain = audioCtx.createGain();
             soundGain.gain.value = (name === 'shoot') ? 0.35 : 1.0;
@@ -158,7 +159,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 4. UFO System ---
+    // --- 4. UFO System (Silent & Disposed) ---
     let ufoTimer = 0.0;
     let activeUFO = null;
     let ufoSpawnInterval = 10.0;
@@ -166,6 +167,8 @@ window.addEventListener('DOMContentLoaded', () => {
     function cleanupUFO() {
         if (activeUFO) {
             activeUFO.laser.visible = false;
+            if (activeUFO.laser.geometry) activeUFO.laser.geometry.dispose();
+            if (activeUFO.laser.material) activeUFO.laser.material.dispose();
             scene.remove(activeUFO.group);
             activeUFO = null;
         }
@@ -250,11 +253,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeUFO.group.rotation.y += delta * 4;
 
                 const halfTrack = trackWidth / 2;
-                if (currentX >= -halfTrack && currentX <= halfTrack) {
-                    activeUFO.laser.visible = true;
-                } else {
-                    activeUFO.laser.visible = false;
-                }
+                activeUFO.laser.visible = (currentX >= -halfTrack && currentX <= halfTrack);
             }
         }
     }
@@ -524,7 +523,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 7. Bullets & Effects ---
+    // --- 7. Bullets & Particle Effects ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -632,7 +631,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Mobile Touch & Mouse Controls (עם מנגנון עצירה בטוח) ---
+    // --- 9. Touch & Mouse Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     function stopInput() {
@@ -660,7 +659,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. Game States & Game Over ---
+    // --- 10. Game States & Loop ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function gameOver() {
@@ -700,7 +699,6 @@ window.addEventListener('DOMContentLoaded', () => {
         pauseMenu?.classList.add('hidden'); 
     });
 
-    // --- 11. Game Loop ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
