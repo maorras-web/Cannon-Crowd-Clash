@@ -31,7 +31,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function playSound(name) {
-        if (audioCtx && audioBuffers[name] && masterVolume > 0) {
+        if (audioCtx && audioBuffers[name] && masterVolume > 0 && !isPaused) {
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffers[name];
             
@@ -163,11 +163,16 @@ window.addEventListener('DOMContentLoaded', () => {
     let activeUFO = null;
     let ufoSpawnInterval = 10.0;
 
-    function spawnUFO() {
+    function cleanupUFO() {
         if (activeUFO) {
+            activeUFO.laser.visible = false;
             scene.remove(activeUFO.group);
             activeUFO = null;
         }
+    }
+
+    function spawnUFO() {
+        cleanupUFO();
 
         const ufoGroup = new THREE.Group();
 
@@ -237,8 +242,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const p = activeUFO.progress;
 
             if (p >= 1.0) {
-                scene.remove(activeUFO.group);
-                activeUFO = null;
+                cleanupUFO();
             } else {
                 const currentX = THREE.MathUtils.lerp(activeUFO.startX, activeUFO.endX, p);
                 activeUFO.group.position.x = currentX;
@@ -628,11 +632,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Mobile Touch Controls ---
+    // --- 9. Mobile Touch & Mouse Controls (עם מנגנון עצירה בטוח) ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
+    function stopInput() {
+        isDragging = false;
+        isFiring = false;
+    }
+
     window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
-    window.addEventListener('mouseup', () => { isDragging = false; isFiring = false; });
+    window.addEventListener('mouseup', stopInput);
+    window.addEventListener('mouseleave', stopInput);
     window.addEventListener('mousemove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
             targetX += (e.clientX - previousTouchX) * 0.035;
@@ -641,7 +651,8 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('touchstart', (e) => { isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; });
-    window.addEventListener('touchend', () => { isDragging = false; isFiring = false; });
+    window.addEventListener('touchend', stopInput);
+    window.addEventListener('touchcancel', stopInput);
     window.addEventListener('touchmove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
             targetX += (e.touches[0].clientX - previousTouchX) * 0.035;
@@ -654,6 +665,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function gameOver() {
         gameStarted = false;
+        stopInput();
         alert(`Game Over! The lizardmen reached your cannon!\nYour Score: ${score}`);
         window.location.reload();
     }
@@ -677,8 +689,16 @@ window.addEventListener('DOMContentLoaded', () => {
     const pauseMenu = document.getElementById('pause-menu');
     const resumeBtn = document.getElementById('resume-btn');
 
-    if (pauseBtn) pauseBtn.addEventListener('click', () => { isPaused = true; pauseMenu?.classList.remove('hidden'); });
-    if (resumeBtn) resumeBtn.addEventListener('click', () => { isPaused = false; pauseMenu?.classList.add('hidden'); });
+    if (pauseBtn) pauseBtn.addEventListener('click', () => { 
+        isPaused = true; 
+        stopInput();
+        pauseMenu?.classList.remove('hidden'); 
+    });
+    
+    if (resumeBtn) resumeBtn.addEventListener('click', () => { 
+        isPaused = false; 
+        pauseMenu?.classList.add('hidden'); 
+    });
 
     // --- 11. Game Loop ---
     const clock = new THREE.Clock();
