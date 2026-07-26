@@ -1,5 +1,16 @@
 window.addEventListener('DOMContentLoaded', () => {
 
+    // --- 0. Fix Mobile Touch Hijacking ---
+    document.documentElement.style.touchAction = 'none';
+    document.body.style.touchAction = 'none';
+    
+    const uiContainer = document.getElementById('ui-container');
+    if (uiContainer) {
+        uiContainer.style.pointerEvents = 'none';
+        const pauseBtn = document.getElementById('pause-btn');
+        if (pauseBtn) pauseBtn.style.pointerEvents = 'auto';
+    }
+
     // --- 1. Audio Engine ---
     let audioCtx = null;
     let masterGainNode = null;
@@ -89,33 +100,23 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Renderer & Rich Lighting ---
+    // --- 3. Scene, Renderer & Lighting ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0c1b);
-    scene.fog = new THREE.FogExp2(0x0a0c1b, 0.008);
+    scene.background = new THREE.Color(0x000000);
+    scene.fog = new THREE.FogExp2(0x000000, 0.008);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(20, 50, 20);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 150;
-    dirLight.shadow.camera.left = -20;
-    dirLight.shadow.camera.right = 20;
-    dirLight.shadow.camera.top = 20;
-    dirLight.shadow.camera.bottom = -50;
     scene.add(dirLight);
 
     // --- 4. Track & Environment ---
@@ -124,33 +125,19 @@ window.addEventListener('DOMContentLoaded', () => {
     const trackLength = 2000;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.2 });
+    const trackMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 15 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
-    track.receiveShadow = true;
     scene.add(track);
 
-    // Side Rails
-    const railGeo = new THREE.BoxGeometry(0.4, 0.8, trackLength);
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.5 });
-    
-    const leftRail = new THREE.Mesh(railGeo, railMat);
-    leftRail.position.set(-trackWidth / 2 - 0.2, 0.2, -trackLength / 2 + 10);
-    scene.add(leftRail);
-
-    const rightRail = new THREE.Mesh(railGeo, railMat);
-    rightRail.position.set(trackWidth / 2 + 0.2, 0.2, -trackLength / 2 + 10);
-    scene.add(rightRail);
-
-    // Starfield Background
     const starGroup = new THREE.Group();
-    const starGeo = new THREE.SphereGeometry(0.25, 4, 4);
-    const starMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    for (let i = 0; i < 300; i++) {
+    const starGeo = new THREE.SphereGeometry(0.2, 4, 4);
+    const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (let i = 0; i < 200; i++) {
         const star = new THREE.Mesh(starGeo, starMat);
         const side = Math.random() < 0.5 ? -1 : 1;
         star.position.set(
-            side * (15 + Math.random() * 60),
+            side * (12 + Math.random() * 50),
             (Math.random() - 0.5) * 60,
             (Math.random() - 0.5) * trackLength
         );
@@ -191,17 +178,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
-        const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.5 });
+        const skinMat = new THREE.MeshPhongMaterial({ color: typeConfig.skinColor, shininess: 50 });
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
         const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 1.0), skinMat);
         body.position.y = 1.2;
-        body.castShadow = true;
         lizardGroup.add(body);
 
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), skinMat);
         head.position.set(0, 2.3, 0.2);
-        head.castShadow = true;
         lizardGroup.add(head);
 
         const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
@@ -213,18 +198,13 @@ window.addEventListener('DOMContentLoaded', () => {
         lizardGroup.add(eyeR);
 
         lizardGroup.scale.setScalar(typeConfig.scale);
-        lizardGroup.userData = { 
-            hp: typeConfig.hp, 
-            speed: typeConfig.speed, 
-            scoreVal: typeConfig.scoreVal
-        };
+        lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal };
 
         return lizardGroup;
     }
 
     function spawnLizard() {
         if (isBossActive) return;
-
         const rand = Math.random();
         let config = ENEMY_TYPES.STANDARD;
         if (rand > 0.75) config = ENEMY_TYPES.ARMORED;
@@ -267,10 +247,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
-
                 scene.remove(liz);
                 lizards.splice(i, 1);
-
                 if (currentHp <= 0) { gameOver(); return; }
                 continue;
             }
@@ -295,35 +273,55 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. High-Detail Cannon ---
+    // --- 7. High-Detail Cannon with Side Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6, roughness: 0.2 });
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.6, roughness: 0.2 });
+    const baseMat = new THREE.MeshPhongMaterial({ color: 0x2563eb, shininess: 80 });
+    const domeMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, shininess: 90 });
 
     const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 20), baseMat);
     base.rotation.x = Math.PI / 12;
-    base.castShadow = true;
     cannonMeshGroup.add(base);
 
     const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
     dome.position.y = 0.3;
-    dome.castShadow = true;
     cannonMeshGroup.add(dome);
 
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
+    const barrelMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 60 });
     const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
     barrelL.rotation.x = Math.PI / 2;
     barrelL.position.set(-0.45, 0.35, -1.0);
-    barrelL.castShadow = true;
     cannonMeshGroup.add(barrelL);
 
     const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
     barrelR.rotation.x = Math.PI / 2;
     barrelR.position.set(0.45, 0.35, -1.0);
-    barrelR.castShadow = true;
     cannonMeshGroup.add(barrelR);
+
+    // --- מדחפים בצידי התותח (שמאל וימין) ---
+    const thrusterMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, shininess: 40 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+
+    // מדחף שמאלי (בצד שמאל של הבסיס)
+    const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), thrusterMat);
+    thrusterL.rotation.z = Math.PI / 2; // שוכב הצידה
+    thrusterL.position.set(-1.3, 0.2, 0);
+    cannonMeshGroup.add(thrusterL);
+
+    const glowL = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), glowMat);
+    glowL.position.set(-1.6, 0.2, 0);
+    cannonMeshGroup.add(glowL);
+
+    // מדחף ימני (בצד ימין של הבסיס)
+    const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), thrusterMat);
+    thrusterR.rotation.z = -Math.PI / 2; // שוכב הצידה
+    thrusterR.position.set(1.3, 0.2, 0);
+    cannonMeshGroup.add(thrusterR);
+
+    const glowR = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), glowMat);
+    glowR.position.set(1.6, 0.2, 0);
+    cannonMeshGroup.add(glowR);
 
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
@@ -334,13 +332,14 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.set(hexColor);
     }
 
-    // --- 8. Bullets & FX ---
-    const bulletGeo = new THREE.SphereGeometry(0.35, 10, 10);
-    const bulletMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xf59e0b, emissiveIntensity: 0.8 });
+    // --- 8. Bullets ---
+    const bulletGeo = new THREE.SphereGeometry(0.25, 8, 8);
+    const bulletMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, emissive: 0xca8a04, shininess: 100 });
     const bullets = [];
 
     function spawnBullet(x, z) {
         const b = new THREE.Mesh(bulletGeo, bulletMat);
+        b.scale.set(1, 1, 2.5);
         b.position.set(x, 1.1, z);
         scene.add(b);
         bullets.push(b);
@@ -357,11 +356,9 @@ window.addEventListener('DOMContentLoaded', () => {
         
         ctx.fillStyle = colorHex;
         ctx.fillRect(0, 0, 256, 256);
-        
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 12;
         ctx.strokeRect(6, 6, 244, 244);
-
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 70px sans-serif';
         ctx.textAlign = 'center';
@@ -377,11 +374,7 @@ window.addEventListener('DOMContentLoaded', () => {
         let label = `+${value}`, colorHex = 'rgba(2, 132, 199, 0.85)';
         if (type === 'multiply') { label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; }
 
-        const frameMat = new THREE.MeshStandardMaterial({ 
-            map: createGateTexture(label, colorHex), 
-            transparent: true, 
-            roughness: 0.2 
-        });
+        const frameMat = new THREE.MeshBasicMaterial({ map: createGateTexture(label, colorHex), transparent: true });
         const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.2, 0.2), frameMat);
         frame.position.y = 2.1;
         gateGroup.add(frame);
@@ -410,21 +403,32 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function stopInput() { isDragging = false; isFiring = false; }
 
-    window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
-    window.addEventListener('mouseup', stopInput);
-    window.addEventListener('mousemove', (e) => {
+    renderer.domElement.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); 
+        isDragging = true; 
+        isFiring = true; 
+        previousTouchX = e.touches[0].clientX; 
+    }, { passive: false });
+    
+    renderer.domElement.addEventListener('touchend', (e) => { 
+        e.preventDefault();
+        stopInput(); 
+    }, { passive: false });
+    
+    renderer.domElement.addEventListener('touchmove', (e) => {
+        e.preventDefault();
         if (isDragging && gameStarted && !isPaused) {
-            targetX += (e.clientX - previousTouchX) * 0.035;
-            previousTouchX = e.clientX;
-        }
-    });
-
-    window.addEventListener('touchstart', (e) => { isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; });
-    window.addEventListener('touchend', stopInput);
-    window.addEventListener('touchmove', (e) => {
-        if (isDragging && gameStarted && !isPaused) {
-            targetX += (e.touches[0].clientX - previousTouchX) * 0.035;
+            targetX += (e.touches[0].clientX - previousTouchX) * 0.045;
             previousTouchX = e.touches[0].clientX;
+        }
+    }, { passive: false });
+
+    renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
+    renderer.domElement.addEventListener('mouseup', stopInput);
+    renderer.domElement.addEventListener('mousemove', (e) => {
+        if (isDragging && gameStarted && !isPaused) {
+            targetX += (e.clientX - previousTouchX) * 0.045;
+            previousTouchX = e.clientX;
         }
     });
 
@@ -511,10 +515,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 12. Main Render Loop ---
     const clock = new THREE.Clock();
+    let currentX = 0;
 
     function animate() {
         requestAnimationFrame(animate);
-
         renderer.render(scene, camera);
 
         if (!gameStarted || isPaused) return;
@@ -524,27 +528,25 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLizards(delta);
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
-        cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.2);
+        currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
+        cannonGroup.position.x = currentX;
 
-        // Dynamic Camera
-        camera.position.x = cannonGroup.position.x * 0.2;
+        camera.position.x = cannonGroup.position.x * 0.15;
         camera.position.y = cannonGroup.position.y + 12.5;
         camera.position.z = cannonGroup.position.z + 18.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
 
-        // Firing
         shootTimer += delta;
-        if (isFiring && shootTimer >= 0.12) {
+        if (isFiring && shootTimer >= 0.15) {
             spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
             spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
             playSound('shoot');
             shootTimer = 0;
         }
 
-        // Bullets Logic & Hits
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
-            b.position.z -= 60 * delta;
+            b.position.z -= 80 * delta;
 
             if (b.position.z < cannonGroup.position.z - 120) {
                 scene.remove(b);
