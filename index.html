@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -11,7 +11,7 @@
 
     <div id="mobile-only-warning">
         <h2>Mobile Only</h2>
-        <p>משחק זה מיועד למכשירים ניידים בלבד.<br>אנא פתח את הקישור דרך הסמארטפון.</p>
+        <p>This game is designed for mobile devices only.<br>Please open the link on your smartphone.</p>
     </div>
 
     <div id="ui-container" class="hud-container">
@@ -39,25 +39,25 @@
         <div id="start-menu">
             <div class="header-section">
                 <h1 class="game-title">Cannon Crowd Clash</h1>
-                <p class="game-subtitle">הזז את המסך כדי להניע את התותח</p>
+                <p class="game-subtitle">Drag screen to control the cannon</p>
             </div>
 
             <div class="best-badge">
-                שיא אישי: <span id="start-best-score">0</span>
+                BEST SCORE: <span id="start-best-score">0</span>
             </div>
 
             <div class="action-section">
-                <button id="start-btn" class="btn">התחל משחק</button>
+                <button id="start-btn" class="btn">START GAME</button>
             </div>
         </div>
     </div>
 
     <div id="pause-menu" class="overlay hidden">
         <div class="pause-card">
-            <h2>משחק מוקפא</h2>
+            <h2>GAME PAUSED</h2>
             
             <div class="customization-section">
-                <span class="section-label">בחר צבע לתותח</span>
+                <span class="section-label">Select Cannon Color</span>
                 <div class="color-picker">
                     <button class="color-btn active" data-color="#2563eb" style="background-color: #2563eb;"></button>
                     <button class="color-btn" data-color="#dc2626" style="background-color: #dc2626;"></button>
@@ -67,20 +67,20 @@
             </div>
 
             <div class="volume-control-menu">
-                <label for="volume-slider">ווליום</label>
+                <label for="volume-slider">Volume</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
             </div>
 
-            <button id="resume-btn" class="btn">המשך משחק</button>
+            <button id="resume-btn" class="btn">RESUME</button>
         </div>
     </div>
 
     <div id="game-over-modal" class="overlay hidden">
         <div class="pause-card">
             <h1 style="font-size: 2.2rem; color: #ef4444; margin-bottom: 4px;">GAME OVER</h1>
-            <p style="font-size: 1.1rem; color: #cbd5e1;">ניקוד: <span id="final-score-val" style="color: #fff; font-weight: bold;">0</span></p>
-            <p style="font-size: 1.1rem; color: #facc15;">שיא אישי: <span id="best-score-val" style="color: #fff; font-weight: bold;">0</span></p>
-            <button id="restart-btn" class="btn btn-restart" style="margin-top: 10px;">נסה שוב</button>
+            <p style="font-size: 1.1rem; color: #cbd5e1;">SCORE: <span id="final-score-val" style="color: #fff; font-weight: bold;">0</span></p>
+            <p style="font-size: 1.1rem; color: #facc15;">BEST SCORE: <span id="best-score-val" style="color: #fff; font-weight: bold;">0</span></p>
+            <button id="restart-btn" class="btn btn-restart" style="margin-top: 10px;">TRY AGAIN</button>
         </div>
     </div>
 
