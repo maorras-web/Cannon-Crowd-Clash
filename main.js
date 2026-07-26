@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 1. Pure Synthetic Audio Engine ---
+    // --- 1. Audio Engine ---
     let audioCtx = null;
     let masterGainNode = null;
     let masterVolume = 0.25;
@@ -15,9 +15,7 @@ window.addEventListener('DOMContentLoaded', () => {
             } else if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-        } catch (e) {
-            console.warn("AudioContext error:", e);
-        }
+        } catch (e) {}
     }
 
     function playSound(type) {
@@ -36,7 +34,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
                 gain.gain.setValueAtTime(0.15, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-
                 osc.start(now);
                 osc.stop(now + 0.08);
             } else if (type === 'hit') {
@@ -45,25 +42,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
                 gain.gain.setValueAtTime(0.4, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-
                 osc.start(now);
                 osc.stop(now + 0.1);
-            } else if (type === 'gate') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, now);
-                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
-
-                osc.start(now);
-                osc.stop(now + 0.12);
             } else if (type === 'boss_hit') {
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(100, now);
                 osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
                 gain.gain.setValueAtTime(0.5, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-
                 osc.start(now);
                 osc.stop(now + 0.2);
             }
@@ -75,13 +61,11 @@ window.addEventListener('DOMContentLoaded', () => {
         volumeSlider.value = masterVolume;
         volumeSlider.addEventListener('input', (e) => {
             masterVolume = parseFloat(e.target.value);
-            if (masterGainNode) {
-                masterGainNode.gain.value = masterVolume;
-            }
+            if (masterGainNode) masterGainNode.gain.value = masterVolume;
         });
     }
 
-    // --- 2. Game Progression & Level State ---
+    // --- 2. Level State & HighScore ---
     let currentLevel = 1;
     let levelProgress = 0;
     const maxLevelProgress = 100;
@@ -105,58 +89,76 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene & Lighting ---
+    // --- 3. Scene, Renderer & Rich Lighting ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050714);
+    scene.background = new THREE.Color(0x0a0c1b);
+    scene.fog = new THREE.FogExp2(0x0a0c1b, 0.008);
 
-    const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    dirLight.position.set(20, 40, 20);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    dirLight.position.set(20, 50, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 150;
+    dirLight.shadow.camera.left = -20;
+    dirLight.shadow.camera.right = 20;
+    dirLight.shadow.camera.top = 20;
+    dirLight.shadow.camera.bottom = -50;
     scene.add(dirLight);
 
-    // --- 4. Track & Space World ---
+    // --- 4. Track & Environment ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 2000;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3 });
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.2 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
+    track.receiveShadow = true;
     scene.add(track);
 
-    let environmentGroup = new THREE.Group();
-    scene.add(environmentGroup);
+    // Side Rails
+    const railGeo = new THREE.BoxGeometry(0.4, 0.8, trackLength);
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.5 });
+    
+    const leftRail = new THREE.Mesh(railGeo, railMat);
+    leftRail.position.set(-trackWidth / 2 - 0.2, 0.2, -trackLength / 2 + 10);
+    scene.add(leftRail);
 
-    function initSpaceWorld() {
-        const starGeo = new THREE.SphereGeometry(0.2, 4, 4);
-        const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const safetyOffset = (trackWidth / 2) + 4.0;
+    const rightRail = new THREE.Mesh(railGeo, railMat);
+    rightRail.position.set(trackWidth / 2 + 0.2, 0.2, -trackLength / 2 + 10);
+    scene.add(rightRail);
 
-        for (let i = 0; i < 400; i++) {
-            const star = new THREE.Mesh(starGeo, starMat);
-            const side = Math.random() < 0.5 ? -1 : 1;
-            
-            star.position.set(
-                side * (safetyOffset + Math.random() * 80),
-                (Math.random() - 0.5) * 80,
-                (Math.random() - 0.5) * trackLength
-            );
-            environmentGroup.add(star);
-        }
+    // Starfield Background
+    const starGroup = new THREE.Group();
+    const starGeo = new THREE.SphereGeometry(0.25, 4, 4);
+    const starMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    for (let i = 0; i < 300; i++) {
+        const star = new THREE.Mesh(starGeo, starMat);
+        const side = Math.random() < 0.5 ? -1 : 1;
+        star.position.set(
+            side * (15 + Math.random() * 60),
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * trackLength
+        );
+        starGroup.add(star);
     }
+    scene.add(starGroup);
 
-    initSpaceWorld();
-
-    // --- 5. HP Health Bar Mechanics ---
+    // --- 5. HP Mechanics ---
     const maxHp = 500;
     let currentHp = 500;
 
@@ -170,49 +172,45 @@ window.addEventListener('DOMContentLoaded', () => {
         hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
 
         let colorHex = '#22c55e';
-        if (percentage < 30) {
-            colorHex = '#ef4444';
-        } else if (percentage < 60) {
-            colorHex = '#eab308';
-        }
+        if (percentage < 30) colorHex = '#ef4444';
+        else if (percentage < 60) colorHex = '#eab308';
 
         hpBar.style.backgroundColor = colorHex;
         hpBar.style.boxShadow = `0 0 12px ${colorHex}`;
     }
 
-    // --- 6. Enemies & Boss Factory ---
+    // --- 6. Lizard Enemies & Boss ---
     const lizards = [];
     let lizardSpawnTimer = 0;
-    const lizardSpawnInterval = 2.5;
 
     const ENEMY_TYPES = {
-        STANDARD: { skinColor: 0x1e5622, scale: 1.2, speed: 16.0, hp: 1, scoreVal: 30 },
-        FAST:     { skinColor: 0xd97706, scale: 0.9, speed: 25.0, hp: 1, scoreVal: 50 },
-        ARMORED:  { skinColor: 0x581c87, scale: 1.6, speed: 10.0, hp: 4, scoreVal: 100 }
+        STANDARD: { skinColor: 0x16a34a, scale: 1.2, speed: 16.0, hp: 1, scoreVal: 30 },
+        FAST:     { skinColor: 0xeab308, scale: 0.9, speed: 24.0, hp: 1, scoreVal: 50 },
+        ARMORED:  { skinColor: 0x9333ea, scale: 1.6, speed: 10.0, hp: 4, scoreVal: 100 }
     };
 
     function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
         const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.5 });
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
-        const bodyGeo = new THREE.BoxGeometry(1.0, 1.8, 1.0);
-        const body = new THREE.Mesh(bodyGeo, skinMat);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 1.0), skinMat);
         body.position.y = 1.2;
+        body.castShadow = true;
         lizardGroup.add(body);
 
-        const headGeo = new THREE.SphereGeometry(0.5, 8, 8);
-        const head = new THREE.Mesh(headGeo, skinMat);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), skinMat);
         head.position.set(0, 2.3, 0.2);
+        head.castShadow = true;
         lizardGroup.add(head);
 
-        const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), eyeMat);
-        eyeLeft.position.set(-0.25, 2.4, 0.6);
-        lizardGroup.add(eyeLeft);
+        const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
+        eyeL.position.set(-0.25, 2.4, 0.6);
+        lizardGroup.add(eyeL);
 
-        const eyeRight = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), eyeMat);
-        eyeRight.position.set(0.25, 2.4, 0.6);
-        lizardGroup.add(eyeRight);
+        const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
+        eyeR.position.set(0.25, 2.4, 0.6);
+        lizardGroup.add(eyeR);
 
         lizardGroup.scale.setScalar(typeConfig.scale);
         lizardGroup.userData = { 
@@ -245,9 +243,9 @@ window.addEventListener('DOMContentLoaded', () => {
         isBossActive = true;
         updateLevelUI();
 
-        const bossConfig = { skinColor: 0xd97706, scale: 3.5, speed: 4.0, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
+        const bossConfig = { skinColor: 0xd97706, scale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
         activeBoss = createLizardMesh(bossConfig);
-        activeBoss.position.set(0, 0, cannonGroup.position.z - 100);
+        activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
         activeBoss.userData.maxHp = bossConfig.hp;
         scene.add(activeBoss);
     }
@@ -255,7 +253,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateLizards(delta) {
         if (!isBossActive) {
             lizardSpawnTimer += delta;
-            if (lizardSpawnTimer >= lizardSpawnInterval) {
+            if (lizardSpawnTimer >= 2.2) {
                 lizardSpawnTimer = 0;
                 spawnLizard();
             }
@@ -265,8 +263,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const liz = lizards[i];
             liz.position.z += liz.userData.speed * delta;
 
-            const distToCannon = liz.position.distanceTo(cannonGroup.position);
-            if (distToCannon < 1.8) {
+            if (liz.position.distanceTo(cannonGroup.position) < 1.8) {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
@@ -274,10 +271,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 scene.remove(liz);
                 lizards.splice(i, 1);
 
-                if (currentHp <= 0) {
-                    gameOver();
-                    return;
-                }
+                if (currentHp <= 0) { gameOver(); return; }
                 continue;
             }
 
@@ -292,44 +286,44 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeBoss.position.z += activeBoss.userData.speed * delta;
             }
 
-            const distToCannon = activeBoss.position.distanceTo(cannonGroup.position);
-            if (distToCannon < 4.0) {
+            if (activeBoss.position.distanceTo(cannonGroup.position) < 4.0) {
                 currentHp -= 200;
                 updateHpBar();
                 playSound('hit');
-
-                if (currentHp <= 0) {
-                    gameOver();
-                }
+                if (currentHp <= 0) gameOver();
             }
         }
     }
 
-    // --- 7. Cannon ---
+    // --- 7. High-Detail Cannon ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.5, roughness: 0.2 });
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.5, roughness: 0.2 });
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6, roughness: 0.2 });
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.6, roughness: 0.2 });
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 0.8, 16), baseMat);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 20), baseMat);
     base.rotation.x = Math.PI / 12;
+    base.castShadow = true;
     cannonMeshGroup.add(base);
 
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
     dome.position.y = 0.3;
+    dome.castShadow = true;
     cannonMeshGroup.add(dome);
 
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 });
-    const barrelLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 1.8, 12), barrelMat);
-    barrelLeft.rotation.x = Math.PI / 2;
-    barrelLeft.position.set(-0.45, 0.35, -0.9);
-    cannonMeshGroup.add(barrelLeft);
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
+    const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
+    barrelL.rotation.x = Math.PI / 2;
+    barrelL.position.set(-0.45, 0.35, -1.0);
+    barrelL.castShadow = true;
+    cannonMeshGroup.add(barrelL);
 
-    const barrelRight = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 1.8, 12), barrelMat);
-    barrelRight.rotation.x = Math.PI / 2;
-    barrelRight.position.set(0.45, 0.35, -0.9);
-    cannonMeshGroup.add(barrelRight);
+    const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
+    barrelR.rotation.x = Math.PI / 2;
+    barrelR.position.set(0.45, 0.35, -1.0);
+    barrelR.castShadow = true;
+    cannonMeshGroup.add(barrelR);
 
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
@@ -340,9 +334,9 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.set(hexColor);
     }
 
-    // --- 8. Bullets ---
-    const bulletGeo = new THREE.SphereGeometry(0.4, 8, 8);
-    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xfbfb04 });
+    // --- 8. Bullets & FX ---
+    const bulletGeo = new THREE.SphereGeometry(0.35, 10, 10);
+    const bulletMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xf59e0b, emissiveIntensity: 0.8 });
     const bullets = [];
 
     function spawnBullet(x, z) {
@@ -352,35 +346,44 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(b);
     }
 
-    // --- 9. Gates System ---
+    // --- 9. Gates ---
     const gates = [];
     let gateIdCounter = 1;
-    const GATE_GAP = 60; 
-    const SPAWN_LIMIT_Z = -800; 
 
     function createGateTexture(label, colorHex) {
         const canvas = document.createElement('canvas');
-        canvas.width = 128; canvas.height = 128;
+        canvas.width = 256; canvas.height = 256;
         const ctx = canvas.getContext('2d');
+        
         ctx.fillStyle = colorHex;
-        ctx.fillRect(0, 0, 128, 128);
+        ctx.fillRect(0, 0, 256, 256);
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 12;
+        ctx.strokeRect(6, 6, 244, 244);
+
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 45px Arial';
+        ctx.font = 'bold 70px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(label, 64, 64);
+        ctx.fillText(label, 128, 128);
+
         return new THREE.CanvasTexture(canvas);
     }
 
     function createGate(id, x, z, type, value) {
         const gateGroup = new THREE.Group();
         const gateWidth = trackWidth / 2 - 0.6;
-        let label = `+${value}`, colorHex = '#0284c7';
-        if (type === 'multiply') { label = `x${value}`; colorHex = '#10b981'; }
+        let label = `+${value}`, colorHex = 'rgba(2, 132, 199, 0.85)';
+        if (type === 'multiply') { label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; }
 
-        const frameMat = new THREE.MeshStandardMaterial({ map: createGateTexture(label, colorHex), transparent: true });
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.0, 0.2), frameMat);
-        frame.position.y = 2.0;
+        const frameMat = new THREE.MeshStandardMaterial({ 
+            map: createGateTexture(label, colorHex), 
+            transparent: true, 
+            roughness: 0.2 
+        });
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.2, 0.2), frameMat);
+        frame.position.y = 2.1;
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
         scene.add(gateGroup);
@@ -398,17 +401,14 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    for (let z = -80; z >= SPAWN_LIMIT_Z; z -= GATE_GAP) {
+    for (let z = -80; z >= -800; z -= 65) {
         spawnGatePairAt(z);
     }
 
-    // --- 10. Controls ---
+    // --- 10. Touch / Drag Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
-    function stopInput() {
-        isDragging = false;
-        isFiring = false;
-    }
+    function stopInput() { isDragging = false; isFiring = false; }
 
     window.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
     window.addEventListener('mouseup', stopInput);
@@ -428,7 +428,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 11. UI & Game Loop ---
+    // --- 11. UI & Game State ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function resetGame() {
@@ -438,14 +438,9 @@ window.addEventListener('DOMContentLoaded', () => {
         levelProgress = 0;
         isBossActive = false;
         
-        if (activeBoss) {
-            scene.remove(activeBoss);
-            activeBoss = null;
-        }
-
+        if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
         for (let liz of lizards) scene.remove(liz);
         lizards.length = 0;
-
         for (let b of bullets) scene.remove(b);
         bullets.length = 0;
 
@@ -514,13 +509,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 12. Main Loop ---
+    // --- 12. Main Render Loop ---
     const clock = new THREE.Clock();
 
     function animate() {
         requestAnimationFrame(animate);
 
-        // Render scene constantly so screen is never black
         renderer.render(scene, camera);
 
         if (!gameStarted || isPaused) return;
@@ -532,11 +526,13 @@ window.addEventListener('DOMContentLoaded', () => {
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, 0.2);
 
+        // Dynamic Camera
         camera.position.x = cannonGroup.position.x * 0.2;
         camera.position.y = cannonGroup.position.y + 12.5;
         camera.position.z = cannonGroup.position.z + 18.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
 
+        // Firing
         shootTimer += delta;
         if (isFiring && shootTimer >= 0.12) {
             spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
@@ -545,9 +541,10 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
+        // Bullets Logic & Hits
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
-            b.position.z -= 55 * delta;
+            b.position.z -= 60 * delta;
 
             if (b.position.z < cannonGroup.position.z - 120) {
                 scene.remove(b);
