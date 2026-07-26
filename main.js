@@ -53,6 +53,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
             osc.start(now);
             osc.stop(now + 0.12);
+        } else if (type === 'boss_hit') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+
+            osc.start(now);
+            osc.stop(now + 0.2);
         }
     }
 
@@ -67,7 +76,28 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 2. Scene & Lighting ---
+    // --- 2. Game Progression & Level State ---
+    let currentLevel = 1;
+    let levelProgress = 0;
+    const maxLevelProgress = 100;
+    let isBossActive = false;
+    let activeBoss = null;
+    let highScore = localStorage.getItem('cannon_high_score') || 0;
+
+    function updateLevelUI() {
+        const progressFill = document.getElementById('level-progress-fill');
+        const levelText = document.getElementById('level-text');
+        
+        if (progressFill) {
+            const percentage = isBossActive ? 100 : Math.min(100, (levelProgress / maxLevelProgress) * 100);
+            progressFill.style.width = `${percentage}%`;
+        }
+        if (levelText) {
+            levelText.innerText = isBossActive ? `LEVEL ${currentLevel} - BOSS FIGHT!` : `LEVEL ${currentLevel}`;
+        }
+    }
+
+    // --- 3. Scene & Lighting ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050714);
     scene.fog = new THREE.FogExp2(0x050714, 0.0008);
@@ -100,7 +130,7 @@ window.addEventListener('DOMContentLoaded', () => {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    // --- 3. Track & Space World ---
+    // --- 4. Track & Space World ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 3500;
@@ -170,7 +200,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     initSpaceWorld();
 
-    // --- 4. HP Health Bar Mechanics ---
+    // --- 5. HP Health Bar Mechanics ---
     const maxHp = 500;
     let currentHp = 500;
 
@@ -194,15 +224,22 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.boxShadow = `0 0 12px ${colorHex}`;
     }
 
-    // --- 5. Enemies: Humanoid Lizardmen ---
+    // --- 6. Enemies & Boss Factory ---
     const lizards = [];
     let lizardSpawnTimer = 0;
-    const lizardSpawnInterval = 3.0;
+    const lizardSpawnInterval = 2.5;
 
-    function createLizardMesh() {
+    // Enemy Types Configuration
+    const ENEMY_TYPES = {
+        STANDARD: { skinColor: 0x1e5622, scale: 1.2, speed: 16.0, hp: 1, scoreVal: 30, type: 'standard' },
+        FAST:     { skinColor: 0xd97706, scale: 0.9, speed: 25.0, hp: 1, scoreVal: 50, type: 'fast' },
+        ARMORED:  { skinColor: 0x581c87, scale: 1.6, speed: 10.0, hp: 4, scoreVal: 100, type: 'armored' }
+    };
+
+    function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
 
-        const skinMat = new THREE.MeshStandardMaterial({ color: 0x1e5622, roughness: 0.5, metalness: 0.1 });
+        const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.5, metalness: 0.1 });
         const armorMat = new THREE.MeshStandardMaterial({ color: 0x143e17, roughness: 0.3, metalness: 0.3 });
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
         const spikeMat = new THREE.MeshStandardMaterial({ color: 0x0f2f11, roughness: 0.3 });
@@ -312,13 +349,27 @@ window.addEventListener('DOMContentLoaded', () => {
         rightLegGroup.add(rightShin);
         lizardGroup.add(rightLegGroup);
 
-        lizardGroup.scale.set(1.2, 1.2, 1.2);
+        lizardGroup.scale.setScalar(typeConfig.scale);
+        lizardGroup.userData = { 
+            hp: typeConfig.hp, 
+            speed: typeConfig.speed, 
+            scoreVal: typeConfig.scoreVal,
+            type: typeConfig.type
+        };
 
         return lizardGroup;
     }
 
     function spawnLizard() {
-        const lizard = createLizardMesh();
+        if (isBossActive) return;
+
+        // Choose enemy type based on probability
+        const rand = Math.random();
+        let config = ENEMY_TYPES.STANDARD;
+        if (rand > 0.75) config = ENEMY_TYPES.ARMORED;
+        else if (rand > 0.5) config = ENEMY_TYPES.FAST;
+
+        const lizard = createLizardMesh(config);
         const spawnX = (Math.random() - 0.5) * (trackWidth - 3);
         const spawnZ = cannonGroup.position.z - 120 - Math.random() * 30;
 
@@ -327,18 +378,30 @@ window.addEventListener('DOMContentLoaded', () => {
         lizards.push(lizard);
     }
 
+    function spawnBoss() {
+        isBossActive = true;
+        updateLevelUI();
+
+        const bossConfig = { skinColor: 0xd97706, scale: 3.8, speed: 4.0, hp: 50 + (currentLevel * 25), scoreVal: 1000, type: 'boss' };
+        activeBoss = createLizardMesh(bossConfig);
+        activeBoss.position.set(0, 0, cannonGroup.position.z - 100);
+        activeBoss.userData.maxHp = bossConfig.hp;
+        scene.add(activeBoss);
+    }
+
     function updateLizards(delta) {
-        lizardSpawnTimer += delta;
-        if (lizardSpawnTimer >= lizardSpawnInterval) {
-            lizardSpawnTimer = 0;
-            spawnLizard();
+        if (!isBossActive) {
+            lizardSpawnTimer += delta;
+            if (lizardSpawnTimer >= lizardSpawnInterval) {
+                lizardSpawnTimer = 0;
+                spawnLizard();
+            }
         }
 
-        const lizardSpeed = 16.0;
-
+        // Update Regular Lizards
         for (let i = lizards.length - 1; i >= 0; i--) {
             const liz = lizards[i];
-            liz.position.z += lizardSpeed * delta;
+            liz.position.z += liz.userData.speed * delta;
             
             liz.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 10)) * 0.35;
             liz.rotation.y = Math.sin(clock.getElapsedTime() * 8) * 0.12;
@@ -366,9 +429,30 @@ window.addEventListener('DOMContentLoaded', () => {
                 lizards.splice(i, 1);
             }
         }
+
+        // Update Boss Logic
+        if (isBossActive && activeBoss) {
+            if (activeBoss.position.z < cannonGroup.position.z - 18) {
+                activeBoss.position.z += activeBoss.userData.speed * delta;
+            }
+            activeBoss.position.x = Math.sin(clock.getElapsedTime() * 1.5) * (maxBoundX - 1);
+            activeBoss.position.y = Math.abs(Math.sin(clock.getElapsedTime() * 4)) * 0.5;
+
+            const distToCannon = activeBoss.position.distanceTo(cannonGroup.position);
+            if (distToCannon < 4.0) {
+                currentHp -= 200;
+                updateHpBar();
+                triggerExplosion(activeBoss.position, 0xef4444);
+                playSound('hit');
+
+                if (currentHp <= 0) {
+                    gameOver();
+                }
+            }
+        }
     }
 
-    // --- 6. Cannon & Thrusters ---
+    // --- 7. Cannon & Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -456,7 +540,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    // --- 7. Bullets & Particle Effects ---
+    // --- 8. Bullets & Particle Effects ---
     function createLightningBallTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
@@ -485,9 +569,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const particles = [];
     const particleGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
 
-    function triggerExplosion(pos, colorHex) {
+    function triggerExplosion(pos, colorHex, count = 12) {
         const particleMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < count; i++) {
             const p = new THREE.Mesh(particleGeo, particleMat);
             p.position.copy(pos);
             p.position.x += (Math.random() - 0.5) * 2;
@@ -498,7 +582,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 8. Gates System ---
+    // --- 9. Gates System ---
     const gates = [];
     let gateIdCounter = 1;
     const GATE_GAP = 50; 
@@ -564,7 +648,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Touch & Mouse Controls ---
+    // --- 10. Touch & Mouse Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     function stopInput() {
@@ -592,14 +676,34 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. UI & Game Logic Connections ---
+    // --- 11. UI & Game Logic Connections ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function gameOver() {
         gameStarted = false;
         stopInput();
-        alert(`Game Over! התותח שלך הושמד!\nהניקוד שלך: ${score}`);
-        window.location.reload();
+
+        // Save High Score
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('cannon_high_score', highScore);
+        }
+
+        // Show Game Over UI Card
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreVal = document.getElementById('final-score-val');
+        const bestScoreVal = document.getElementById('best-score-val');
+
+        if (finalScoreVal) finalScoreVal.innerText = score;
+        if (bestScoreVal) bestScoreVal.innerText = highScore;
+        if (gameOverModal) gameOverModal.classList.remove('hidden');
+    }
+
+    const restartBtn = document.getElementById('restart-btn');
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+            window.location.reload();
+        });
     }
 
     const startBtn = document.getElementById('start-btn');
@@ -609,6 +713,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initAudio();
             gameStarted = true;
             updateHpBar();
+            updateLevelUI();
             if (startOverlay) {
                 startOverlay.style.opacity = '0';
                 setTimeout(() => startOverlay.classList.add('hidden'), 400);
@@ -636,7 +741,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 11. Main Loop ---
+    // --- 12. Main Loop ---
     const clock = new THREE.Clock();
     const gateSpeed = 32.0;
 
@@ -700,27 +805,68 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             let bulletDestroyed = false;
-            for (let k = lizards.length - 1; k >= 0; k--) {
-                const liz = lizards[k];
-                if (b.position.distanceTo(liz.position) < 1.6) {
-                    playSound('hit');
-                    score += 30;
-                    const scoreVal = document.getElementById('score-val');
-                    if (scoreVal) scoreVal.innerText = score;
 
-                    triggerExplosion(liz.position, 0x16a34a);
-                    scene.remove(liz);
-                    lizards.splice(k, 1);
+            // Collision with Boss
+            if (isBossActive && activeBoss) {
+                if (b.position.distanceTo(activeBoss.position) < 3.2) {
+                    playSound('boss_hit');
+                    activeBoss.userData.hp -= 1;
+                    triggerExplosion(b.position, 0xf59e0b, 5);
 
                     scene.remove(b);
                     bullets.splice(i, 1);
                     bulletDestroyed = true;
+
+                    if (activeBoss.userData.hp <= 0) {
+                        score += activeBoss.userData.scoreVal;
+                        triggerExplosion(activeBoss.position, 0xef4444, 40);
+                        scene.remove(activeBoss);
+                        activeBoss = null;
+                        isBossActive = false;
+                        
+                        currentLevel++;
+                        levelProgress = 0;
+                        updateLevelUI();
+                    }
+                    continue;
+                }
+            }
+
+            // Collision with Lizards
+            for (let k = lizards.length - 1; k >= 0; k--) {
+                const liz = lizards[k];
+                if (b.position.distanceTo(liz.position) < 1.6) {
+                    playSound('hit');
+                    liz.userData.hp -= 1;
+
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    bulletDestroyed = true;
+
+                    if (liz.userData.hp <= 0) {
+                        score += liz.userData.scoreVal;
+                        const scoreVal = document.getElementById('score-val');
+                        if (scoreVal) scoreVal.innerText = score;
+
+                        if (!isBossActive) {
+                            levelProgress += 5;
+                            updateLevelUI();
+                            if (levelProgress >= maxLevelProgress) {
+                                spawnBoss();
+                            }
+                        }
+
+                        triggerExplosion(liz.position, 0x16a34a);
+                        scene.remove(liz);
+                        lizards.splice(k, 1);
+                    }
                     break;
                 }
             }
 
             if (bulletDestroyed) continue;
 
+            // Collision with Gates
             for (let j = gates.length - 1; j >= 0; j--) {
                 const g = gates[j];
                 if (Math.abs(b.position.z - g.position.z) < 1.5 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
