@@ -4,7 +4,7 @@
     box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
-    font-family: 'Rubik', sans-serif;
+    font-family: 'Rubik', system-ui, -apple-system, sans-serif;
 }
 
 html, body {
@@ -12,7 +12,6 @@ html, body {
     height: 100%;
     overflow: hidden;
     background-color: #050714;
-    /* מונע מחוות גלילה ורענון בדפדפן הנייד בזמן מגע */
     touch-action: none;
 }
 
@@ -70,7 +69,7 @@ canvas {
     pointer-events: none;
 }
 
-/* === מד חיים חדש לתותח (HP Bar) === */
+/* === מד חיים לתותח (HP Bar) === */
 #hp-container {
     position: relative;
     width: 110px;
@@ -87,8 +86,8 @@ canvas {
 #hp-bar {
     width: 100%;
     height: 100%;
-    background-color: #22c55e; /* ירוק התחלתי */
-    box-shadow: 0 0 10px #22c55e; /* הילת אור ניאונית */
+    background-color: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
     transition: width 0.25s ease-out, background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -192,7 +191,7 @@ canvas {
     transform: scale(0.92);
 }
 
-/* === מסך פתיחה פנומנלי בפריסה מלאה (Full Screen) === */
+/* === מסכי Overlay (פתיחה, עצירה ו-Game Over) === */
 #start-overlay, .overlay {
     position: fixed;
     top: 0;
@@ -245,21 +244,22 @@ canvas {
     padding: 0 10px;
 }
 
-/* בחירת צבע התותח */
+/* בחירת צבע התותח בתוך כרטיס ה-Pause */
 .customization-section {
     width: 100%;
     background: rgba(255, 255, 255, 0.04);
-    padding: 16px;
-    border-radius: 20px;
+    padding: 12px;
+    border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 6px 0;
 }
 
 .section-label {
     display: block;
     color: #38bdf8;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     letter-spacing: 1px;
 }
 
@@ -270,8 +270,8 @@ canvas {
 }
 
 .color-btn {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: 2px solid transparent;
     cursor: pointer;
@@ -279,7 +279,7 @@ canvas {
 }
 
 .color-btn.active {
-    transform: scale(1.2);
+    transform: scale(1.15);
     border-color: #ffffff;
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
 }
@@ -295,7 +295,7 @@ canvas {
     font-size: 0.95rem;
 }
 
-/* כפתורים כלליים */
+/* כפתורים */
 .btn {
     padding: 14px 32px;
     font-size: 1.1rem;
@@ -329,7 +329,7 @@ canvas {
     font-size: 1.3rem;
 }
 
-/* === תפריטים ותסריטי Pause / Game Over === */
+/* תפריטי Pause / Game Over */
 #pause-menu, #game-over-modal {
     position: fixed;
     top: 0;
@@ -347,7 +347,7 @@ canvas {
 .pause-card {
     background: #0f172a;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 28px 24px;
+    padding: 24px 20px;
     border-radius: 24px;
     text-align: center;
     width: 88%;
@@ -362,20 +362,19 @@ canvas {
 
 .pause-card h2 {
     color: #38bdf8;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
 }
 
 .volume-control-menu {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
-    margin: 10px 0;
 }
 
 .volume-control-menu label {
-    font-size: 14px;
+    font-size: 13px;
     color: #cbd5e1;
     font-weight: 600;
 }

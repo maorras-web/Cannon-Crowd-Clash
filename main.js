@@ -229,7 +229,6 @@ window.addEventListener('DOMContentLoaded', () => {
     let lizardSpawnTimer = 0;
     const lizardSpawnInterval = 2.5;
 
-    // Enemy Types Configuration
     const ENEMY_TYPES = {
         STANDARD: { skinColor: 0x1e5622, scale: 1.2, speed: 16.0, hp: 1, scoreVal: 30, type: 'standard' },
         FAST:     { skinColor: 0xd97706, scale: 0.9, speed: 25.0, hp: 1, scoreVal: 50, type: 'fast' },
@@ -363,7 +362,6 @@ window.addEventListener('DOMContentLoaded', () => {
     function spawnLizard() {
         if (isBossActive) return;
 
-        // Choose enemy type based on probability
         const rand = Math.random();
         let config = ENEMY_TYPES.STANDARD;
         if (rand > 0.75) config = ENEMY_TYPES.ARMORED;
@@ -456,15 +454,17 @@ window.addEventListener('DOMContentLoaded', () => {
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    const baseGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.8, 24);
+    // חומרים של התותח לשינוי צבע בלייב
     const baseMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.8, roughness: 0.2 });
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.9, roughness: 0.1 });
+
+    const baseGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.8, 24);
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.rotation.x = Math.PI / 12;
     base.castShadow = true;
     cannonMeshGroup.add(base);
 
     const domeGeo = new THREE.SphereGeometry(0.9, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.9, roughness: 0.1 });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.y = 0.3;
     dome.castShadow = true;
@@ -539,6 +539,12 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
+
+    // פונקציה לעדכון צבע התותח מתוך התפריט
+    function updateCannonColor(hexColor) {
+        baseMat.color.set(hexColor);
+        domeMat.color.set(hexColor);
+    }
 
     // --- 8. Bullets & Particle Effects ---
     function createLightningBallTexture() {
@@ -679,17 +685,45 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 11. UI & Game Logic Connections ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
+    function resetGame() {
+        score = 0;
+        currentHp = maxHp;
+        currentLevel = 1;
+        levelProgress = 0;
+        isBossActive = false;
+        
+        if (activeBoss) {
+            scene.remove(activeBoss);
+            activeBoss = null;
+        }
+
+        // ניקוי אויבים
+        for (let liz of lizards) scene.remove(liz);
+        lizards.length = 0;
+
+        // ניקוי כדורים
+        for (let b of bullets) scene.remove(b);
+        bullets.length = 0;
+
+        cannonGroup.position.set(0, 1.2, 0);
+        targetX = 0;
+
+        const scoreVal = document.getElementById('score-val');
+        if (scoreVal) scoreVal.innerText = '0';
+
+        updateHpBar();
+        updateLevelUI();
+    }
+
     function gameOver() {
         gameStarted = false;
         stopInput();
 
-        // Save High Score
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('cannon_high_score', highScore);
         }
 
-        // Show Game Over UI Card
         const gameOverModal = document.getElementById('game-over-modal');
         const finalScoreVal = document.getElementById('final-score-val');
         const bestScoreVal = document.getElementById('best-score-val');
@@ -702,7 +736,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const restartBtn = document.getElementById('restart-btn');
     if (restartBtn) {
         restartBtn.addEventListener('click', () => {
-            window.location.reload();
+            document.getElementById('game-over-modal')?.classList.add('hidden');
+            resetGame();
+            gameStarted = true;
         });
     }
 
@@ -711,9 +747,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (startBtn) {
         startBtn.addEventListener('click', () => {
             initAudio();
+            resetGame();
             gameStarted = true;
-            updateHpBar();
-            updateLevelUI();
             if (startOverlay) {
                 startOverlay.style.opacity = '0';
                 setTimeout(() => startOverlay.classList.add('hidden'), 400);
@@ -740,6 +775,19 @@ window.addEventListener('DOMContentLoaded', () => {
             pauseMenu?.classList.add('hidden'); 
         });
     }
+
+    // חיבור כפתורי בחירת הצבע בתפריט
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const selectedColor = e.target.getAttribute('data-color');
+            if (selectedColor) {
+                updateCannonColor(selectedColor);
+            }
+        });
+    });
 
     // --- 12. Main Loop ---
     const clock = new THREE.Clock();
@@ -804,8 +852,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            let bulletDestroyed = false;
-
             // Collision with Boss
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 3.2) {
@@ -815,10 +861,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     scene.remove(b);
                     bullets.splice(i, 1);
-                    bulletDestroyed = true;
 
                     if (activeBoss.userData.hp <= 0) {
                         score += activeBoss.userData.scoreVal;
+                        const scoreVal = document.getElementById('score-val');
+                        if (scoreVal) scoreVal.innerText = score;
+
                         triggerExplosion(activeBoss.position, 0xef4444, 40);
                         scene.remove(activeBoss);
                         activeBoss = null;
@@ -841,79 +889,46 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     scene.remove(b);
                     bullets.splice(i, 1);
-                    bulletDestroyed = true;
 
                     if (liz.userData.hp <= 0) {
                         score += liz.userData.scoreVal;
                         const scoreVal = document.getElementById('score-val');
                         if (scoreVal) scoreVal.innerText = score;
 
+                        // התקדמות בשלב
                         if (!isBossActive) {
-                            levelProgress += 5;
-                            updateLevelUI();
+                            levelProgress += 10;
                             if (levelProgress >= maxLevelProgress) {
                                 spawnBoss();
+                            } else {
+                                updateLevelUI();
                             }
                         }
 
-                        triggerExplosion(liz.position, 0x16a34a);
+                        triggerExplosion(liz.position, 0x22c55e, 12);
                         scene.remove(liz);
                         lizards.splice(k, 1);
                     }
                     break;
                 }
             }
-
-            if (bulletDestroyed) continue;
-
-            // Collision with Gates
-            for (let j = gates.length - 1; j >= 0; j--) {
-                const g = gates[j];
-                if (Math.abs(b.position.z - g.position.z) < 1.5 && Math.abs(b.position.x - g.position.x) < trackWidth / 4) {
-                    playSound('gate');
-                    score += 20;
-                    const scoreVal = document.getElementById('score-val');
-                    if (scoreVal) scoreVal.innerText = score;
-
-                    if (g.userData.type === 'multiply') {
-                        const extra = Math.min(g.userData.value - 1, 2);
-                        for (let k = 0; k < extra; k++) {
-                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.5, b.position.z - (k * 0.4));
-                        }
-                    } else if (g.userData.type === 'add') {
-                        for (let k = 0; k < 2; k++) {
-                            spawnBullet(b.position.x + (Math.random() - 0.5) * 0.5, b.position.z - (k * 0.4));
-                        }
-                    }
-
-                    triggerExplosion(g.position, g.userData.colorHex);
-                    if (g.userData.mat) g.userData.mat.dispose();
-                    scene.remove(g);
-                    gates.splice(j, 1);
-                    scene.remove(b);
-                    bullets.splice(i, 1);
-                    break;
-                }
-            }
         }
 
+        // עדכון חלקיקי פיצוץ
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
-            p.userData.life -= delta * 2.5;
             p.position.x += p.userData.vx * delta;
             p.position.y += p.userData.vy * delta;
             p.position.z += p.userData.vz * delta;
-            p.userData.vy -= 30 * delta;
-            p.scale.setScalar(Math.max(0, p.userData.life));
+            p.userData.vy -= 18 * delta; // כוח משיכה
+            p.userData.life -= 2.0 * delta;
 
             if (p.userData.life <= 0) {
-                if (p.userData.mat) p.userData.mat.dispose();
                 scene.remove(p);
+                if (p.userData.mat) p.userData.mat.dispose();
                 particles.splice(i, 1);
             }
         }
-
-        renderer.render(scene, camera);
     }
 
     window.addEventListener('resize', () => {
