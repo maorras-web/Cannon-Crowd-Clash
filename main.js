@@ -66,14 +66,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
                 osc.start(now);
                 osc.stop(now + 0.1);
-            } else if (type === 'boss_hit') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(100, now);
-                osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
-                gain.gain.setValueAtTime(0.5, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            } else if (type === 'gate') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
                 osc.start(now);
-                osc.stop(now + 0.2);
+                osc.stop(now + 0.12);
             } else if (type === 'explosion') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(120, now);
@@ -225,20 +225,6 @@ window.addEventListener('DOMContentLoaded', () => {
     track.receiveShadow = true;
     scene.add(track);
 
-    // Stars Particles
-    const starCount = 3000;
-    const starPositions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-        const side = Math.random() < 0.5 ? -1 : 1;
-        starPositions[i * 3]     = side * (12 + Math.random() * 100);
-        starPositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
-        starPositions[i * 3 + 2] = (Math.random() - 0.5) * trackLength;
-    }
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.35, transparent: true, opacity: 0.95 });
-    scene.add(new THREE.Points(starGeo, starMat));
-
     // --- 5. HP Mechanics ---
     const maxHp = 500;
     let currentHp = 500;
@@ -323,25 +309,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
         const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.75, 1.2, 1.8); lizardGroup.add(eyeL);
         const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.75, 1.2, 1.8); lizardGroup.add(eyeR);
-
-        for (let z = -0.8; z <= 0.8; z += 0.5) {
-            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.7, 4), detailMat);
-            spike.position.set(0, 1.5, z);
-            lizardGroup.add(spike);
-        }
-
-        const legGeo = new THREE.BoxGeometry(1.1, 0.35, 0.45);
-        const legFL = new THREE.Mesh(legGeo, skinMat); legFL.position.set(-1.1, 0.5, 0.7); legFL.rotation.z = 0.3; lizardGroup.add(legFL);
-        const legFR = new THREE.Mesh(legGeo, skinMat); legFR.position.set(1.1, 0.5, 0.7); legFR.rotation.z = -0.3; lizardGroup.add(legFR);
-        const legBL = new THREE.Mesh(legGeo, skinMat); legBL.position.set(-1.1, 0.5, -0.7); legBL.rotation.z = 0.3; lizardGroup.add(legBL);
-        const legBR = new THREE.Mesh(legGeo, skinMat); legBR.position.set(1.1, 0.5, -0.7); legBR.rotation.z = -0.3; lizardGroup.add(legBR);
-
-        const tailGeo = new THREE.ConeGeometry(0.55, 2.5, 5);
-        tailGeo.rotateX(Math.PI / 2);
-        const tail = new THREE.Mesh(tailGeo, skinMat);
-        tail.position.set(0, 0.7, -2.2);
-        tail.castShadow = true;
-        lizardGroup.add(tail);
 
         lizardGroup.rotation.y = Math.PI;
         lizardGroup.scale.setScalar(typeConfig.scale * 1.35);
@@ -453,8 +420,8 @@ window.addEventListener('DOMContentLoaded', () => {
     function spawnTNTBarrel(x, z) {
         const barrelGroup = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ map: tntTexture, roughness: 0.4, metalness: 0.3 });
-        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.6, 16), mat);
-        mesh.position.y = 1.3;
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.8, 16), mat);
+        mesh.position.y = 1.4;
         mesh.castShadow = true;
         barrelGroup.add(mesh);
 
@@ -469,10 +436,8 @@ window.addEventListener('DOMContentLoaded', () => {
         playSound('explosion');
         triggerCameraShake(0.7);
 
-        // אפקט חלקיקי פיצוץ
         createGateParticles(barrel.position, false);
 
-        // חיסול לטאות ברדיוס הפיצוץ
         const blastRadius = 16.0;
         for (let i = lizards.length - 1; i >= 0; i--) {
             const liz = lizards[i];
@@ -529,15 +494,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
     barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
-
-    const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
-    const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
-    thrusterL.rotation.z = Math.PI / 2; thrusterL.position.set(-1.3, 0.2, 0);
-    cannonMeshGroup.add(thrusterL);
-
-    const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
-    thrusterR.rotation.z = -Math.PI / 2; thrusterR.position.set(1.3, 0.2, 0);
-    cannonMeshGroup.add(thrusterR);
 
     // Fire Particles
     const fireParticles = [];
@@ -608,33 +564,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Muzzle Flashes
-    const muzzleFlashes = [];
-    const muzzleFlashGeo = new THREE.SphereGeometry(0.5, 12, 12);
-    const muzzleFlashMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1.0 });
-
-    function triggerMuzzleFlash(x, y, z) {
-        const flash = new THREE.Mesh(muzzleFlashGeo, muzzleFlashMat.clone());
-        flash.position.set(x, y, z);
-        scene.add(flash);
-        muzzleFlashes.push({ mesh: flash, life: 1.0 });
-    }
-
-    function updateMuzzleFlashes(delta) {
-        for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
-            const f = muzzleFlashes[i];
-            f.life -= delta * 15.0;
-            if (f.life <= 0) {
-                scene.remove(f.mesh);
-                f.mesh.material.dispose();
-                muzzleFlashes.splice(i, 1);
-            } else {
-                f.mesh.scale.setScalar(f.life * 1.2);
-                f.mesh.material.opacity = f.life;
-            }
-        }
-    }
-
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
@@ -644,57 +573,46 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.set(hexColor);
     }
 
-    // --- 9. Bullets & Particles ---
+    // --- 9. Bullets & Fire Multiplier ---
+    let fireRateMultiplier = 1; // משפיע על כמות הכדורים שנורים בכל פעם
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ 
         color: 0xfacc15, emissive: 0xffea00, emissiveIntensity: 2.0, roughness: 0.1 
     });
 
-    const trailGeo = new THREE.CylinderGeometry(0.04, 0.22, 2.8, 8);
-    trailGeo.rotateX(Math.PI / 2);
-    const trailMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.65 });
-
     const bullets = [];
 
     function spawnBullet(x, z) {
-        const bulletGroup = new THREE.Group();
-
         const mainBullet = new THREE.Mesh(bulletGeo, bulletMat);
         mainBullet.scale.set(1, 1, 1.8);
-        bulletGroup.add(mainBullet);
-
-        const trail = new THREE.Mesh(trailGeo, trailMat);
-        trail.position.z = 1.4;
-        bulletGroup.add(trail);
-
-        bulletGroup.position.set(x, 1.1, z);
-        scene.add(bulletGroup);
-        bullets.push(bulletGroup);
+        mainBullet.position.set(x, 1.1, z);
+        scene.add(mainBullet);
+        bullets.push(mainBullet);
     }
 
     // Gate Particles
     const activeParticleSystems = [];
     function createGateParticles(position, isMultiply) {
-        const count = 20;
+        const count = 15;
         const geometry = new THREE.BufferGeometry();
         const positions = [];
         const velocities = [];
 
-        const particleColor = isMultiply ? 0x10b981 : 0x0284c7;
+        const particleColor = isMultiply ? 0x10b981 : 0xef4444;
 
         for (let i = 0; i < count; i++) {
             positions.push(position.x, position.y, position.z);
             velocities.push(
-                (Math.random() - 0.5) * 0.35,
-                (Math.random() - 0.2) * 0.4 + 0.1,
-                (Math.random() - 0.5) * 0.35
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.2) * 0.3 + 0.1,
+                (Math.random() - 0.5) * 0.3
             );
         }
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
         const material = new THREE.PointsMaterial({
-            color: particleColor, size: 0.4, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending, depthWrite: false
+            color: particleColor, size: 0.35, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending, depthWrite: false
         });
 
         const system = new THREE.Points(geometry, material);
@@ -726,9 +644,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 10. GATES (DYNAMIC, MOVING & RED NEGATIVE GATES) ---
+    // --- 10. GATES (SMOOTH MOVEMENT & WORKING COLLISION) ---
     const gates = [];
-    let gateIdCounter = 1;
 
     function createGateTexture(label, colorHex) {
         const canvas = document.createElement('canvas');
@@ -749,9 +666,9 @@ window.addEventListener('DOMContentLoaded', () => {
         return new THREE.CanvasTexture(canvas);
     }
 
-    function createGate(id, x, z, type, value, isMoving = false) {
+    function createGate(x, z, type, value, isMoving = false) {
         const gateGroup = new THREE.Group();
-        const gateWidth = trackWidth / 2 - 0.6;
+        const gateWidth = trackWidth / 2 - 0.8;
         let label = `+${value}`, colorHex = 'rgba(2, 132, 199, 0.85)';
         
         if (type === 'multiply') { 
@@ -765,15 +682,15 @@ window.addEventListener('DOMContentLoaded', () => {
         const frameMat = new THREE.MeshStandardMaterial({ 
             map: createGateTexture(label, colorHex), transparent: true, roughness: 0.1, metalness: 0.2
         });
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.2, 0.2), frameMat);
-        frame.position.y = 2.1;
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.0, 0.2), frameMat);
+        frame.position.y = 2.0;
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
         
         gateGroup.userData = { 
-            id, type, value, width: gateWidth, height: 4.2, baseY: 0,
-            floatOffset: Math.random() * Math.PI * 2, hitScale: 1.0,
-            isMoving: isMoving, initialX: x, moveSpeed: 2.0 + Math.random() * 1.5, moveRange: 3.0
+            type, value, width: gateWidth, height: 4.0,
+            isMoving: isMoving, initialX: x, moveSpeed: 1.2, moveRange: 2.0,
+            hasCollided: false
         };
 
         scene.add(gateGroup);
@@ -784,46 +701,38 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let g of gates) {
             const gData = g.userData;
             
-            // תנועה אנכית (ציפה)
-            g.position.y = gData.baseY + Math.sin(elapsedTime * 3 + gData.floatOffset) * 0.15;
-            
-            // שערים זזים אופקית (ימינה ושמאלה)
+            // תנועה אופקית חלקה מאוד שנשארת במסלול בלבד
             if (gData.isMoving) {
                 g.position.x = gData.initialX + Math.sin(elapsedTime * gData.moveSpeed) * gData.moveRange;
             }
-
-            if (gData.hitScale > 1.0) {
-                gData.hitScale = THREE.MathUtils.lerp(gData.hitScale, 1.0, delta * 12);
-                g.scale.set(gData.hitScale, gData.hitScale, gData.hitScale);
-            }
         }
     }
 
-    function spawnGatePairAt(z) {
+    function spawnGateSetAt(z) {
         const offset = trackWidth / 4;
-        const randType = Math.random();
+        const rand = Math.random();
 
-        if (randType > 0.65) {
-            // שילוב שער שלילי (אדום)
-            createGate(`g_${gateIdCounter++}`, -offset, z, 'subtract', 15);
-            createGate(`g_${gateIdCounter++}`, offset, z, 'multiply', 2);
-        } else if (randType > 0.35) {
-            // שערים זזים דינמיים
-            createGate(`g_${gateIdCounter++}`, -offset, z, 'add', 20, true);
-            createGate(`g_${gateIdCounter++}`, offset, z, 'divide', 2, true);
+        if (rand > 0.6) {
+            // שערים זזים במתכונת בטוחה
+            createGate(-offset, z, 'multiply', 2, true);
+            createGate(offset, z, 'subtract', 10, true);
+        } else if (rand > 0.3) {
+            // שערים שליליים
+            createGate(-offset, z, 'subtract', 15, false);
+            createGate(offset, z, 'add', 20, false);
         } else {
             // שערים רגילים
-            createGate(`g_${gateIdCounter++}`, -offset, z, 'multiply', 3);
-            createGate(`g_${gateIdCounter++}`, offset, z, 'add', 15);
+            createGate(-offset, z, 'multiply', 3, false);
+            createGate(offset, z, 'add', 10, false);
         }
 
-        // ספציפית: סיכוי לחבית מתפוצצת ליד השערים
-        if (Math.random() > 0.4) {
-            spawnTNTBarrel((Math.random() - 0.5) * (trackWidth - 4), z - 18);
+        // יצירת חבית TNT בדרכים
+        if (Math.random() > 0.35) {
+            spawnTNTBarrel((Math.random() - 0.5) * (trackWidth - 4), z - 25);
         }
     }
 
-    for (let z = -80; z >= -800; z -= 65) spawnGatePairAt(z);
+    for (let z = -60; z >= -1000; z -= 70) spawnGateSetAt(z);
 
     // --- 11. Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
@@ -858,6 +767,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
+        fireRateMultiplier = 1;
         isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
         
         if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
@@ -954,7 +864,6 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLizards(delta);
         updateParticles(delta);
         updateGates(elapsedTime, delta);
-        updateMuzzleFlashes(delta);
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
@@ -975,23 +884,22 @@ window.addEventListener('DOMContentLoaded', () => {
         camera.position.z = cannonGroup.position.z + 18.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
 
+        // ירי כדורים לפי המכפיל המעודכן מהשערים
         shootTimer += delta;
         if (isFiring && shootTimer >= 0.15) {
-            const lx = cannonGroup.position.x - 0.45;
-            const rx = cannonGroup.position.x + 0.45;
-            const fz = cannonGroup.position.z - 2.0;
-
-            spawnBullet(lx, cannonGroup.position.z - 1.2);
-            spawnBullet(rx, cannonGroup.position.z - 1.2);
-
-            triggerMuzzleFlash(lx, 1.35, fz);
-            triggerMuzzleFlash(rx, 1.35, fz);
+            const spread = 0.35;
+            const numBullets = Math.min(fireRateMultiplier, 5); // מוגבל לעד 5 כדורים במקביל
+            for (let bIdx = 0; bIdx < numBullets; bIdx++) {
+                const offsetX = (bIdx - (numBullets - 1) / 2) * spread;
+                spawnBullet(cannonGroup.position.x + offsetX, cannonGroup.position.z - 1.2);
+            }
 
             cannonRecoilZ = 0.35;
             playSound('shoot');
             shootTimer = 0;
         }
 
+        // בדיקת פגיעה של כדורים בלטאות, TNT ושערים
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 80 * delta;
@@ -1000,6 +908,24 @@ window.addEventListener('DOMContentLoaded', () => {
                 scene.remove(b);
                 bullets.splice(i, 1);
                 continue;
+            }
+
+            // פגיעה בשערים (המרה של סוג השער לתוצאה בפועל)
+            for (let g of gates) {
+                const gData = g.userData;
+                if (!gData.hasCollided && Math.abs(b.position.x - g.position.x) < gData.width / 2 && Math.abs(b.position.z - g.position.z) < 1.2) {
+                    gData.hasCollided = true;
+                    createGateParticles(g.position, gData.type === 'multiply' || gData.type === 'add');
+                    playSound('gate');
+
+                    if (gData.type === 'multiply') fireRateMultiplier *= gData.value;
+                    else if (gData.type === 'add') fireRateMultiplier += 1;
+                    else if (gData.type === 'subtract') fireRateMultiplier = Math.max(1, fireRateMultiplier - 1);
+                    else if (gData.type === 'divide') fireRateMultiplier = Math.max(1, Math.floor(fireRateMultiplier / gData.value));
+
+                    scene.remove(g);
+                    break;
+                }
             }
 
             // פגיעה בחביות TNT
@@ -1014,16 +940,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // פגיעה בשערים
-            for (let g of gates) {
-                const gData = g.userData;
-                if (Math.abs(b.position.x - g.position.x) < gData.width / 2 && Math.abs(b.position.z - g.position.z) < 1.0) {
-                    createGateParticles(b.position, gData.type === 'multiply' || gData.type === 'add');
-                    gData.hitScale = 1.18;
-                    break;
-                }
-            }
-
+            // פגיעה בבוס
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 4.0) {
                     playSound('boss_hit');
@@ -1048,6 +965,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // פגיעה בלטאות
             for (let j = lizards.length - 1; j >= 0; j--) {
                 const liz = lizards[j];
                 if (b.position.distanceTo(liz.position) < 2.0) {
