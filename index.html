@@ -2,229 +2,362 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cannon Crowd Clash - Juice Effects</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cannon Crowd Clash</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000000; /* רקע שחור נקי */
+        * {
+            box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
         }
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-        }
-        #instructions {
-            position: absolute;
-            top: 20px;
+        body, html {
             width: 100%;
-            text-align: center;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            font-size: 18px;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .stats-card {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00f3ff;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            border-radius: 12px;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 16px;
+            display: flex;
+            gap: 20px;
+            align-self: center;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stat-value {
+            color: #00f3ff;
+            font-weight: bold;
+        }
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 16px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #ff0055, #7a00ff);
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #start-btn:active {
+            transform: translate(-50%, -50%) scale(0.95);
         }
     </style>
-    <!-- טעינת Three.js -->
+    <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="instructions">לחץ על המסך כדי לירות בתותח!</div>
+    <div id="game-container"></div>
+
+    <div id="ui-overlay">
+        <div class="stats-card">
+            <div class="stat-item">קנים: <span id="ui-bullets" class="stat-value">1</span></div>
+            <div class="stat-item">קצב ירי: <span id="ui-firerate" class="stat-value">100%</span></div>
+            <div class="stat-item">נזק: <span id="ui-damage" class="stat-value">10</span></div>
+        </div>
+        <button id="start-btn">התחל משחק</button>
+    </div>
 
     <script>
-        // ==========================================
-        // 1. הגדרת הסצנה, המצלמה והרנדרר
-        // ==========================================
+        // --- 1. SETUP & SCENE ---
+        const container = document.getElementById('game-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000); // רקע שחור סטטי
+        scene.fog = new THREE.FogExp2(0x000511, 0.015);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        // מיקום הבסיס של המצלמה (קריטי עבור Camera Shake)
-        const ORIGINAL_CAMERA_POS = new THREE.Vector3(0, 4, 8);
-        camera.position.copy(ORIGINAL_CAMERA_POS);
-        camera.lookAt(0, 1, -5);
+        camera.position.set(0, 6, 12);
+        camera.lookAt(0, 0, -10);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // אופטימיזציה למובייל
-        document.body.appendChild(renderer.domElement);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
 
-        // ==========================================
-        // 2. תאורה
-        // ==========================================
+        // --- 2. LIGHTING ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 7);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // ==========================================
-        // 3. יצירת התותח והמטרות
-        // ==========================================
-        
-        // גוף התותח (קבוצה)
+        // --- 3. GAME VARIABLES & STATS ---
+        let isPlaying = false;
+        let bullets = [];
+        let gates = [];
+        let particles = [];
+
+        // משתני שדרוג התותח
+        let cannonStats = {
+            fireRate: 250,      // מרווח במילישניות בין ירי לירי
+            bulletCount: 1,     // מספר כדורים במקביל
+            bulletDamage: 10,   // נזק לכל כדור
+            lastShotTime: 0
+        };
+
+        // --- 4. PLAYER (CANNON) ---
         const cannonGroup = new THREE.Group();
+        
+        // גוף התותח
+        const bodyGeo = new THREE.BoxGeometry(1.4, 0.8, 1.8);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 });
+        const cannonBody = new THREE.Mesh(bodyGeo, bodyMat);
+        cannonBody.castShadow = true;
+        cannonGroup.add(cannonBody);
+
+        // קני התותח
+        const barrelGeo = new THREE.CylinderGeometry(0.15, 0.18, 1.2, 16);
+        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, metalness: 0.9, roughness: 0.1 });
+        
+        const barrels = [];
+        for(let i = 0; i < 5; i++) {
+            const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.set((i - 2) * 0.3, 0.2, -0.8);
+            barrel.visible = i === 2; // מתחילים רק עם הקן המרכזי
+            cannonGroup.add(barrel);
+            barrels.push(barrel);
+        }
+
+        cannonGroup.position.set(0, 0.5, 0);
         scene.add(cannonGroup);
 
-        // קנה התותח
-        const barrelGeometry = new THREE.CylinderGeometry(0.3, 0.4, 1.5, 16);
-        const barrelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
-        const barrel = new THREE.Mesh(barrelGeometry, barrelMaterial);
-        barrel.rotation.x = Math.PI / 2; // השכבת הקנה קדימה
-        barrel.position.set(0, 0.5, 0);
-        cannonGroup.add(barrel);
+        // --- 5. TRACK & ENVIRONMENT ---
+        const trackGeo = new THREE.PlaneGeometry(18, 1000);
+        const trackMat = new THREE.MeshStandardMaterial({ color: 0x050b14, roughness: 0.4 });
+        const track = new THREE.Mesh(trackGeo, trackMat);
+        track.rotation.x = -Math.PI / 2;
+        track.position.z = -450;
+        track.receiveShadow = true;
+        scene.add(track);
 
-        // מיקום הבסיס של התותח (קריטי עבור Recoil)
-        const ORIGINAL_CANNON_Z = 3;
-        cannonGroup.position.set(0, 0, ORIGINAL_CANNON_Z);
-
-        // מערכים לניהול כדורים ומטרות
-        const bullets = [];
-        const targets = [];
-
-        // יצירת מטרה/אויב לדוגמה
-        function createTarget(x, z, color = 0xff4444, isBoss = false) {
-            const size = isBoss ? 1.2 : 0.6;
-            const geo = new THREE.BoxGeometry(size, size, size);
-            const mat = new THREE.MeshStandardMaterial({ color: color });
-            const target = new THREE.Mesh(geo, mat);
-            target.position.set(x, size / 2, z);
-            target.userData = { isBoss: isBoss, hp: isBoss ? 3 : 1 };
-            scene.add(target);
-            targets.push(target);
-        }
-
-        // יצירת מטרה רגילה ובוס
-        createTarget(0, -4, 0xff4444, false); // אויב רגיל
-        createTarget(2, -6, 0xffbb00, true);  // בוס
-
-        // ==========================================
-        // 4. משתנים לאפקטים (JUICE VARIABLES)
-        // ==========================================
-        let shakeIntensity = 0;   // עוצמת רעד המצלמה
-        const shakeDecay = 0.88;  // קצב נחתית הרעד בכל פריים
-
-        let recoilOffset = 0;     // כמה התותח נדחף אחורה
-        const recoilDecay = 0.82;  // קצב חזרת התותח למקום
-
-        // ==========================================
-        // 5. מנגנון ירייה ושליטה
-        // ==========================================
-        function shoot() {
-            // 1. יצירת כדור
-            const bulletGeo = new THREE.SphereGeometry(0.2, 8, 8);
-            const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffdd00 });
-            const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+        // --- 6. GATES SYSTEM ---
+        function spawnGate(zPos, type, value) {
+            const gateGroup = new THREE.Group();
             
-            bullet.position.set(cannonGroup.position.x, 0.5, cannonGroup.position.z - 0.8);
-            scene.add(bullet);
-            bullets.push(bullet);
+            const isMultiply = type === 'multiply';
+            const color = isMultiply ? 0x00ff88 : 0x00a2ff;
 
-            // 2. הפעלת רתע לתותח (דוחף אחורה בציר Z)
-            recoilOffset = 0.4; 
+            const frameGeo = new THREE.BoxGeometry(6, 4, 0.3);
+            const frameMat = new THREE.MeshStandardMaterial({ 
+                color: color, 
+                transparent: true, 
+                opacity: 0.6,
+                metalness: 0.5 
+            });
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            gateGroup.add(frame);
 
-            // 3. רעד קל מאוד במצלמה מעצם הירייה
-            shakeIntensity = Math.max(shakeIntensity, 0.05);
+            gateGroup.position.set(type === 'multiply' ? 4 : -4, 2, zPos);
+            gateGroup.userData = { type: type, value: value, active: true };
+
+            scene.add(gateGroup);
+            gates.push(gateGroup);
         }
 
-        // אירוע לחיצה (עובד גם במחשב וגם במובייל)
-        window.addEventListener('pointerdown', () => {
-            shoot();
+        // יצירת שערים לדוגמה לאורך המסלול
+        spawnGate(-30, 'add', 1);
+        spawnGate(-60, 'multiply', 1.5);
+        spawnGate(-90, 'add', 2);
+        spawnGate(-120, 'multiply', 2);
+
+        // --- 7. AUDIO (WEB AUDIO API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playShootSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        // --- 8. UPGRADE LOGIC ---
+        function applyGateUpgrade(type, value) {
+            if (type === 'add') {
+                cannonStats.bulletCount = Math.min(cannonStats.bulletCount + Math.floor(value), 5);
+            } else if (type === 'multiply') {
+                cannonStats.fireRate = Math.max(cannonStats.fireRate / value, 60);
+            }
+
+            // עדכון המראה של קני התותח בהתאם למספר הכדורים
+            updateCannonBarrels();
+            updateUI();
+        }
+
+        function updateCannonBarrels() {
+            const count = cannonStats.bulletCount;
+            barrels.forEach((b, idx) => {
+                // הצגת הקנים בהתאם לכמות הנוכחית
+                if (count === 1) b.visible = (idx === 2);
+                else if (count === 2) b.visible = (idx === 1 || idx === 3);
+                else if (count === 3) b.visible = (idx === 1 || idx === 2 || idx === 3);
+                else if (count >= 4) b.visible = true;
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('ui-bullets').innerText = cannonStats.bulletCount;
+            const ratePercent = Math.round((250 / cannonStats.fireRate) * 100);
+            document.getElementById('ui-firerate').innerText = ratePercent + '%';
+            document.getElementById('ui-damage').innerText = cannonStats.bulletDamage;
+        }
+
+        // --- 9. SHOOTING MECHANIC ---
+        function shootBullet() {
+            const now = Date.now();
+            if (now - cannonStats.lastShotTime < cannonStats.fireRate) return;
+            cannonStats.lastShotTime = now;
+
+            const count = cannonStats.bulletCount;
+            const spread = 0.35;
+
+            for (let i = 0; i < count; i++) {
+                const xOffset = (i - (count - 1) / 2) * spread;
+
+                const bGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const bMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+                const bullet = new THREE.Mesh(bGeo, bMat);
+
+                bullet.position.set(
+                    cannonGroup.position.x + xOffset,
+                    cannonGroup.position.y + 0.2,
+                    cannonGroup.position.z - 1
+                );
+
+                bullet.userData = { damage: cannonStats.bulletDamage, speedZ: -1.8 };
+                scene.add(bullet);
+                bullets.push(bullet);
+            }
+
+            playShootSound();
+        }
+
+        // --- 10. CONTROLS (TOUCH & MOUSE) ---
+        let targetX = 0;
+        let isDragging = false;
+        let previousMouseX = 0;
+
+        window.addEventListener('pointerdown', (e) => {
+            if (!isPlaying) return;
+            isDragging = true;
+            previousMouseX = e.clientX;
         });
 
-        // התאמת גודל מסך בזמן שינוי חלון/סיבוב מסך במובייל
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging || !isPlaying) return;
+            const deltaX = e.clientX - previousMouseX;
+            targetX += deltaX * 0.02;
+            targetX = Math.max(-7.5, Math.min(7.5, targetX));
+            previousMouseX = e.clientX;
+        });
+
+        window.addEventListener('pointerup', () => isDragging = false);
+
+        // --- 11. GAME LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isPlaying) {
+                // תנועת התותח
+                cannonGroup.position.x += (targetX - cannonGroup.position.x) * 0.15;
+                camera.position.x = cannonGroup.position.x * 0.3;
+
+                // ירי אוטומטי
+                shootBullet();
+
+                // תנועת כדורים ובדיקת התנגשויות
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const b = bullets[i];
+                    b.position.z += b.userData.speedZ;
+
+                    // בדיקת פגיעה בשערים
+                    gates.forEach(gate => {
+                        if (gate.userData.active) {
+                            const distZ = Math.abs(b.position.z - gate.position.z);
+                            const distX = Math.abs(b.position.x - gate.position.x);
+
+                            if (distZ < 0.5 && distX < 3) {
+                                // הפעלת שדרוג
+                                applyGateUpgrade(gate.userData.type, gate.userData.value);
+                                gate.userData.active = false;
+                                scene.remove(gate); // הסרת השער שנאסף
+                            }
+                        }
+                    });
+
+                    // הסרת כדורים שאינם במסך
+                    if (b.position.z < -200) {
+                        scene.remove(b);
+                        bullets.splice(i, 1);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- 12. START GAME ---
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('start-btn').style.display = 'none';
+            isPlaying = true;
+        });
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // ==========================================
-        // 6. לולאת ה-ANIMATION הראשית
-        // ==========================================
-        function animate() {
-            requestAnimationFrame(animate);
-
-            // --- א. עדכון תנועת כדורים בדיקת פגיעות ---
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                const bullet = bullets[i];
-                bullet.position.z -= 0.3; // תנועה קדימה
-
-                // בדיקת פגיעה במטרות
-                for (let j = targets.length - 1; j >= 0; j--) {
-                    const target = targets[j];
-                    const dist = bullet.position.distanceTo(target.position);
-
-                    if (dist < 0.8) { // יש פגיעה!
-                        scene.remove(bullet);
-                        bullets.splice(i, 1);
-
-                        target.userData.hp--;
-
-                        if (target.userData.isBoss) {
-                            // פגיעה בבוס -> רעד חזק!
-                            shakeIntensity = 0.35;
-                        } else {
-                            // השמדת אויב רגיל -> רעד בינוני
-                            shakeIntensity = 0.18;
-                        }
-
-                        // אם המטרה הושמדה
-                        if (target.userData.hp <= 0) {
-                            scene.remove(target);
-                            targets.splice(j, 1);
-
-                            // יצירת מטרה חדשה בלולאה כדי שהמשחק לא ייגמר
-                            setTimeout(() => {
-                                createTarget((Math.random() - 0.5) * 4, -4 - Math.random() * 4, 0xff4444, false);
-                            }, 1000);
-                        }
-                        break;
-                    }
-                }
-
-                // הסרת כדור שיצא מהמסך
-                if (bullet && bullet.position.z < -15) {
-                    scene.remove(bullet);
-                    bullets.splice(i, 1);
-                }
-            }
-
-            // --- ב. חישוב והחלת הרתע לתותח (RECOIL) ---
-            if (recoilOffset > 0.001) {
-                recoilOffset *= recoilDecay; // דעיכה הדרגתית
-            } else {
-                recoilOffset = 0;
-            }
-            // החלת הזזה אחורה על ציר Z
-            cannonGroup.position.z = ORIGINAL_CANNON_Z + recoilOffset;
-
-            // --- ג. חישוב והחלת רעד המצלמה (CAMERA SHAKE) ---
-            if (shakeIntensity > 0.001) {
-                // הוספת היסט רנדומלי קטן למיקום המקורי של המצלמה
-                camera.position.x = ORIGINAL_CAMERA_POS.x + (Math.random() - 0.5) * shakeIntensity;
-                camera.position.y = ORIGINAL_CAMERA_POS.y + (Math.random() - 0.5) * shakeIntensity;
-
-                shakeIntensity *= shakeDecay; // דעיכה מהירה של הרעד
-            } else {
-                // החזרת המצלמה בדיוק למיקום המקורי
-                camera.position.x = ORIGINAL_CAMERA_POS.x;
-                camera.position.y = ORIGINAL_CAMERA_POS.y;
-                shakeIntensity = 0;
-            }
-
-            // --- ד. רינדור הסצנה ---
-            renderer.render(scene, camera);
-        }
-
-        // התחלת הלולאה
         animate();
     </script>
 </body>
