@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D - Demon Edition</title>
+    <title>Track Shooter 3D - Space Edition</title>
     <style>
         * { box-sizing: border-box; }
         body, html {
@@ -139,7 +139,7 @@
             else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
         }
 
-        // --- Audio System ---
+        // --- Audio Engine ---
         let audioCtx = null, masterGainNode = null, masterVolume = 0.25;
 
         function initAudio() {
@@ -183,7 +183,7 @@
             } catch(e) {}
         }
 
-        // --- Game Logic & Progress ---
+        // --- Game State & HighScore ---
         let currentLevel = 1, levelProgress = 0, maxLevelProgress = 100;
         let isBossActive = false, activeBoss = null;
         let highScore = localStorage.getItem('cannon_high_score') || 0;
@@ -203,9 +203,9 @@
             }
         }
 
-        // --- Three.js Setup ---
+        // --- Scene & Graphics ---
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x030712, 0.008);
+        scene.fog = new THREE.FogExp2(0x030712, 0.007);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -257,6 +257,84 @@
             new THREE.MeshBasicMaterial({ map: createGalaxyTexture(), side: THREE.BackSide })
         );
         scene.add(galaxySky);
+
+        // --- 🪐 DYNAMIC BACKGROUND OBJECTS (Planets, Moon & Asteroids) ---
+        const bgObjectsGroup = new THREE.Group();
+
+        // 1. Giant Ringed Planet (Saturn-like)
+        const planetGeo = new THREE.SphereGeometry(45, 32, 32);
+        const planetMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.6, metalness: 0.2, emissive: 0x1e1b4b, emissiveIntensity: 0.4 });
+        const ringedPlanet = new THREE.Mesh(planetGeo, planetMat);
+        ringedPlanet.position.set(-180, 70, -350);
+
+        const ringGeo = new THREE.RingGeometry(55, 85, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x818cf8, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
+        const planetRing = new THREE.Mesh(ringGeo, ringMat);
+        planetRing.rotation.x = Math.PI / 2.4;
+        ringedPlanet.add(planetRing);
+        bgObjectsGroup.add(ringedPlanet);
+
+        // 2. Glowing Red/Purple Moon
+        const moonGeo = new THREE.SphereGeometry(22, 24, 24);
+        const moonMat = new THREE.MeshStandardMaterial({ color: 0xdb2777, roughness: 0.8, emissive: 0x831843, emissiveIntensity: 0.5 });
+        const moon = new THREE.Mesh(moonGeo, moonMat);
+        moon.position.set(220, 110, -450);
+        bgObjectsGroup.add(moon);
+
+        // 3. Floating Asteroids
+        const asteroids = [];
+        const asteroidMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9, metalness: 0.1 });
+
+        for (let i = 0; i < 18; i++) {
+            const size = Math.random() * 4 + 2;
+            const astGeo = new THREE.DodecahedronGeometry(size, 1);
+            
+            // Randomize vertices for jagged rocky shape
+            const posAttr = astGeo.attributes.position;
+            for (let j = 0; j < posAttr.count; j++) {
+                posAttr.setXYZ(
+                    j,
+                    posAttr.getX(j) + (Math.random() - 0.5) * (size * 0.3),
+                    posAttr.getY(j) + (Math.random() - 0.5) * (size * 0.3),
+                    posAttr.getZ(j) + (Math.random() - 0.5) * (size * 0.3)
+                );
+            }
+            astGeo.computeVertexNormals();
+
+            const ast = new THREE.Mesh(astGeo, asteroidMat);
+            const side = i % 2 === 0 ? 1 : -1;
+            ast.position.set(
+                side * (Math.random() * 60 + 35),
+                (Math.random() - 0.2) * 40,
+                -Math.random() * 400 - 50
+            );
+
+            ast.userData = {
+                rotSpeedX: (Math.random() - 0.5) * 0.8,
+                rotSpeedY: (Math.random() - 0.5) * 0.8,
+                speedZ: Math.random() * 10 + 5
+            };
+
+            bgObjectsGroup.add(ast);
+            asteroids.push(ast);
+        }
+
+        scene.add(bgObjectsGroup);
+
+        function updateBackgroundObjects(delta) {
+            ringedPlanet.rotation.y += delta * 0.05;
+            moon.rotation.y -= delta * 0.03;
+
+            asteroids.forEach(ast => {
+                ast.rotation.x += ast.userData.rotSpeedX * delta;
+                ast.rotation.y += ast.userData.rotSpeedY * delta;
+                ast.position.z += ast.userData.speedZ * delta;
+
+                if (ast.position.z > 20) {
+                    ast.position.z = -450;
+                }
+            });
+        }
 
         // Track
         const trackWidth = 18, maxBoundX = trackWidth / 2 - 1.2, trackLength = 2000;
@@ -370,7 +448,7 @@
             hpBar.style.backgroundColor = colorHex;
         }
 
-        // --- TALL RED DEMONS (Replaces Lizards) ---
+        // --- TALL RED DEMONS ---
         const demons = []; let demonSpawnTimer = 0;
         const DEMON_TYPES = {
             STANDARD: { bodyColor: 0xd97706, heightScale: 1.8, speed: 15.0, hp: 1, scoreVal: 30 },
@@ -386,32 +464,27 @@
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
             const hornMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.2 });
 
-            // Tall Torso
             const torsoGeo = new THREE.CylinderGeometry(0.7, 0.4, 3.2, 10);
             const torso = new THREE.Mesh(torsoGeo, demonMat);
             torso.position.y = 1.6;
             demonGroup.add(torso);
 
-            // Head
             const headGeo = new THREE.BoxGeometry(0.9, 1.0, 0.9);
             const head = new THREE.Mesh(headGeo, demonMat);
             head.position.set(0, 3.4, 0);
             demonGroup.add(head);
 
-            // Glowing Red Eyes
             const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
             const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.25, 3.5, 0.45);
             const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.25, 3.5, 0.45);
             demonGroup.add(eyeL, eyeR);
 
-            // Sharp Tall Horns
             const hornGeo = new THREE.ConeGeometry(0.18, 1.2, 6);
             hornGeo.rotateX(-0.2);
             const hornL = new THREE.Mesh(hornGeo, hornMat); hornL.position.set(-0.35, 4.3, 0.1); hornL.rotation.z = 0.2;
             const hornR = new THREE.Mesh(hornGeo, hornMat); hornR.position.set(0.35, 4.3, 0.1); hornR.rotation.z = -0.2;
             demonGroup.add(hornL, hornR);
 
-            // Long Arms
             const armGeo = new THREE.BoxGeometry(0.3, 2.2, 0.3);
             const armL = new THREE.Mesh(armGeo, darkMat); armL.position.set(-0.95, 2.0, 0); armL.rotation.z = 0.15;
             const armR = new THREE.Mesh(armGeo, darkMat); armR.position.set(0.95, 2.0, 0); armR.rotation.z = -0.15;
@@ -478,7 +551,7 @@
             }
         }
 
-        // --- Cannon Setup & BOTH BARRELS MUZZLE FLASH ---
+        // Cannon & Dual Muzzle Flashes
         const cannonGroup = new THREE.Group();
         const cannonMeshGroup = new THREE.Group();
 
@@ -498,14 +571,12 @@
         const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelL.rotation.x = Math.PI / 2; barrelL.position.set(-0.45, 0.35, -1.0); cannonMeshGroup.add(barrelL);
         const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0); cannonMeshGroup.add(barrelR);
 
-        // Visual Flash Glow Mesh for BOTH Barrels
         const flashGeo = new THREE.SphereGeometry(0.4, 12, 12);
         const flashMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0 });
 
         const muzzleFlashL = new THREE.Mesh(flashGeo, flashMat); muzzleFlashL.position.set(-0.45, 0.35, -2.1); cannonMeshGroup.add(muzzleFlashL);
         const muzzleFlashR = new THREE.Mesh(flashGeo, flashMat); muzzleFlashR.position.set(0.45, 0.35, -2.1); cannonMeshGroup.add(muzzleFlashR);
 
-        // Point Lights for BOTH Barrels
         const flashLightL = new THREE.PointLight(0x38bdf8, 0, 8); flashLightL.position.set(-0.45, 0.35, -2.1); cannonMeshGroup.add(flashLightL);
         const flashLightR = new THREE.PointLight(0x38bdf8, 0, 8); flashLightR.position.set(0.45, 0.35, -2.1); cannonMeshGroup.add(flashLightR);
 
@@ -579,7 +650,7 @@
             }
         }
 
-        // Touch & Mouse Controls
+        // Controls
         let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
         function stopInput() { isDragging = false; isFiring = false; }
 
@@ -659,6 +730,7 @@
 
             updateStars(delta);
             updateParticles(delta);
+            updateBackgroundObjects(delta);
 
             if (gameStarted && !isPaused) {
                 targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
