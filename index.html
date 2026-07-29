@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Three.js Track Shooter - Advanced Mobile & Desktop</title>
+    <title>Track Shooter 3D - Deluxe Edition</title>
     <style>
         * { box-sizing: border-box; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background-color: #030712;
-            font-family: Arial, sans-serif; user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none;
             touch-action: none;
         }
         #ui-container {
@@ -18,35 +18,45 @@
             display: flex; flex-direction: column; justify-content: space-between; padding: 15px;
         }
         .top-ui { display: flex; justify-content: space-between; align-items: flex-start; }
-        .stats-box { color: #fff; text-shadow: 0 0 8px #38bdf8; font-weight: bold; font-size: 16px; }
+        .stats-box { color: #fff; text-shadow: 0 0 8px #38bdf8; font-weight: bold; font-size: 16px; text-align: right; }
         
         /* HP Bar */
-        #hp-container { width: 150px; background: rgba(0,0,0,0.5); border: 2px solid #1e293b; border-radius: 10px; padding: 3px; }
+        #hp-container { width: 140px; background: rgba(0,0,0,0.6); border: 2px solid #1e293b; border-radius: 10px; padding: 3px; }
         #hp-bar { height: 12px; background: #22c55e; width: 100%; border-radius: 6px; transition: width 0.2s, background-color 0.2s; }
-        #hp-text { color: #fff; font-size: 12px; text-align: center; margin-top: 2px; }
+        #hp-text { color: #fff; font-size: 11px; text-align: center; margin-top: 2px; font-weight: bold; }
 
         /* Level Progress Bar */
-        #level-progress-bg { width: 100%; max-width: 300px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-top: 5px; overflow: hidden; }
+        #level-progress-bg { width: 120px; height: 8px; background: rgba(255,255,255,0.15); border-radius: 4px; margin: 4px auto 0 auto; overflow: hidden; }
         #level-progress-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.2s; }
-        #level-text { color: #38bdf8; font-weight: bold; text-align: center; font-size: 14px; margin-top: 4px; }
+        #level-text { color: #38bdf8; font-weight: bold; text-align: center; font-size: 13px; text-shadow: 0 0 6px rgba(56, 189, 248, 0.6); }
 
         .btn {
-            background: #0284c7; color: white; border: none; padding: 10px 20px;
-            border-radius: 8px; font-weight: bold; cursor: pointer; pointer-events: auto;
-            box-shadow: 0 0 10px rgba(2, 132, 199, 0.5); transition: transform 0.1s;
+            background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 10px 20px;
+            border-radius: 10px; font-weight: bold; cursor: pointer; pointer-events: auto;
+            box-shadow: 0 0 12px rgba(2, 132, 199, 0.5); transition: transform 0.1s, background 0.2s;
         }
         .btn:active { transform: scale(0.95); }
+
+        /* Color Picker UI */
+        .color-picker-title { font-size: 14px; color: #cbd5e1; margin-bottom: 8px; }
+        .color-options { display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; pointer-events: auto; }
+        .color-dot {
+            width: 36px; height: 36px; border-radius: 50%; border: 3px solid #ffffff;
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+        .color-dot:hover, .color-dot.active { transform: scale(1.25); box-shadow: 0 0 15px #fff; }
 
         /* Modals & Overlays */
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(3, 7, 18, 0.85); z-index: 20;
+            background: rgba(3, 7, 18, 0.88); backdrop-filter: blur(8px); z-index: 20;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: #fff; text-align: center; transition: opacity 0.3s;
         }
         .hidden { display: none !important; }
-        .overlay h1 { font-size: 32px; color: #38bdf8; margin-bottom: 10px; }
-        .overlay p { color: #94a3b8; margin-bottom: 20px; }
+        .overlay h1 { font-size: 34px; color: #38bdf8; margin-bottom: 10px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.8); }
+        .overlay p { color: #94a3b8; margin-bottom: 15px; font-size: 16px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -56,22 +66,18 @@
     <div id="ui-container">
         <div class="top-ui">
             <div>
-                <div id="hp-container">
-                    <div id="hp-bar"></div>
-                </div>
+                <div id="hp-container"><div id="hp-bar"></div></div>
                 <div id="hp-text">500 / 500</div>
             </div>
             
             <div style="text-align: center;">
                 <div id="level-text">LEVEL 1</div>
-                <div id="level-progress-bg">
-                    <div id="level-progress-fill"></div>
-                </div>
+                <div id="level-progress-bg"><div id="level-progress-fill"></div></div>
             </div>
 
             <div class="stats-box">
-                <div>ניקוד: <span id="score-val">0</span></div>
-                <button id="pause-btn" class="btn" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">השהה</button>
+                <div>SCORE: <span id="score-val">0</span></div>
+                <button id="pause-btn" class="btn" style="margin-top: 5px; padding: 5px 12px; font-size: 12px;">PAUSE</button>
             </div>
         </div>
     </div>
@@ -79,51 +85,63 @@
     <!-- Start Overlay -->
     <div id="start-overlay" class="overlay">
         <h1>TRACK SHOOTER 3D</h1>
-        <p>שיא אישי: <span id="start-best-score">0</span></p>
-        <button id="start-btn" class="btn" style="font-size: 20px; padding: 15px 40px;">התחל משחק</button>
+        <p>BEST SCORE: <span id="start-best-score">0</span></p>
+        
+        <div class="color-picker-title">SELECT CANNON COLOR:</div>
+        <div class="color-options">
+            <div class="color-dot active" style="background: #2563eb;" onclick="selectColor(0x2563eb, this)"></div>
+            <div class="color-dot" style="background: #22c55e;" onclick="selectColor(0x22c55e, this)"></div>
+            <div class="color-dot" style="background: #a855f7;" onclick="selectColor(0xa855f7, this)"></div>
+            <div class="color-dot" style="background: #ef4444;" onclick="selectColor(0xef4444, this)"></div>
+            <div class="color-dot" style="background: #f59e0b;" onclick="selectColor(0xf59e0b, this)"></div>
+        </div>
+
+        <button id="start-btn" class="btn" style="font-size: 20px; padding: 14px 40px;">START GAME</button>
     </div>
 
     <!-- Pause Menu -->
     <div id="pause-menu" class="overlay hidden">
-        <h1>משחק מושהה</h1>
-        <button id="resume-btn" class="btn" style="font-size: 18px; padding: 12px 30px;">המשך</button>
+        <h1>GAME PAUSED</h1>
+        <button id="resume-btn" class="btn" style="font-size: 18px; padding: 12px 30px;">RESUME</button>
     </div>
 
     <!-- Game Over Modal -->
     <div id="game-over-modal" class="overlay hidden">
-        <h1 style="color: #ef4444;">GAME OVER</h1>
-        <p>ניקוד סופי: <span id="final-score-val">0</span></p>
-        <p>שיא אישי: <span id="best-score-val">0</span></p>
-        <button id="restart-btn" class="btn" style="font-size: 18px; padding: 12px 30px;">שחק שוב</button>
+        <h1 style="color: #ef4444; text-shadow: 0 0 15px rgba(239, 68, 68, 0.8);">GAME OVER</h1>
+        <p>FINAL SCORE: <span id="final-score-val">0</span></p>
+        <p>BEST SCORE: <span id="best-score-val">0</span></p>
+        <button id="restart-btn" class="btn" style="font-size: 18px; padding: 12px 30px;">PLAY AGAIN</button>
     </div>
 
     <script>
+    let changeCannonColorFn = null;
+
+    function selectColor(hexColor, element) {
+        document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        if (changeCannonColorFn) changeCannonColorFn(hexColor);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
 
-        // --- 0. Touch Hijacking & UI Setup ---
+        // --- 0. Touch & UI Hijacking ---
         document.documentElement.style.touchAction = 'none';
         document.body.style.touchAction = 'none';
         
         const uiContainer = document.getElementById('ui-container');
         if (uiContainer) {
             uiContainer.style.pointerEvents = 'none';
-            const pauseBtn = document.getElementById('pause-btn');
-            if (pauseBtn) pauseBtn.style.pointerEvents = 'auto';
+            document.getElementById('pause-btn').style.pointerEvents = 'auto';
         }
 
         function requestFullScreen() {
             const docEl = document.documentElement;
-            if (docEl.requestFullscreen) {
-                docEl.requestFullscreen().catch(() => {});
-            } else if (docEl.webkitRequestFullscreen) {
-                docEl.webkitRequestFullscreen();
-            }
+            if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+            else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
         }
 
         // --- 1. Audio Engine ---
-        let audioCtx = null;
-        let masterGainNode = null;
-        let masterVolume = 0.25;
+        let audioCtx = null, masterGainNode = null, masterVolume = 0.25;
 
         function initAudio() {
             try {
@@ -154,30 +172,24 @@
                     osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
                     gain.gain.setValueAtTime(0.2, now);
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-                    osc.start(now);
-                    osc.stop(now + 0.08);
+                    osc.start(now); osc.stop(now + 0.08);
                 } else if (type === 'hit') {
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(160, now);
                     osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
                     gain.gain.setValueAtTime(0.4, now);
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-                    osc.start(now);
-                    osc.stop(now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
                 }
             } catch(e) {}
         }
 
-        // --- 2. Level State & HighScore ---
-        let currentLevel = 1;
-        let levelProgress = 0;
-        const maxLevelProgress = 100;
-        let isBossActive = false;
-        let activeBoss = null;
+        // --- 2. Game State & HighScore ---
+        let currentLevel = 1, levelProgress = 0, maxLevelProgress = 100;
+        let isBossActive = false, activeBoss = null;
         let highScore = localStorage.getItem('cannon_high_score') || 0;
 
-        const startBestScoreEl = document.getElementById('start-best-score');
-        if (startBestScoreEl) startBestScoreEl.innerText = highScore;
+        document.getElementById('start-best-score').innerText = highScore;
 
         function updateLevelUI() {
             const progressFill = document.getElementById('level-progress-fill');
@@ -188,11 +200,11 @@
                 progressFill.style.width = `${percentage}%`;
             }
             if (levelText) {
-                levelText.innerText = isBossActive ? `LEVEL ${currentLevel} - BOSS FIGHT!` : `LEVEL ${currentLevel}`;
+                levelText.innerText = isBossActive ? `LEVEL ${currentLevel} - BOSS!` : `LEVEL ${currentLevel}`;
             }
         }
 
-        // --- 3. Scene & Advanced Visuals Setup ---
+        // --- 3. Scene & Graphics ---
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x030712, 0.008);
 
@@ -212,32 +224,18 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        const ambientLight = new THREE.AmbientLight(0x1e1b4b, 1.2);
-        scene.add(ambientLight);
+        const ambientLight = new THREE.AmbientLight(0x1e1b4b, 1.2); scene.add(ambientLight);
+        const mainLight = new THREE.DirectionalLight(0x38bdf8, 2.2); mainLight.position.set(15, 40, 20); scene.add(mainLight);
+        const rimLight = new THREE.DirectionalLight(0xc084fc, 2.8); rimLight.position.set(-15, 20, -30); scene.add(rimLight);
 
-        const mainLight = new THREE.DirectionalLight(0x38bdf8, 2.2);
-        mainLight.position.set(15, 40, 20);
-        scene.add(mainLight);
-
-        const rimLight = new THREE.DirectionalLight(0xc084fc, 2.8);
-        rimLight.position.set(-15, 20, -30);
-        scene.add(rimLight);
-
-        let cameraShakeIntensity = 0;
-        let cannonRecoilZ = 0;
-
-        function triggerCameraShake(intensity) {
-            cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
-        }
+        let cameraShakeIntensity = 0, cannonRecoilZ = 0;
+        function triggerCameraShake(intensity) { cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity); }
 
         // Skybox
         function createGalaxyTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 2048; canvas.height = 2048;
+            const canvas = document.createElement('canvas'); canvas.width = 2048; canvas.height = 2048;
             const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#020208';
-            ctx.fillRect(0, 0, 2048, 2048);
+            ctx.fillStyle = '#020208'; ctx.fillRect(0, 0, 2048, 2048);
 
             const nebulae = [
                 { x: 500,  y: 600,  r: 800, color: 'rgba(99, 102, 241, 0.65)' },
@@ -250,58 +248,78 @@
                 grad.addColorStop(0, n.color);
                 grad.addColorStop(0.5, n.color.replace(/[\d\.]+\)$/, '0.25)'));
                 grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, 2048, 2048);
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, 2048, 2048);
             });
-
             return new THREE.CanvasTexture(canvas);
         }
 
-        const galaxySkyGeo = new THREE.SphereGeometry(800, 32, 32);
-        const galaxySkyMat = new THREE.MeshBasicMaterial({ map: createGalaxyTexture(), side: THREE.BackSide });
-        const galaxySky = new THREE.Mesh(galaxySkyGeo, galaxySkyMat);
+        const galaxySky = new THREE.Mesh(
+            new THREE.SphereGeometry(800, 32, 32),
+            new THREE.MeshBasicMaterial({ map: createGalaxyTexture(), side: THREE.BackSide })
+        );
         scene.add(galaxySky);
 
         // Track
-        const trackWidth = 18; 
-        const maxBoundX = trackWidth / 2 - 1.2; 
-        const trackLength = 2000;
-
-        const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-        const trackMat = new THREE.MeshStandardMaterial({ 
-            color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.08
-        });
-        const track = new THREE.Mesh(trackGeo, trackMat);
+        const trackWidth = 18, maxBoundX = trackWidth / 2 - 1.2, trackLength = 2000;
+        const track = new THREE.Mesh(
+            new THREE.BoxGeometry(trackWidth, 0.5, trackLength),
+            new THREE.MeshStandardMaterial({ color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.08 })
+        );
         track.position.set(0, -0.25, -trackLength / 2 + 10);
         scene.add(track);
 
         const railGeo = new THREE.BoxGeometry(0.3, 0.6, trackLength);
         const railMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-        
-        const railLeft = new THREE.Mesh(railGeo, railMat);
-        railLeft.position.set(-trackWidth / 2, 0.1, -trackLength / 2 + 10);
-        scene.add(railLeft);
+        const railL = new THREE.Mesh(railGeo, railMat); railL.position.set(-trackWidth / 2, 0.1, -trackLength / 2 + 10);
+        const railR = new THREE.Mesh(railGeo, railMat); railR.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
+        scene.add(railL, railR);
 
-        const railRight = new THREE.Mesh(railGeo, railMat);
-        railRight.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
-        scene.add(railRight);
+        // Particle System for Explosions
+        const particles = [];
+        const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
 
-        // Stars
+        function createExplosion(position, colorHex = 0x38bdf8) {
+            const count = 12;
+            const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+            for (let i = 0; i < count; i++) {
+                const p = new THREE.Mesh(particleGeo, pMat);
+                p.position.copy(position);
+                p.userData = {
+                    vel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 12,
+                        Math.random() * 8 + 2,
+                        (Math.random() - 0.5) * 12
+                    ),
+                    life: 0.4
+                };
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        function updateParticles(delta) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.userData.life -= delta;
+                p.position.addScaledVector(p.userData.vel, delta);
+                p.scale.multiplyScalar(0.92);
+
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // Starfield
         function createRoundStarTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64; canvas.height = 64;
+            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
-
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
             grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
             grad.addColorStop(0.35, 'rgba(56, 189, 248, 0.85)');
             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(32, 32, 32, 0, Math.PI * 2);
-            ctx.fill();
-
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(32, 32, 32, 0, Math.PI * 2); ctx.fill();
             return new THREE.CanvasTexture(canvas);
         }
 
@@ -316,14 +334,11 @@
             starPos[i * 3 + 2] = -Math.random() * 250;
             starSpeeds[i]      = 40 + Math.random() * 50;
         }
-
         starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
 
-        const starMat = new THREE.PointsMaterial({
+        const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({
             size: 1.8, map: createRoundStarTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
-        });
-
-        const starField = new THREE.Points(starGeo, starMat);
+        }));
         scene.add(starField);
 
         function updateStars(delta) {
@@ -340,9 +355,7 @@
         }
 
         // HP Mechanics
-        const maxHp = 500;
-        let currentHp = 500;
-
+        const maxHp = 500; let currentHp = 500;
         function updateHpBar() {
             const hpBar = document.getElementById('hp-bar');
             const hpText = document.getElementById('hp-text');
@@ -355,14 +368,11 @@
             let colorHex = '#22c55e';
             if (percentage < 30) colorHex = '#ef4444';
             else if (percentage < 60) colorHex = '#eab308';
-
             hpBar.style.backgroundColor = colorHex;
         }
 
-        // Enemies & Lizards
-        const lizards = [];
-        let lizardSpawnTimer = 0;
-
+        // Enemies & Boss
+        const lizards = []; let lizardSpawnTimer = 0;
         const ENEMY_TYPES = {
             STANDARD: { skinColor: 0x16a34a, eyeColor: 0xef4444, scale: 1.1, speed: 16.0, hp: 1, scoreVal: 30 },
             FAST:     { skinColor: 0xca8a04, eyeColor: 0x38bdf8, scale: 0.85, speed: 24.0, hp: 1, scoreVal: 50 },
@@ -371,33 +381,20 @@
 
         function createLizardMesh(typeConfig) {
             const lizardGroup = new THREE.Group();
-
             const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.25, metalness: 0.4 });
             const eyeMat = new THREE.MeshBasicMaterial({ color: typeConfig.eyeColor });
 
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 2.6), skinMat);
-            body.position.set(0, 0.8, 0);
-            lizardGroup.add(body);
-
-            const headGeo = new THREE.ConeGeometry(1.1, 1.8, 4);
-            headGeo.rotateX(-Math.PI / 2); headGeo.rotateY(Math.PI / 4);
-            const head = new THREE.Mesh(headGeo, skinMat);
-            head.position.set(0, 1.0, 1.8);
-            lizardGroup.add(head);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 2.6), skinMat); body.position.set(0, 0.8, 0); lizardGroup.add(body);
+            const headGeo = new THREE.ConeGeometry(1.1, 1.8, 4); headGeo.rotateX(-Math.PI / 2); headGeo.rotateY(Math.PI / 4);
+            const head = new THREE.Mesh(headGeo, skinMat); head.position.set(0, 1.0, 1.8); lizardGroup.add(head);
 
             const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-0.75, 1.2, 1.8);
-            lizardGroup.add(eyeL);
-
-            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(0.75, 1.2, 1.8);
-            lizardGroup.add(eyeR);
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.75, 1.2, 1.8); lizardGroup.add(eyeL);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.75, 1.2, 1.8); lizardGroup.add(eyeR);
 
             lizardGroup.rotation.y = Math.PI;
             lizardGroup.scale.setScalar(typeConfig.scale * 1.35);
-            lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal };
-
+            lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal, color: typeConfig.skinColor };
             return lizardGroup;
         }
 
@@ -409,18 +406,12 @@
             else if (rand > 0.5) config = ENEMY_TYPES.FAST;
 
             const lizard = createLizardMesh(config);
-            const spawnX = (Math.random() - 0.5) * (trackWidth - 3);
-            const spawnZ = cannonGroup.position.z - 120 - Math.random() * 30;
-
-            lizard.position.set(spawnX, 0, spawnZ);
-            scene.add(lizard);
-            lizards.push(lizard);
+            lizard.position.set((Math.random() - 0.5) * (trackWidth - 3), 0, cannonGroup.position.z - 120 - Math.random() * 30);
+            scene.add(lizard); lizards.push(lizard);
         }
 
         function spawnBoss() {
-            isBossActive = true;
-            updateLevelUI();
-
+            isBossActive = true; updateLevelUI();
             const bossConfig = { skinColor: 0xd97706, eyeColor: 0xef4444, scale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
             activeBoss = createLizardMesh(bossConfig);
             activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
@@ -431,10 +422,7 @@
         function updateLizards(delta) {
             if (!isBossActive) {
                 lizardSpawnTimer += delta;
-                if (lizardSpawnTimer >= 2.0) {
-                    lizardSpawnTimer = 0;
-                    spawnLizard();
-                }
+                if (lizardSpawnTimer >= 2.0) { lizardSpawnTimer = 0; spawnLizard(); }
             }
 
             for (let i = lizards.length - 1; i >= 0; i--) {
@@ -442,38 +430,25 @@
                 liz.position.z += liz.userData.speed * delta;
 
                 if (liz.position.distanceTo(cannonGroup.position) < 2.5) {
-                    currentHp -= 100;
-                    updateHpBar();
-                    playSound('hit');
-                    triggerCameraShake(0.3);
-                    scene.remove(liz);
-                    lizards.splice(i, 1);
+                    currentHp -= 100; updateHpBar(); playSound('hit'); triggerCameraShake(0.3);
+                    createExplosion(liz.position, liz.userData.color);
+                    scene.remove(liz); lizards.splice(i, 1);
                     if (currentHp <= 0) { gameOver(); return; }
                     continue;
                 }
-
-                if (liz.position.z > cannonGroup.position.z + 10) {
-                    scene.remove(liz);
-                    lizards.splice(i, 1);
-                }
+                if (liz.position.z > cannonGroup.position.z + 10) { scene.remove(liz); lizards.splice(i, 1); }
             }
 
             if (isBossActive && activeBoss) {
-                if (activeBoss.position.z < cannonGroup.position.z - 18) {
-                    activeBoss.position.z += activeBoss.userData.speed * delta;
-                }
-
+                if (activeBoss.position.z < cannonGroup.position.z - 18) activeBoss.position.z += activeBoss.userData.speed * delta;
                 if (activeBoss.position.distanceTo(cannonGroup.position) < 5.0) {
-                    currentHp -= 200;
-                    updateHpBar();
-                    playSound('hit');
-                    triggerCameraShake(0.5);
+                    currentHp -= 200; updateHpBar(); playSound('hit'); triggerCameraShake(0.5);
                     if (currentHp <= 0) gameOver();
                 }
             }
         }
 
-        // Cannon Setup
+        // Cannon & Color Customization
         const cannonGroup = new THREE.Group();
         const cannonMeshGroup = new THREE.Group();
 
@@ -481,41 +456,30 @@
         const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9 });
         const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.95 });
 
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat);
-        base.rotation.x = Math.PI / 12;
-        cannonMeshGroup.add(base);
+        changeCannonColorFn = function(hexColor) {
+            baseMat.color.setHex(hexColor);
+            bulletLight.color.setHex(hexColor);
+        };
 
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
-        dome.position.y = 0.3;
-        cannonMeshGroup.add(dome);
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat); base.rotation.x = Math.PI / 12; cannonMeshGroup.add(base);
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat); dome.position.y = 0.3; cannonMeshGroup.add(dome);
+        const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelL.rotation.x = Math.PI / 2; barrelL.position.set(-0.45, 0.35, -1.0); cannonMeshGroup.add(barrelL);
+        const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0); cannonMeshGroup.add(barrelR);
 
-        const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-        barrelL.rotation.x = Math.PI / 2; barrelL.position.set(-0.45, 0.35, -1.0);
-        cannonMeshGroup.add(barrelL);
+        cannonGroup.add(cannonMeshGroup); cannonGroup.position.set(0, 1.2, 0); scene.add(cannonGroup);
 
-        const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-        barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0);
-        cannonMeshGroup.add(barrelR);
-
-        cannonGroup.add(cannonMeshGroup);
-        cannonGroup.position.set(0, 1.2, 0);
-        scene.add(cannonGroup);
-
-        // Bullets
+        // Bullets & Muzzle Light
         const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
         const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
         const bullets = [];
 
-        const bulletLight = new THREE.PointLight(0x38bdf8, 3.5, 20);
-        bulletLight.visible = false;
-        scene.add(bulletLight);
+        const bulletLight = new THREE.PointLight(0x38bdf8, 4.0, 25);
+        bulletLight.visible = false; scene.add(bulletLight);
 
         function spawnBullet(x, z) {
             const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-            bullet.scale.set(1, 1, 2.2);
-            bullet.position.set(x, 1.1, z);
-            scene.add(bullet);
-            bullets.push(bullet);
+            bullet.scale.set(1, 1, 2.2); bullet.position.set(x, 1.1, z);
+            scene.add(bullet); bullets.push(bullet);
         }
 
         function updateBullets(delta) {
@@ -523,9 +487,7 @@
                 bulletLight.visible = true;
                 const leadBullet = bullets[bullets.length - 1];
                 bulletLight.position.set(leadBullet.position.x, 1.5, leadBullet.position.z);
-            } else {
-                bulletLight.visible = false;
-            }
+            } else { bulletLight.visible = false; }
 
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
@@ -536,67 +498,47 @@
                     const liz = lizards[j];
                     if (b.position.distanceTo(liz.position) < 1.6) {
                         liz.userData.hp--;
+                        createExplosion(b.position, 0x38bdf8);
                         if (liz.userData.hp <= 0) {
                             score += liz.userData.scoreVal;
                             levelProgress += 5;
-                            const scoreVal = document.getElementById('score-val');
-                            if (scoreVal) scoreVal.innerText = score;
+                            document.getElementById('score-val').innerText = score;
                             updateLevelUI();
-                            scene.remove(liz);
-                            lizards.splice(j, 1);
-                            if (levelProgress >= maxLevelProgress && !isBossActive) {
-                                spawnBoss();
-                            }
+                            createExplosion(liz.position, liz.userData.color);
+                            scene.remove(liz); lizards.splice(j, 1);
+                            if (levelProgress >= maxLevelProgress && !isBossActive) spawnBoss();
                         }
-                        hitEnemy = true;
-                        playSound('hit');
-                        break;
+                        hitEnemy = true; playSound('hit'); break;
                     }
                 }
 
-                if (hitEnemy) {
-                    scene.remove(b);
-                    bullets.splice(i, 1);
-                    continue;
-                }
+                if (hitEnemy) { scene.remove(b); bullets.splice(i, 1); continue; }
 
                 if (isBossActive && activeBoss && b.position.distanceTo(activeBoss.position) < 3.5) {
-                    activeBoss.userData.hp--;
-                    playSound('hit');
-                    triggerCameraShake(0.1);
-                    scene.remove(b);
-                    bullets.splice(i, 1);
+                    activeBoss.userData.hp--; playSound('hit'); triggerCameraShake(0.1);
+                    createExplosion(b.position, 0xef4444);
+                    scene.remove(b); bullets.splice(i, 1);
 
                     if (activeBoss.userData.hp <= 0) {
-                        scene.remove(activeBoss);
-                        activeBoss = null;
-                        isBossActive = false;
-                        score += 1000;
-                        currentLevel++;
-                        levelProgress = 0;
-                        updateLevelUI();
+                        createExplosion(activeBoss.position, 0xf59e0b);
+                        scene.remove(activeBoss); activeBoss = null; isBossActive = false;
+                        score += 1000; currentLevel++; levelProgress = 0; updateLevelUI();
                     }
                     continue;
                 }
 
-                if (b.position.z < cannonGroup.position.z - 160) {
-                    scene.remove(b);
-                    bullets.splice(i, 1);
-                }
+                if (b.position.z < cannonGroup.position.z - 160) { scene.remove(b); bullets.splice(i, 1); }
             }
         }
 
         // Controls
         let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
-
         function stopInput() { isDragging = false; isFiring = false; }
 
         renderer.domElement.addEventListener('touchstart', (e) => { 
             e.preventDefault(); isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; 
         }, { passive: false });
-        
         renderer.domElement.addEventListener('touchend', (e) => { e.preventDefault(); stopInput(); }, { passive: false });
-        
         renderer.domElement.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (isDragging && gameStarted && !isPaused) {
@@ -614,7 +556,7 @@
             }
         });
 
-        // Game Loop & Logic
+        // Game Loop
         let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
         function resetGame() {
@@ -622,66 +564,41 @@
             isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
             
             if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
-            for (let liz of lizards) scene.remove(liz);
-            lizards.length = 0;
-            for (let b of bullets) scene.remove(b);
-            bullets.length = 0;
+            for (let liz of lizards) scene.remove(liz); lizards.length = 0;
+            for (let b of bullets) scene.remove(b); bullets.length = 0;
+            for (let p of particles) scene.remove(p); particles.length = 0;
 
-            cannonGroup.position.set(0, 1.2, 0);
-            targetX = 0;
-
-            const scoreVal = document.getElementById('score-val');
-            if (scoreVal) scoreVal.innerText = '0';
-
-            updateHpBar();
-            updateLevelUI();
+            cannonGroup.position.set(0, 1.2, 0); targetX = 0;
+            document.getElementById('score-val').innerText = '0';
+            updateHpBar(); updateLevelUI();
         }
 
         function gameOver() {
             gameStarted = false; stopInput();
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('cannon_high_score', highScore);
-            }
-
-            const gameOverModal = document.getElementById('game-over-modal');
-            const finalScoreVal = document.getElementById('final-score-val');
-            const bestScoreVal = document.getElementById('best-score-val');
-
-            if (finalScoreVal) finalScoreVal.innerText = score;
-            if (bestScoreVal) bestScoreVal.innerText = highScore;
-            if (gameOverModal) gameOverModal.classList.remove('hidden');
+            if (score > highScore) { highScore = score; localStorage.setItem('cannon_high_score', highScore); }
+            document.getElementById('final-score-val').innerText = score;
+            document.getElementById('best-score-val').innerText = highScore;
+            document.getElementById('game-over-modal').classList.remove('hidden');
         }
 
         document.getElementById('restart-btn')?.addEventListener('click', () => {
-            requestFullScreen();
-            document.getElementById('game-over-modal')?.classList.add('hidden');
-            resetGame();
-            gameStarted = true;
+            requestFullScreen(); document.getElementById('game-over-modal')?.classList.add('hidden');
+            resetGame(); gameStarted = true;
         });
 
         document.getElementById('start-btn')?.addEventListener('click', () => {
-            requestFullScreen();
-            initAudio();
-            resetGame();
-            gameStarted = true;
+            requestFullScreen(); initAudio(); resetGame(); gameStarted = true;
             const startOverlay = document.getElementById('start-overlay');
-            if (startOverlay) {
-                startOverlay.style.opacity = '0';
-                setTimeout(() => startOverlay.classList.add('hidden'), 300);
-            }
+            startOverlay.style.opacity = '0'; setTimeout(() => startOverlay.classList.add('hidden'), 300);
         });
 
         document.getElementById('pause-btn')?.addEventListener('click', () => {
-            if (!gameStarted) return;
-            isPaused = true;
+            if (!gameStarted) return; isPaused = true;
             document.getElementById('pause-menu')?.classList.remove('hidden');
         });
 
         document.getElementById('resume-btn')?.addEventListener('click', () => { 
-            requestFullScreen();
-            isPaused = false; 
-            document.getElementById('pause-menu')?.classList.add('hidden'); 
+            requestFullScreen(); isPaused = false; document.getElementById('pause-menu')?.classList.add('hidden'); 
         });
 
         let clock = new THREE.Clock();
@@ -693,6 +610,7 @@
             const elapsedTime = clock.getElapsedTime();
 
             updateStars(delta);
+            updateParticles(delta);
 
             if (gameStarted && !isPaused) {
                 targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
@@ -708,8 +626,7 @@
                     shootTimer = 0;
                     spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
                     spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
-                    playSound('shoot');
-                    cannonRecoilZ = 0.2;
+                    playSound('shoot'); cannonRecoilZ = 0.2;
                 }
 
                 cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 10);
