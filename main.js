@@ -129,6 +129,14 @@ window.addEventListener('DOMContentLoaded', () => {
     const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x030712, 0.8);
     scene.add(hemiLight);
 
+    // --- 3.1. משתנים עבור Camera Shake & Recoil ---
+    let cameraShakeIntensity = 0;
+    let cannonRecoilZ = 0;
+
+    function triggerCameraShake(intensity) {
+        cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
+    }
+
     // --- 4. Modern Neon Track & Environment ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
@@ -278,6 +286,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
+                triggerCameraShake(0.4); // רעד מצלמה בלקיחת נזק
                 scene.remove(liz);
                 lizards.splice(i, 1);
                 if (currentHp <= 0) { gameOver(); return; }
@@ -299,6 +308,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentHp -= 200;
                 updateHpBar();
                 playSound('hit');
+                triggerCameraShake(0.6); // רעד רציני כשבוס פוגע בנו
                 if (currentHp <= 0) gameOver();
             }
         }
@@ -620,6 +630,8 @@ window.addEventListener('DOMContentLoaded', () => {
         currentLevel = 1;
         levelProgress = 0;
         isBossActive = false;
+        cameraShakeIntensity = 0;
+        cannonRecoilZ = 0;
         
         if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
         for (let liz of lizards) scene.remove(liz);
@@ -628,6 +640,7 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.length = 0;
 
         cannonGroup.position.set(0, 1.2, 0);
+        cannonMeshGroup.position.z = 0;
         targetX = 0;
 
         const scoreVal = document.getElementById('score-val');
@@ -720,8 +733,22 @@ window.addEventListener('DOMContentLoaded', () => {
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
         cannonGroup.position.x = currentX;
 
-        camera.position.x = cannonGroup.position.x * 0.15;
-        camera.position.y = cannonGroup.position.y + 12.5;
+        // חישוב הרתע (Recoil)
+        cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 15.0);
+        cannonMeshGroup.position.z = cannonRecoilZ;
+
+        // חישוב רעד המצלמה (Camera Shake)
+        let shakeOffsetX = 0;
+        let shakeOffsetY = 0;
+        if (cameraShakeIntensity > 0) {
+            shakeOffsetX = (Math.random() - 0.5) * cameraShakeIntensity;
+            shakeOffsetY = (Math.random() - 0.5) * cameraShakeIntensity;
+            cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8.0);
+        }
+
+        // עדכון מיקום המצלמה כולל רעד
+        camera.position.x = cannonGroup.position.x * 0.15 + shakeOffsetX;
+        camera.position.y = cannonGroup.position.y + 12.5 + shakeOffsetY;
         camera.position.z = cannonGroup.position.z + 18.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
 
@@ -736,6 +763,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
             triggerMuzzleFlash(lx, 1.35, fz);
             triggerMuzzleFlash(rx, 1.35, fz);
+
+            // הפעלת רתע בכל ירייה
+            cannonRecoilZ = 0.35;
 
             playSound('shoot');
             shootTimer = 0;
@@ -764,6 +794,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 3.2) {
                     playSound('boss_hit');
+                    triggerCameraShake(0.12); // רעד קל במכה בבוס
                     activeBoss.userData.hp -= 1;
                     scene.remove(b);
                     bullets.splice(i, 1);
@@ -771,6 +802,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (activeBoss.userData.hp <= 0) {
                         score += activeBoss.userData.scoreVal;
                         document.getElementById('score-val').innerText = score;
+                        triggerCameraShake(0.5); // רעד חזק בהשמדת הבוס
                         scene.remove(activeBoss);
                         activeBoss = null;
                         isBossActive = false;
@@ -793,6 +825,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (liz.userData.hp <= 0) {
                         score += liz.userData.scoreVal;
                         document.getElementById('score-val').innerText = score;
+                        triggerCameraShake(0.08); // רעד קל בהריגת אויב
 
                         if (!isBossActive) {
                             levelProgress += 10;
