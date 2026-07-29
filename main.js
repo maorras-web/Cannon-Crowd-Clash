@@ -134,17 +134,15 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. REALISTIC NEBULA & GALAXY SKYBOX (רקע גלקסיה וערפיליות) ---
+    // --- 3.1. REALISTIC NEBULA & GALAXY SKYBOX ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 1024; canvas.height = 1024;
         const ctx = canvas.getContext('2d');
 
-        // בסיס חלל כהה
         ctx.fillStyle = '#02020a';
         ctx.fillRect(0, 0, 1024, 1024);
 
-        // ציור ערפיליות גלקסיה בצבעי סגול, כחול ורוד
         const nebulae = [
             { x: 300, y: 400, r: 350, color: 'rgba(147, 51, 234, 0.35)' },
             { x: 750, y: 300, r: 400, color: 'rgba(59, 130, 246, 0.30)' },
@@ -399,7 +397,7 @@ window.addEventListener('DOMContentLoaded', () => {
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    // --- 7.1. REALISTIC SIDE-ENGINE FIRE PARTICLES ---
+    // --- 7.1. REALISTIC SIDE-ENGINE FIRE PARTICLES (FIXED) ---
     const fireParticles = [];
 
     function createFireTextureCanvas() {
@@ -424,31 +422,35 @@ window.addEventListener('DOMContentLoaded', () => {
         depthWrite: false
     });
 
-    function spawnEngineFireParticle(localX, localY, localZ) {
+    function spawnEngineFireParticle(isLeft) {
         const sprite = new THREE.Sprite(fireMaterialTemplate.clone());
-        const worldPos = new THREE.Vector3(localX, localY, localZ);
-        cannonMeshGroup.localToWorld(worldPos);
+        
+        // יצירת וקטור מיקום מדויק של קצה האגזוז הצדי (שמאל או ימין)
+        const localPos = new THREE.Vector3(isLeft ? -1.3 : 1.3, 0.2, 0.3);
+        const worldPos = localPos.applyMatrix4(cannonMeshGroup.matrixWorld);
 
         sprite.position.copy(worldPos);
-        sprite.scale.set(0.6, 0.6, 1.0);
+        sprite.scale.set(0.5, 0.5, 1.0);
         scene.add(sprite);
 
         fireParticles.push({
             sprite: sprite,
             life: 1.0,
-            speedZ: 25.0 + Math.random() * 10.0,
-            spreadX: (Math.random() - 0.5) * 0.8,
-            spreadY: (Math.random() - 0.5) * 0.5,
-            scaleSpeed: 3.5 + Math.random() * 2.0
+            speedZ: 25.0 + Math.random() * 8.0,
+            spreadX: (Math.random() - 0.5) * 0.4,
+            spreadY: (Math.random() - 0.5) * 0.4,
+            scaleSpeed: 3.0 + Math.random() * 2.0
         });
     }
 
     function updateEngineFire(delta) {
         if (gameStarted && !isPaused) {
-            for (let i = 0; i < 3; i++) {
-                // ממוקם בדיוק בצידי התותח בפתח האגזוזים (-1.3 ו-1.3)
-                spawnEngineFireParticle(-1.3, 0.2, 0.2); 
-                spawnEngineFireParticle(1.3, 0.2, 0.2);
+            // לוודא שהמטריצה המרחבית מעודכנת לפני חישוב מיקום האגזוזים
+            cannonMeshGroup.updateMatrixWorld();
+
+            for (let i = 0; i < 2; i++) {
+                spawnEngineFireParticle(true);  // אגזוז שמאל
+                spawnEngineFireParticle(false); // אגזוז ימין
             }
         }
 
@@ -869,6 +871,7 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
+        // ניהול כדורים והתנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 80 * delta;
@@ -879,6 +882,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
+            // פגיעה בשערים
             for (let g of gates) {
                 const gData = g.userData;
                 const halfW = gData.width / 2;
@@ -889,18 +893,20 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // פגיעה בבוס
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 3.2) {
                     playSound('boss_hit');
                     triggerCameraShake(0.12);
-                    activeBoss.userData.hp -= 1;
+                    activeBoss.userData.hp--;
                     scene.remove(b);
                     bullets.splice(i, 1);
 
                     if (activeBoss.userData.hp <= 0) {
                         score += activeBoss.userData.scoreVal;
-                        document.getElementById('score-val').innerText = score;
-                        triggerCameraShake(0.5);
+                        const scoreValEl = document.getElementById('score-val');
+                        if (scoreValEl) scoreValEl.innerText = score;
+                        
                         scene.remove(activeBoss);
                         activeBoss = null;
                         isBossActive = false;
@@ -912,39 +918,36 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            for (let k = lizards.length - 1; k >= 0; k--) {
-                const liz = lizards[k];
-                if (b.position.distanceTo(liz.position) < 1.6) {
+            // פגיעה באויבים רגילים
+            for (let j = lizards.length - 1; j >= 0; j--) {
+                const liz = lizards[j];
+                if (b.position.distanceTo(liz.position) < 1.4) {
                     playSound('hit');
-                    liz.userData.hp -= 1;
+                    liz.userData.hp--;
                     scene.remove(b);
                     bullets.splice(i, 1);
 
                     if (liz.userData.hp <= 0) {
                         score += liz.userData.scoreVal;
-                        document.getElementById('score-val').innerText = score;
-                        triggerCameraShake(0.08);
+                        const scoreValEl = document.getElementById('score-val');
+                        if (scoreValEl) scoreValEl.innerText = score;
 
                         if (!isBossActive) {
-                            levelProgress += 10;
-                            if (levelProgress >= maxLevelProgress) spawnBoss();
-                            else updateLevelUI();
+                            levelProgress += 5;
+                            updateLevelUI();
+                            if (levelProgress >= maxLevelProgress) {
+                                spawnBoss();
+                            }
                         }
 
                         scene.remove(liz);
-                        lizards.splice(k, 1);
+                        lizards.splice(j, 1);
                     }
                     break;
                 }
             }
         }
     }
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
 
     animate();
 });
