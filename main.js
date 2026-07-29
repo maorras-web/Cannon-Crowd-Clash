@@ -147,7 +147,7 @@ window.addEventListener('DOMContentLoaded', () => {
     track.receiveShadow = true;
     scene.add(track);
 
-    // --- 4.1. 4000 כוכבים לבנים בחלל החיצון ---
+    // --- 4.1. 4000 כוכבים בחלל החיצון ---
     const starCount = 4000;
     const starPositions = new Float32Array(starCount * 3);
 
@@ -344,9 +344,9 @@ window.addEventListener('DOMContentLoaded', () => {
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    // --- 7.1. להבות ננפלטות ממנועי הדחף בצידים (Thruster Flames) ---
+    // להבות מנועי דחף
     const flameGeo = new THREE.ConeGeometry(0.22, 0.9, 12);
-    flameGeo.rotateZ(Math.PI / 2); // כיוון הלהבה כלפי חוץ
+    flameGeo.rotateZ(Math.PI / 2);
 
     const flameMatL = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
     const thrustFlameL = new THREE.Mesh(flameGeo, flameMatL);
@@ -361,6 +361,33 @@ window.addEventListener('DOMContentLoaded', () => {
     thrustFlameR.position.set(1.8, 0.2, 0);
     cannonMeshGroup.add(thrustFlameR);
 
+    // --- 7.1. Muzzle Flash System (הבזק לוע ברגע ירייה) ---
+    const muzzleFlashes = [];
+    const muzzleFlashGeo = new THREE.SphereGeometry(0.5, 12, 12);
+    const muzzleFlashMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1.0 });
+
+    function triggerMuzzleFlash(x, y, z) {
+        const flash = new THREE.Mesh(muzzleFlashGeo, muzzleFlashMat.clone());
+        flash.position.set(x, y, z);
+        scene.add(flash);
+        muzzleFlashes.push({ mesh: flash, life: 1.0 });
+    }
+
+    function updateMuzzleFlashes(delta) {
+        for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
+            const f = muzzleFlashes[i];
+            f.life -= delta * 15.0; // נעלם מהר מאוד
+            if (f.life <= 0) {
+                scene.remove(f.mesh);
+                f.mesh.material.dispose();
+                muzzleFlashes.splice(i, 1);
+            } else {
+                f.mesh.scale.setScalar(f.life * 1.2);
+                f.mesh.material.opacity = f.life;
+            }
+        }
+    }
+
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
@@ -370,22 +397,38 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.set(hexColor);
     }
 
-    // --- 8. Bullets ---
-    const bulletGeo = new THREE.SphereGeometry(0.25, 12, 12);
+    // --- 8. Upgraded Bullets & Bullet Trails ---
+    const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ 
         color: 0xfacc15, 
-        emissive: 0xeab308, 
-        emissiveIntensity: 1.5,
+        emissive: 0xffea00, 
+        emissiveIntensity: 2.0,
         roughness: 0.1 
     });
+
+    // גיאומטריית שובל האור (Bullet Trail)
+    const trailGeo = new THREE.CylinderGeometry(0.04, 0.22, 2.8, 8);
+    trailGeo.rotateX(Math.PI / 2); // הטיות הזנב לאורך ציר ה-Z
+    const trailMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.65 });
+
     const bullets = [];
 
     function spawnBullet(x, z) {
-        const b = new THREE.Mesh(bulletGeo, bulletMat);
-        b.scale.set(1, 1, 2.5);
-        b.position.set(x, 1.1, z);
-        scene.add(b);
-        bullets.push(b);
+        const bulletGroup = new THREE.Group();
+
+        // כדור ראשי
+        const mainBullet = new THREE.Mesh(bulletGeo, bulletMat);
+        mainBullet.scale.set(1, 1, 1.8);
+        bulletGroup.add(mainBullet);
+
+        // שובל נמתח מאחורי הכדור
+        const trail = new THREE.Mesh(trailGeo, trailMat);
+        trail.position.z = 1.4; // מיקום הזנב מאחורי הכדור
+        bulletGroup.add(trail);
+
+        bulletGroup.position.set(x, 1.1, z);
+        scene.add(bulletGroup);
+        bullets.push(bulletGroup);
     }
 
     // --- 8.5. מערכת החלקיקים ---
@@ -640,6 +683,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('resume-btn')?.addEventListener('click', () => { 
         isPaused = false; 
+        document.getElementById('pause-menu')?.classList.hidden = true;
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
 
@@ -652,7 +696,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 12. Main Render Loop & Flame Animation ---
+    // --- 12. Main Render Loop & Animations ---
     const clock = new THREE.Clock();
     let currentX = 0;
 
@@ -665,7 +709,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
 
-        // אנימציית הבהוב והתרחבות ללהבות המנועים בצדדים
+        // אנימציית הבהוב להבות מנועי הצידים
         const flameScale = 0.85 + Math.sin(elapsedTime * 35) * 0.25;
         thrustFlameL.scale.set(flameScale, flameScale, flameScale);
         thrustFlameR.scale.set(flameScale, flameScale, flameScale);
@@ -675,6 +719,7 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLizards(delta);
         updateParticles(delta);
         updateGates(elapsedTime, delta);
+        updateMuzzleFlashes(delta);
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
@@ -687,8 +732,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
         shootTimer += delta;
         if (isFiring && shootTimer >= 0.15) {
-            spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
-            spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
+            const lx = cannonGroup.position.x - 0.45;
+            const rx = cannonGroup.position.x + 0.45;
+            const fz = cannonGroup.position.z - 2.0;
+
+            spawnBullet(lx, cannonGroup.position.z - 1.2);
+            spawnBullet(rx, cannonGroup.position.z - 1.2);
+
+            triggerMuzzleFlash(lx, 1.35, fz);
+            triggerMuzzleFlash(rx, 1.35, fz);
+
             playSound('shoot');
             shootTimer = 0;
         }
