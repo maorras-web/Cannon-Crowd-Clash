@@ -100,24 +100,36 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Renderer & Lighting ---
+    // --- 3. Scene, Renderer & Lighting (משודרג לחדות וצבעים חיים) ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.FogExp2(0x000000, 0.008);
+    scene.fog = new THREE.FogExp2(0x000000, 0.005);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // מונע מראה מטושטש
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;          // מעשיר צבעים וניגודיות
+    renderer.toneMappingExposure = 1.25;                         // מחזיר אור ובהירות לסצנה
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // תאורת סביבה מוגברת
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    // תאורה כיוונית ראשית ליצירת ברק ועומק
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
     dirLight.position.set(20, 50, 20);
+    dirLight.castShadow = true;
     scene.add(dirLight);
+
+    // תאורה משלימה למעלה/למטה מעניקה עומק לתלת-ממד
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x333355, 0.6);
+    scene.add(hemiLight);
 
     // --- 4. Track & Environment ---
     const trackWidth = 18; 
@@ -125,7 +137,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const trackLength = 2000;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 15 });
+    const trackMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 25 });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
@@ -299,13 +311,12 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
-    // --- מדחפים בצידי התותח (שמאל וימין) ---
+    // מדחפים בצידי התותח
     const thrusterMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, shininess: 40 });
     const glowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
 
-    // מדחף שמאלי (בצד שמאל של הבסיס)
     const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), thrusterMat);
-    thrusterL.rotation.z = Math.PI / 2; // שוכב הצידה
+    thrusterL.rotation.z = Math.PI / 2;
     thrusterL.position.set(-1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterL);
 
@@ -313,9 +324,8 @@ window.addEventListener('DOMContentLoaded', () => {
     glowL.position.set(-1.6, 0.2, 0);
     cannonMeshGroup.add(glowL);
 
-    // מדחף ימני (בצד ימין של הבסיס)
     const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), thrusterMat);
-    thrusterR.rotation.z = -Math.PI / 2; // שוכב הצידה
+    thrusterR.rotation.z = -Math.PI / 2;
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
@@ -343,6 +353,72 @@ window.addEventListener('DOMContentLoaded', () => {
         b.position.set(x, 1.1, z);
         scene.add(b);
         bullets.push(b);
+    }
+
+    // --- 8.5. מערכת החלקיקים (Particles System) לפגיעה בשערים ---
+    const activeParticleSystems = [];
+
+    function createGateParticles(position, isMultiply) {
+        const count = 18;
+        const geometry = new THREE.BufferGeometry();
+        const positions = [];
+        const velocities = [];
+
+        // צבע זוהר: ירוק/טורקיז בהתאם לסוג השער
+        const particleColor = isMultiply ? 0x10b981 : 0x0284c7;
+
+        for (let i = 0; i < count; i++) {
+            positions.push(position.x, position.y, position.z);
+            velocities.push(
+                (Math.random() - 0.5) * 0.35,
+                (Math.random() - 0.2) * 0.4 + 0.1,
+                (Math.random() - 0.5) * 0.35
+            );
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+        const material = new THREE.PointsMaterial({
+            color: particleColor,
+            size: 0.35,
+            transparent: true,
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const system = new THREE.Points(geometry, material);
+        scene.add(system);
+
+        activeParticleSystems.push({
+            system: system,
+            velocities: velocities,
+            life: 1.0
+        });
+    }
+
+    function updateParticles(delta) {
+        for (let i = activeParticleSystems.length - 1; i >= 0; i--) {
+            const p = activeParticleSystems[i];
+            p.life -= delta * 2.5;
+
+            if (p.life <= 0) {
+                scene.remove(p.system);
+                p.system.geometry.dispose();
+                p.system.material.dispose();
+                activeParticleSystems.splice(i, 1);
+                continue;
+            }
+
+            const pos = p.system.geometry.attributes.position.array;
+            for (let j = 0; j < p.velocities.length / 3; j++) {
+                pos[j * 3]     += p.velocities[j * 3];
+                pos[j * 3 + 1] += p.velocities[j * 3 + 1];
+                pos[j * 3 + 2] += p.velocities[j * 3 + 2];
+            }
+            p.system.geometry.attributes.position.needsUpdate = true;
+            p.system.material.opacity = p.life;
+        }
     }
 
     // --- 9. Gates ---
@@ -379,6 +455,9 @@ window.addEventListener('DOMContentLoaded', () => {
         frame.position.y = 2.1;
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
+        
+        gateGroup.userData = { id, type, value, width: gateWidth, height: 4.2 };
+
         scene.add(gateGroup);
         gates.push(gateGroup);
     }
@@ -526,6 +605,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
 
         updateLizards(delta);
+        updateParticles(delta); // עדכון אנימציית החלקיקים בשערים
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
@@ -544,6 +624,7 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
+        // --- בודק כדורים, פגיעה באויבים ובשערים ---
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 80 * delta;
@@ -552,6 +633,18 @@ window.addEventListener('DOMContentLoaded', () => {
                 scene.remove(b);
                 bullets.splice(i, 1);
                 continue;
+            }
+
+            // פגיעה בשערים + הפעלת אפקט החלקיקים
+            let hitGate = false;
+            for (let g of gates) {
+                const gData = g.userData;
+                const halfW = gData.width / 2;
+                if (Math.abs(b.position.x - g.position.x) < halfW && Math.abs(b.position.z - g.position.z) < 1.0) {
+                    createGateParticles(b.position, gData.type === 'multiply');
+                    hitGate = true;
+                    break;
+                }
             }
 
             if (isBossActive && activeBoss) {
