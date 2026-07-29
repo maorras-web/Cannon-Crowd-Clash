@@ -52,7 +52,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(700, now);
                 osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.setValueAtTime(0.2, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
                 osc.start(now);
                 osc.stop(now + 0.08);
@@ -60,7 +60,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(160, now);
                 osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.setValueAtTime(0.4, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
                 osc.start(now);
                 osc.stop(now + 0.1);
@@ -92,16 +92,16 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Visuals & Optimized Lighting ---
+    // --- 3. Scene & Advanced Visuals Setup ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x02040a, 0.007);
+    scene.fog = new THREE.FogExp2(0x030712, 0.008);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // מותאם לביצועים חלקים
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.4; // חשיפה עוצמתית לברק נאוון
 
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
@@ -112,13 +112,17 @@ window.addEventListener('DOMContentLoaded', () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // תאורה ממוטבת (בלי צללים כבדים שמאיטים)
-    const ambientLight = new THREE.AmbientLight(0x38bdf8, 1.2);
+    // מערך תאורה עשיר ויוקרתי
+    const ambientLight = new THREE.AmbientLight(0x1e1b4b, 1.2);
     scene.add(ambientLight);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.8);
-    mainLight.position.set(10, 30, 20);
+    const mainLight = new THREE.DirectionalLight(0x38bdf8, 2.2);
+    mainLight.position.set(15, 40, 20);
     scene.add(mainLight);
+
+    const rimLight = new THREE.DirectionalLight(0xc084fc, 2.8); // Rim Light חזק להדגשת קצוות הלטאות והתותח
+    rimLight.position.set(-15, 20, -30);
+    scene.add(rimLight);
 
     let cameraShakeIntensity = 0;
     let cannonRecoilZ = 0;
@@ -127,46 +131,48 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. DARK NEBULA SKYBOX ---
+    // --- 3.1. DARK PURPLE NEBULA SKYBOX ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 1024; canvas.height = 1024;
+        canvas.width = 2048; canvas.height = 2048;
         const ctx = canvas.getContext('2d');
 
         ctx.fillStyle = '#020208';
-        ctx.fillRect(0, 0, 1024, 1024);
+        ctx.fillRect(0, 0, 2048, 2048);
 
         const nebulae = [
-            { x: 250, y: 300, r: 400, color: 'rgba(99, 102, 241, 0.5)' },
-            { x: 750, y: 250, r: 450, color: 'rgba(168, 85, 247, 0.5)' }
+            { x: 500,  y: 600,  r: 800, color: 'rgba(99, 102, 241, 0.65)' },
+            { x: 1500, y: 500,  r: 950, color: 'rgba(168, 85, 247, 0.70)' },
+            { x: 1000, y: 1400, r: 750, color: 'rgba(236, 72, 153, 0.50)' }
         ];
 
         nebulae.forEach(n => {
             const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
             grad.addColorStop(0, n.color);
+            grad.addColorStop(0.5, n.color.replace(/[\d\.]+\)$/, '0.25)'));
             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 1024, 1024);
+            ctx.fillRect(0, 0, 2048, 2048);
         });
 
         return new THREE.CanvasTexture(canvas);
     }
 
-    const galaxySkyGeo = new THREE.SphereGeometry(600, 24, 24);
+    const galaxySkyGeo = new THREE.SphereGeometry(800, 32, 32);
     const galaxySkyMat = new THREE.MeshBasicMaterial({ map: createGalaxyTexture(), side: THREE.BackSide });
     const galaxySky = new THREE.Mesh(galaxySkyGeo, galaxySkyMat);
     scene.add(galaxySky);
 
-    // --- 4. High-Tech Track & ROUND STARS FLOW ---
+    // --- 4. Metallic Track & Round Streaming Stars ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
-    const trackLength = 1500;
+    const trackLength = 2000;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
     const trackMat = new THREE.MeshStandardMaterial({ 
-        color: 0x050b18, 
-        roughness: 0.2, 
-        metalness: 0.8,
+        color: 0x070d1e, 
+        roughness: 0.1, 
+        metalness: 0.9,
         emissive: 0x0284c7,
         emissiveIntensity: 0.08
     });
@@ -174,7 +180,7 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    const railGeo = new THREE.BoxGeometry(0.3, 0.5, trackLength);
+    const railGeo = new THREE.BoxGeometry(0.3, 0.6, trackLength);
     const railMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
     
     const railLeft = new THREE.Mesh(railGeo, railMat);
@@ -185,7 +191,7 @@ window.addEventListener('DOMContentLoaded', () => {
     railRight.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
     scene.add(railRight);
 
-    // --- יצירת טקסטורת כוכב עגולה וזוהרת (Soft Round Circle) ---
+    // --- טקסטורת כוכב עגולה, זוהרת ורכה ---
     function createRoundStarTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 64; canvas.height = 64;
@@ -193,7 +199,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
         grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        grad.addColorStop(0.4, 'rgba(56, 189, 248, 0.8)');
+        grad.addColorStop(0.35, 'rgba(56, 189, 248, 0.85)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
         ctx.fillStyle = grad;
@@ -204,23 +210,22 @@ window.addEventListener('DOMContentLoaded', () => {
         return new THREE.CanvasTexture(canvas);
     }
 
-    // מערכת כוכבים מעוגלים בלולאה תמידית
-    const starCount = 600;
+    const starCount = 700;
     const starGeo = new THREE.BufferGeometry();
     const starPos = new Float32Array(starCount * 3);
     const starSpeeds = new Float32Array(starCount);
 
     for (let i = 0; i < starCount; i++) {
-        starPos[i * 3]     = (Math.random() - 0.5) * 80;
-        starPos[i * 3 + 1] = Math.random() * 40 - 5;
+        starPos[i * 3]     = (Math.random() - 0.5) * 70;
+        starPos[i * 3 + 1] = Math.random() * 35 - 3;
         starPos[i * 3 + 2] = -Math.random() * 250;
-        starSpeeds[i]      = 35 + Math.random() * 45; // מהירויות שונות לעומק
+        starSpeeds[i]      = 40 + Math.random() * 50;
     }
 
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
 
     const starMat = new THREE.PointsMaterial({
-        size: 1.6,
+        size: 1.8,
         map: createRoundStarTexture(),
         transparent: true,
         blending: THREE.AdditiveBlending,
@@ -234,11 +239,10 @@ window.addEventListener('DOMContentLoaded', () => {
         const positions = starField.geometry.attributes.position.array;
         for (let i = 0; i < starCount; i++) {
             positions[i * 3 + 2] += starSpeeds[i] * delta;
-            // כשהכוכב עובר את המצלמה הוא חוזר אחורה באופן רציף
-            if (positions[i * 3 + 2] > 20) {
-                positions[i * 3 + 2] = -220;
-                positions[i * 3] = (Math.random() - 0.5) * 80;
-                positions[i * 3 + 1] = Math.random() * 40 - 5;
+            if (positions[i * 3 + 2] > 15) {
+                positions[i * 3 + 2] = -230;
+                positions[i * 3] = (Math.random() - 0.5) * 70;
+                positions[i * 3 + 1] = Math.random() * 35 - 3;
             }
         }
         starField.geometry.attributes.position.needsUpdate = true;
@@ -279,8 +283,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const skinMat = new THREE.MeshStandardMaterial({ 
             color: typeConfig.skinColor, 
-            roughness: 0.3, 
-            metalness: 0.3 
+            roughness: 0.25, 
+            metalness: 0.4 
         });
         const eyeMat = new THREE.MeshBasicMaterial({ color: typeConfig.eyeColor });
 
@@ -295,7 +299,7 @@ window.addEventListener('DOMContentLoaded', () => {
         head.position.set(0, 1.0, 1.8);
         lizardGroup.add(head);
 
-        const eyeGeo = new THREE.SphereGeometry(0.3, 8, 8);
+        const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
         const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
         eyeL.position.set(-0.75, 1.2, 1.8);
         lizardGroup.add(eyeL);
@@ -383,12 +387,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. Metallic Cannon & Dynamic Color Picker ---
+    // --- 7. Metallic Cannon & Real-Time Color Picker ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    // חומר התותח (ניתן לשינוי בזמן אמת!)
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.2, metalness: 0.8 });
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.15, metalness: 0.85 });
     const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9 });
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.95 });
 
@@ -396,7 +399,7 @@ window.addEventListener('DOMContentLoaded', () => {
     base.rotation.x = Math.PI / 12;
     cannonMeshGroup.add(base);
 
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
     dome.position.y = 0.3;
     cannonMeshGroup.add(dome);
 
@@ -414,15 +417,20 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    // פונקציית שינוי צבע גלובלית (עבור כפתורי ה-HTML)
+    // חיבור בחירת הצבעים ב-UI
     window.changeCannonColor = function(hexColor) {
         baseMat.color.set(hexColor);
     };
 
-    // --- 8. Optimized Glowing Bullets ---
-    const bulletGeo = new THREE.SphereGeometry(0.35, 8, 8);
+    // --- 8. Glowing Bullets & Dynamic Glow ---
+    const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
     const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
     const bullets = [];
+
+    // מקור אור יחיד ויעיל שמלווה את מטח הירי בלי להאיט את המשחק!
+    const bulletLight = new THREE.PointLight(0x38bdf8, 3.5, 20);
+    bulletLight.visible = false;
+    scene.add(bulletLight);
 
     function spawnBullet(x, z) {
         const bullet = new THREE.Mesh(bulletGeo, bulletMat);
@@ -433,6 +441,14 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateBullets(delta) {
+        if (bullets.length > 0) {
+            bulletLight.visible = true;
+            const leadBullet = bullets[bullets.length - 1];
+            bulletLight.position.set(leadBullet.position.x, 1.5, leadBullet.position.z);
+        } else {
+            bulletLight.visible = false;
+        }
+
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 95.0 * delta;
@@ -597,7 +613,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
 
-        // עדכון כוכבים מעוגלים תמיד (גם במסכי פתיחה)
+        // עדכון כוכבים עגולים וזורמים
         updateStars(delta);
 
         if (gameStarted && !isPaused) {
@@ -616,7 +632,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
                 spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
                 playSound('shoot');
-                cannonRecoilZ = 0.18;
+                cannonRecoilZ = 0.2;
             }
 
             cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 10);
