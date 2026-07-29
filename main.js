@@ -11,12 +11,11 @@ window.addEventListener('DOMContentLoaded', () => {
         if (pauseBtn) pauseBtn.style.pointerEvents = 'auto';
     }
 
-    // פונקציה להפעלת מסך מלא אמיתי
     function requestFullScreen() {
         const docEl = document.documentElement;
         if (docEl.requestFullscreen) {
             docEl.requestFullscreen().catch(() => {});
-        } else if (docEl.webkitRequestFullscreen) { /* Safari / iOS */
+        } else if (docEl.webkitRequestFullscreen) {
             docEl.webkitRequestFullscreen();
         } else if (docEl.msRequestFullscreen) {
             docEl.msRequestFullscreen();
@@ -112,7 +111,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Renderer & Modern High-Res Graphics Setup ---
+    // --- 3. Scene, Renderer & Skybox ---
     const scene = new THREE.Scene();
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
@@ -127,7 +126,6 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
 
-    // התאמת גודל המסך בשינוי אוריאנטציה / יציאה וכניסה ממסך מלא
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -145,7 +143,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x030712, 0.8);
     scene.add(hemiLight);
 
-    // Camera Shake & Recoil
     let cameraShakeIntensity = 0;
     let cannonRecoilZ = 0;
 
@@ -153,24 +150,21 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. DARK PURPLE NEBULA & GALAXY SKYBOX ---
+    // --- 3.1. DARK PURPLE NEBULA SKYBOX ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 2048; 
-        canvas.height = 2048;
+        canvas.width = 2048; canvas.height = 2048;
         const ctx = canvas.getContext('2d');
 
-        // בסיס סגול-שחור כהה ועמוק
         ctx.fillStyle = '#030108';
         ctx.fillRect(0, 0, 2048, 2048);
 
-        // ענני ערפילית בסגול כהה, אינדיגו ומג'נטה
         const nebulae = [
-            { x: 500,  y: 600,  r: 750, color: 'rgba(88, 28, 135, 0.70)' },  // סגול כהה עמוק
-            { x: 1500, y: 500,  r: 900, color: 'rgba(58, 12, 107, 0.75)' },  // סגול אינדיגו
-            { x: 1000, y: 1400, r: 700, color: 'rgba(126, 34, 206, 0.60)' }, // סגול עז
-            { x: 400,  y: 1600, r: 650, color: 'rgba(76, 29, 149, 0.65)' },  // סגול מלכותי
-            { x: 1600, y: 1500, r: 550, color: 'rgba(112, 26, 117, 0.50)' }  // מג'נטה כהה
+            { x: 500,  y: 600,  r: 750, color: 'rgba(88, 28, 135, 0.70)' },
+            { x: 1500, y: 500,  r: 900, color: 'rgba(58, 12, 107, 0.75)' },
+            { x: 1000, y: 1400, r: 700, color: 'rgba(126, 34, 206, 0.60)' },
+            { x: 400,  y: 1600, r: 650, color: 'rgba(76, 29, 149, 0.65)' },
+            { x: 1600, y: 1500, r: 550, color: 'rgba(112, 26, 117, 0.50)' }
         ];
 
         nebulae.forEach(n => {
@@ -182,7 +176,6 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fillRect(0, 0, 2048, 2048);
         });
 
-        // כוכבים ברקע
         for (let i = 0; i < 1200; i++) {
             const x = Math.random() * 2048;
             const y = Math.random() * 2048;
@@ -206,7 +199,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const galaxySky = new THREE.Mesh(galaxySkyGeo, galaxySkyMat);
     scene.add(galaxySky);
 
-    // --- 4. Modern Neon Track & Environment ---
+    // --- 4. Track & Environment ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 2000;
@@ -227,30 +220,16 @@ window.addEventListener('DOMContentLoaded', () => {
     // Stars Particles
     const starCount = 3000;
     const starPositions = new Float32Array(starCount * 3);
-
     for (let i = 0; i < starCount; i++) {
         const side = Math.random() < 0.5 ? -1 : 1;
-        const x = side * (12 + Math.random() * 100);
-        const y = (Math.random() - 0.5) * 100;
-        const z = (Math.random() - 0.5) * trackLength;
-
-        starPositions[i * 3]     = x;
-        starPositions[i * 3 + 1] = y;
-        starPositions[i * 3 + 2] = z;
+        starPositions[i * 3]     = side * (12 + Math.random() * 100);
+        starPositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+        starPositions[i * 3 + 2] = (Math.random() - 0.5) * trackLength;
     }
-
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-
-    const starMat = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.35,
-        transparent: true,
-        opacity: 0.95
-    });
-
-    const starField = new THREE.Points(starGeo, starMat);
-    scene.add(starField);
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.35, transparent: true, opacity: 0.95 });
+    scene.add(new THREE.Points(starGeo, starMat));
 
     // --- 5. HP Mechanics ---
     const maxHp = 500;
@@ -273,40 +252,143 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.boxShadow = `0 0 12px ${colorHex}`;
     }
 
-    // --- 6. Lizard Enemies & Boss ---
+    // --- 6. REALISTIC LIZARD GEOMETRY & PROCEDURAL TEXTURES ---
+    
+    // יצירת BumpMap של קשקשים דרך Canvas
+    function createLizardScaleBumpMap() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#808080'; // אפור ניטרלי לבסיס Bump
+        ctx.fillRect(0, 0, 512, 512);
+
+        // ציור דפוס קשקשים
+        const scaleSize = 16;
+        for (let y = 0; y < 512; y += scaleSize) {
+            for (let x = 0; x < 512; x += scaleSize) {
+                const offsetX = (y / scaleSize) % 2 === 0 ? 0 : scaleSize / 2;
+                ctx.beginPath();
+                ctx.arc(x + offsetX, y, scaleSize * 0.6, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff'; // קשקש בולט
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#202020'; // שקע
+                ctx.stroke();
+            }
+        }
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(4, 4);
+        return texture;
+    }
+
+    const scaleBumpMap = createLizardScaleBumpMap();
+
     const lizards = [];
     let lizardSpawnTimer = 0;
 
     const ENEMY_TYPES = {
-        STANDARD: { skinColor: 0x16a34a, scale: 1.2, speed: 16.0, hp: 1, scoreVal: 30 },
-        FAST:     { skinColor: 0xeab308, scale: 0.9, speed: 24.0, hp: 1, scoreVal: 50 },
-        ARMORED:  { skinColor: 0x9333ea, scale: 1.6, speed: 10.0, hp: 4, scoreVal: 100 }
+        STANDARD: { skinColor: 0x16a34a, eyeColor: 0xef4444, scale: 1.1, speed: 16.0, hp: 1, scoreVal: 30 },
+        FAST:     { skinColor: 0xca8a04, eyeColor: 0x38bdf8, scale: 0.85, speed: 24.0, hp: 1, scoreVal: 50 },
+        ARMORED:  { skinColor: 0x6b21a8, eyeColor: 0xfacc15, scale: 1.5, speed: 10.0, hp: 4, scoreVal: 100 }
     };
 
     function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
-        const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.3, metalness: 0.2 });
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 1.0), skinMat);
-        body.position.y = 1.2;
+        // חומר עור ריאליסטי עם BumpMap קשקשים
+        const skinMat = new THREE.MeshStandardMaterial({ 
+            color: typeConfig.skinColor, 
+            roughness: 0.45, 
+            metalness: 0.15,
+            bumpMap: scaleBumpMap,
+            bumpScale: 0.08
+        });
+
+        // עיניים זרחניות Emissive
+        const eyeMat = new THREE.MeshStandardMaterial({ 
+            color: typeConfig.eyeColor, 
+            emissive: typeConfig.eyeColor, 
+            emissiveIntensity: 2.5,
+            roughness: 0.1
+        });
+
+        // 1. גוף הידרודינמי (גליל מתוח)
+        const bodyGeo = new THREE.CylinderGeometry(0.5, 0.35, 2.2, 12);
+        bodyGeo.rotateX(Math.PI / 2);
+        const body = new THREE.Mesh(bodyGeo, skinMat);
+        body.position.set(0, 0.7, 0);
         body.castShadow = true;
         lizardGroup.add(body);
 
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), skinMat);
-        head.position.set(0, 2.3, 0.2);
+        // 2. ראש מוארך עם חרטום מחודד
+        const headGeo = new THREE.ConeGeometry(0.48, 1.2, 10);
+        headGeo.rotateX(-Math.PI / 2);
+        const head = new THREE.Mesh(headGeo, skinMat);
+        head.position.set(0, 0.85, 1.4);
+        head.castShadow = true;
         lizardGroup.add(head);
 
-        const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
-        eyeL.position.set(-0.25, 2.4, 0.6);
+        // 3. עיניים פלואורסצנטיות בולטות
+        const eyeGeo = new THREE.SphereGeometry(0.12, 10, 10);
+        
+        const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+        eyeL.position.set(-0.3, 1.0, 1.3);
         lizardGroup.add(eyeL);
 
-        const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
-        eyeR.position.set(0.25, 2.4, 0.6);
+        const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+        eyeR.position.set(0.3, 1.0, 1.3);
         lizardGroup.add(eyeR);
 
+        // 4. גפיים כפופות (4 רגליים בצדדים)
+        const legGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9, 8);
+
+        // רגליים קדמיות
+        const legFL = new THREE.Mesh(legGeo, skinMat);
+        legFL.position.set(-0.6, 0.4, 0.6);
+        legFL.rotation.z = Math.PI / 4;
+        legFL.rotation.x = -Math.PI / 6;
+        lizardGroup.add(legFL);
+
+        const legFR = new THREE.Mesh(legGeo, skinMat);
+        legFR.position.set(0.6, 0.4, 0.6);
+        legFR.rotation.z = -Math.PI / 4;
+        legFR.rotation.x = -Math.PI / 6;
+        lizardGroup.add(legFR);
+
+        // רגליים אחוריות
+        const legBL = new THREE.Mesh(legGeo, skinMat);
+        legBL.position.set(-0.6, 0.4, -0.6);
+        legBL.rotation.z = Math.PI / 4;
+        legBL.rotation.x = Math.PI / 6;
+        lizardGroup.add(legBL);
+
+        const legBR = new THREE.Mesh(legGeo, skinMat);
+        legBR.position.set(0.6, 0.4, -0.6);
+        legBR.rotation.z = -Math.PI / 4;
+        legBR.rotation.x = Math.PI / 6;
+        lizardGroup.add(legBR);
+
+        // 5. זנב ארוך
+        const tailGeo = new THREE.ConeGeometry(0.3, 2.0, 8);
+        tailGeo.rotateX(Math.PI / 2);
+        const tail = new THREE.Mesh(tailGeo, skinMat);
+        tail.position.set(0, 0.6, -1.8);
+        tail.castShadow = true;
+        lizardGroup.add(tail);
+
+        // סיבוב הלטאה שתביט לכיוון התותח (+Z)
+        lizardGroup.rotation.y = Math.PI;
+
         lizardGroup.scale.setScalar(typeConfig.scale);
-        lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal };
+        lizardGroup.userData = { 
+            hp: typeConfig.hp, 
+            speed: typeConfig.speed, 
+            scoreVal: typeConfig.scoreVal 
+        };
 
         return lizardGroup;
     }
@@ -331,7 +413,14 @@ window.addEventListener('DOMContentLoaded', () => {
         isBossActive = true;
         updateLevelUI();
 
-        const bossConfig = { skinColor: 0xd97706, scale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
+        const bossConfig = { 
+            skinColor: 0xc2410c, 
+            eyeColor: 0xef4444, 
+            scale: 3.5, 
+            speed: 4.5, 
+            hp: 40 + (currentLevel * 20), 
+            scoreVal: 1000 
+        };
         activeBoss = createLizardMesh(bossConfig);
         activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
         activeBoss.userData.maxHp = bossConfig.hp;
@@ -351,7 +440,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const liz = lizards[i];
             liz.position.z += liz.userData.speed * delta;
 
-            if (liz.position.distanceTo(cannonGroup.position) < 1.8) {
+            if (liz.position.distanceTo(cannonGroup.position) < 2.0) {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
@@ -373,7 +462,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeBoss.position.z += activeBoss.userData.speed * delta;
             }
 
-            if (activeBoss.position.distanceTo(cannonGroup.position) < 4.0) {
+            if (activeBoss.position.distanceTo(cannonGroup.position) < 4.5) {
                 currentHp -= 200;
                 updateHpBar();
                 playSound('hit');
@@ -383,7 +472,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. High-Detail Cannon with Side Thrusters ---
+    // --- 7. Cannon & Engine Fire ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -410,9 +499,7 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
-    // מנועי דחף צדיים
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
-    
     const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
     thrusterL.rotation.z = Math.PI / 2;
     thrusterL.position.set(-1.3, 0.2, 0);
@@ -423,9 +510,8 @@ window.addEventListener('DOMContentLoaded', () => {
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    // --- 7.1. REALISTIC SIDE-ENGINE FIRE PARTICLES ---
+    // Fire Particles
     const fireParticles = [];
-
     function createFireTextureCanvas() {
         const canvas = document.createElement('canvas');
         canvas.width = 64; canvas.height = 64;
@@ -458,7 +544,6 @@ window.addEventListener('DOMContentLoaded', () => {
         scene.add(sprite);
 
         const sideDir = isLeft ? -1 : 1;
-
         fireParticles.push({
             sprite: sprite,
             life: 1.0,
@@ -472,7 +557,6 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateEngineFire(delta) {
         if (gameStarted && !isPaused) {
             cannonMeshGroup.updateMatrixWorld(true);
-
             for (let i = 0; i < 2; i++) {
                 spawnEngineFireParticle(true);
                 spawnEngineFireParticle(false);
@@ -496,11 +580,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.35;
             p.sprite.scale.set(currentScale, currentScale, 1.0);
-            p.sprite.material.opacity = p.life * p.life; 
+            p.sprite.material.opacity = p.life * p.life;
         }
     }
 
-    // --- 7.2. Muzzle Flash System ---
+    // Muzzle Flashes
     const muzzleFlashes = [];
     const muzzleFlashGeo = new THREE.SphereGeometry(0.5, 12, 12);
     const muzzleFlashMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1.0 });
@@ -536,7 +620,7 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.set(hexColor);
     }
 
-    // --- 8. Upgraded Bullets & Bullet Trails ---
+    // --- 8. Bullets & Particle Effects ---
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ 
         color: 0xfacc15, 
@@ -567,9 +651,8 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(bulletGroup);
     }
 
-    // --- 8.5. Gate Particle System ---
+    // Gate Particles
     const activeParticleSystems = [];
-
     function createGateParticles(position, isMultiply) {
         const count = 20;
         const geometry = new THREE.BufferGeometry();
@@ -601,11 +684,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const system = new THREE.Points(geometry, material);
         scene.add(system);
 
-        activeParticleSystems.push({
-            system: system,
-            velocities: velocities,
-            life: 1.0
-        });
+        activeParticleSystems.push({ system, velocities, life: 1.0 });
     }
 
     function updateParticles(delta) {
@@ -632,7 +711,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Modern Neon Gates ---
+    // --- 9. Gates ---
     const gates = [];
     let gateIdCounter = 1;
 
@@ -673,14 +752,8 @@ window.addEventListener('DOMContentLoaded', () => {
         gateGroup.position.set(x, 0, z);
         
         gateGroup.userData = { 
-            id, 
-            type, 
-            value, 
-            width: gateWidth, 
-            height: 4.2,
-            baseY: 0,
-            floatOffset: Math.random() * Math.PI * 2,
-            hitScale: 1.0
+            id, type, value, width: gateWidth, height: 4.2, baseY: 0,
+            floatOffset: Math.random() * Math.PI * 2, hitScale: 1.0
         };
 
         scene.add(gateGroup);
@@ -690,10 +763,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateGates(elapsedTime, delta) {
         for (let g of gates) {
             const gData = g.userData;
-
-            const floatY = Math.sin(elapsedTime * 3 + gData.floatOffset) * 0.15;
-            g.position.y = gData.baseY + floatY;
-
+            g.position.y = gData.baseY + Math.sin(elapsedTime * 3 + gData.floatOffset) * 0.15;
             if (gData.hitScale > 1.0) {
                 gData.hitScale = THREE.MathUtils.lerp(gData.hitScale, 1.0, delta * 12);
                 g.scale.set(gData.hitScale, gData.hitScale, gData.hitScale);
@@ -712,26 +782,18 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    for (let z = -80; z >= -800; z -= 65) {
-        spawnGatePairAt(z);
-    }
+    for (let z = -80; z >= -800; z -= 65) spawnGatePairAt(z);
 
-    // --- 10. Touch / Drag Controls ---
+    // --- 10. Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     function stopInput() { isDragging = false; isFiring = false; }
 
     renderer.domElement.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); 
-        isDragging = true; 
-        isFiring = true; 
-        previousTouchX = e.touches[0].clientX; 
+        e.preventDefault(); isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; 
     }, { passive: false });
     
-    renderer.domElement.addEventListener('touchend', (e) => { 
-        e.preventDefault();
-        stopInput(); 
-    }, { passive: false });
+    renderer.domElement.addEventListener('touchend', (e) => { e.preventDefault(); stopInput(); }, { passive: false });
     
     renderer.domElement.addEventListener('touchmove', (e) => {
         e.preventDefault();
@@ -750,17 +812,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 11. UI & Game State ---
+    // --- 11. UI & Game Loop State ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function resetGame() {
-        score = 0;
-        currentHp = maxHp;
-        currentLevel = 1;
-        levelProgress = 0;
-        isBossActive = false;
-        cameraShakeIntensity = 0;
-        cannonRecoilZ = 0;
+        score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
+        isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
         
         if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
         for (let liz of lizards) scene.remove(liz);
@@ -780,9 +837,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function gameOver() {
-        gameStarted = false;
-        stopInput();
-
+        gameStarted = false; stopInput();
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('cannon_high_score', highScore);
@@ -837,7 +892,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 12. Main Render Loop & Animations ---
+    // --- 12. Main Render Loop ---
     const clock = new THREE.Clock();
     let currentX = 0;
 
@@ -865,8 +920,7 @@ window.addEventListener('DOMContentLoaded', () => {
         cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 15.0);
         cannonMeshGroup.position.z = cannonRecoilZ;
 
-        let shakeOffsetX = 0;
-        let shakeOffsetY = 0;
+        let shakeOffsetX = 0, shakeOffsetY = 0;
         if (cameraShakeIntensity > 0) {
             shakeOffsetX = (Math.random() - 0.5) * cameraShakeIntensity;
             shakeOffsetY = (Math.random() - 0.5) * cameraShakeIntensity;
@@ -891,7 +945,6 @@ window.addEventListener('DOMContentLoaded', () => {
             triggerMuzzleFlash(rx, 1.35, fz);
 
             cannonRecoilZ = 0.35;
-
             playSound('shoot');
             shootTimer = 0;
         }
@@ -908,8 +961,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             for (let g of gates) {
                 const gData = g.userData;
-                const halfW = gData.width / 2;
-                if (Math.abs(b.position.x - g.position.x) < halfW && Math.abs(b.position.z - g.position.z) < 1.0) {
+                if (Math.abs(b.position.x - g.position.x) < gData.width / 2 && Math.abs(b.position.z - g.position.z) < 1.0) {
                     createGateParticles(b.position, gData.type === 'multiply');
                     gData.hitScale = 1.18;
                     break;
@@ -917,7 +969,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             if (isBossActive && activeBoss) {
-                if (b.position.distanceTo(activeBoss.position) < 3.2) {
+                if (b.position.distanceTo(activeBoss.position) < 3.5) {
                     playSound('boss_hit');
                     triggerCameraShake(0.12);
                     activeBoss.userData.hp--;
@@ -942,7 +994,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             for (let j = lizards.length - 1; j >= 0; j--) {
                 const liz = lizards[j];
-                if (b.position.distanceTo(liz.position) < 1.4) {
+                if (b.position.distanceTo(liz.position) < 1.6) {
                     playSound('hit');
                     liz.userData.hp--;
                     scene.remove(b);
@@ -956,9 +1008,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         if (!isBossActive) {
                             levelProgress += 5;
                             updateLevelUI();
-                            if (levelProgress >= maxLevelProgress) {
-                                spawnBoss();
-                            }
+                            if (levelProgress >= maxLevelProgress) spawnBoss();
                         }
 
                         scene.remove(liz);
