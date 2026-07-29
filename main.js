@@ -75,11 +75,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.start(now);
                 osc.stop(now + 0.2);
             } else if (type === 'explosion') {
-                // צליל פיצוץ עמוק לחביות
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(120, now);
                 osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
-                gain.gain.setValueAtTime(0.8, now);
+                gain.gain.setValueAtTime(0.6, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
                 osc.start(now);
                 osc.stop(now + 0.4);
@@ -159,7 +158,7 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. DARK PURPLE NEBULA SKYBOX ---
+    // --- SKYBOX ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 2048; canvas.height = 2048;
@@ -261,14 +260,11 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.boxShadow = `0 0 12px ${colorHex}`;
     }
 
-    // --- 6. REALISTIC LIZARD GEOMETRY & PROCEDURAL TEXTURES ---
-    
+    // --- 6. LIZARDS ---
     function createLizardScaleBumpMap() {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+        canvas.width = 512; canvas.height = 512;
         const ctx = canvas.getContext('2d');
-
         ctx.fillStyle = '#808080';
         ctx.fillRect(0, 0, 512, 512);
 
@@ -307,83 +303,39 @@ window.addEventListener('DOMContentLoaded', () => {
         const lizardGroup = new THREE.Group();
 
         const skinMat = new THREE.MeshStandardMaterial({ 
-            color: typeConfig.skinColor, 
-            roughness: 0.3, 
-            metalness: 0.2,
-            bumpMap: scaleBumpMap,
-            bumpScale: 0.15
+            color: typeConfig.skinColor, roughness: 0.3, metalness: 0.2, bumpMap: scaleBumpMap, bumpScale: 0.15 
         });
+        const detailMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+        const eyeMat = new THREE.MeshStandardMaterial({ color: typeConfig.eyeColor, emissive: typeConfig.eyeColor, emissiveIntensity: 4.0 });
 
-        const detailMat = new THREE.MeshStandardMaterial({ 
-            color: 0x0f172a, 
-            roughness: 0.5 
-        });
-
-        const eyeMat = new THREE.MeshStandardMaterial({ 
-            color: typeConfig.eyeColor, 
-            emissive: typeConfig.eyeColor, 
-            emissiveIntensity: 4.0
-        });
-
-        // 1. גוף רחב ומסיבי
-        const bodyGeo = new THREE.BoxGeometry(1.6, 0.9, 2.6);
-        const body = new THREE.Mesh(bodyGeo, skinMat);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 2.6), skinMat);
         body.position.set(0, 0.8, 0);
         body.castShadow = true;
         lizardGroup.add(body);
 
-        // 2. ראש מואץ ומשולשי
         const headGeo = new THREE.ConeGeometry(1.1, 1.8, 4);
-        headGeo.rotateX(-Math.PI / 2);
-        headGeo.rotateY(Math.PI / 4);
+        headGeo.rotateX(-Math.PI / 2); headGeo.rotateY(Math.PI / 4);
         const head = new THREE.Mesh(headGeo, skinMat);
         head.position.set(0, 1.0, 1.8);
         head.castShadow = true;
         lizardGroup.add(head);
 
-        // 3. עיניים בוהקות מוגדלות
         const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
-        
-        const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeL.position.set(-0.75, 1.2, 1.8);
-        lizardGroup.add(eyeL);
+        const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.75, 1.2, 1.8); lizardGroup.add(eyeL);
+        const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.75, 1.2, 1.8); lizardGroup.add(eyeR);
 
-        const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeR.position.set(0.75, 1.2, 1.8);
-        lizardGroup.add(eyeR);
-
-        // 4. קוצים אגרסיביים לאורך הגב
         for (let z = -0.8; z <= 0.8; z += 0.5) {
-            const spikeGeo = new THREE.ConeGeometry(0.25, 0.7, 4);
-            const spike = new THREE.Mesh(spikeGeo, detailMat);
+            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.7, 4), detailMat);
             spike.position.set(0, 1.5, z);
             lizardGroup.add(spike);
         }
 
-        // 5. רגליים עבות ופרוסות לצדדים
         const legGeo = new THREE.BoxGeometry(1.1, 0.35, 0.45);
+        const legFL = new THREE.Mesh(legGeo, skinMat); legFL.position.set(-1.1, 0.5, 0.7); legFL.rotation.z = 0.3; lizardGroup.add(legFL);
+        const legFR = new THREE.Mesh(legGeo, skinMat); legFR.position.set(1.1, 0.5, 0.7); legFR.rotation.z = -0.3; lizardGroup.add(legFR);
+        const legBL = new THREE.Mesh(legGeo, skinMat); legBL.position.set(-1.1, 0.5, -0.7); legBL.rotation.z = 0.3; lizardGroup.add(legBL);
+        const legBR = new THREE.Mesh(legGeo, skinMat); legBR.position.set(1.1, 0.5, -0.7); legBR.rotation.z = -0.3; lizardGroup.add(legBR);
 
-        const legFL = new THREE.Mesh(legGeo, skinMat);
-        legFL.position.set(-1.1, 0.5, 0.7);
-        legFL.rotation.z = 0.3;
-        lizardGroup.add(legFL);
-
-        const legFR = new THREE.Mesh(legGeo, skinMat);
-        legFR.position.set(1.1, 0.5, 0.7);
-        legFR.rotation.z = -0.3;
-        lizardGroup.add(legFR);
-
-        const legBL = new THREE.Mesh(legGeo, skinMat);
-        legBL.position.set(-1.1, 0.5, -0.7);
-        legBL.rotation.z = 0.3;
-        lizardGroup.add(legBL);
-
-        const legBR = new THREE.Mesh(legGeo, skinMat);
-        legBR.position.set(1.1, 0.5, -0.7);
-        legBR.rotation.z = -0.3;
-        lizardGroup.add(legBR);
-
-        // 6. זנב ארוך
         const tailGeo = new THREE.ConeGeometry(0.55, 2.5, 5);
         tailGeo.rotateX(Math.PI / 2);
         const tail = new THREE.Mesh(tailGeo, skinMat);
@@ -392,13 +344,8 @@ window.addEventListener('DOMContentLoaded', () => {
         lizardGroup.add(tail);
 
         lizardGroup.rotation.y = Math.PI;
-
         lizardGroup.scale.setScalar(typeConfig.scale * 1.35);
-        lizardGroup.userData = { 
-            hp: typeConfig.hp, 
-            speed: typeConfig.speed, 
-            scoreVal: typeConfig.scoreVal 
-        };
+        lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal };
 
         return lizardGroup;
     }
@@ -424,12 +371,7 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLevelUI();
 
         const bossConfig = { 
-            skinColor: 0xc2410c, 
-            eyeColor: 0xef4444, 
-            scale: 3.5, 
-            speed: 4.5, 
-            hp: 40 + (currentLevel * 20), 
-            scoreVal: 1000 
+            skinColor: 0xc2410c, eyeColor: 0xef4444, scale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 
         };
         activeBoss = createLizardMesh(bossConfig);
         activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
@@ -482,127 +424,73 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6.1. EXPLOSIVE BARRELS SYSTEM ---
+    // --- 7. EXPLOSIVE TNT BARRELS ---
     const barrels = [];
-    const barrelRadius = 1.2;
-    const explosionRadius = 12.0;
 
-    function createBarrelMesh() {
+    function createTNTBarrelTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(0, 0, 256, 256);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 20, 256, 30);
+        ctx.fillRect(0, 206, 256, 30);
+
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 90px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('TNT', 128, 135);
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    const tntTexture = createTNTBarrelTexture();
+
+    function spawnTNTBarrel(x, z) {
         const barrelGroup = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ map: tntTexture, roughness: 0.4, metalness: 0.3 });
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.6, 16), mat);
+        mesh.position.y = 1.3;
+        mesh.castShadow = true;
+        barrelGroup.add(mesh);
 
-        // גוף החבית האדומה
-        const bodyMat = new THREE.MeshStandardMaterial({
-            color: 0xd97706,
-            roughness: 0.3,
-            metalness: 0.4
-        });
-        const bodyGeo = new THREE.CylinderGeometry(1.0, 1.0, 2.4, 16);
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 1.2;
-        body.castShadow = true;
-        barrelGroup.add(body);
+        barrelGroup.position.set(x, 0, z);
+        barrelGroup.userData = { hp: 2 };
 
-        // טבעות מתכת סביב החבית
-        const ringMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.8 });
-        const ringGeo = new THREE.TorusGeometry(1.02, 0.06, 8, 24);
-        
-        const ring1 = new THREE.Mesh(ringGeo, ringMat);
-        ring1.rotation.x = Math.PI / 2;
-        ring1.position.y = 0.6;
-        barrelGroup.add(ring1);
-
-        const ring2 = new THREE.Mesh(ringGeo, ringMat);
-        ring2.rotation.x = Math.PI / 2;
-        ring2.position.y = 1.8;
-        barrelGroup.add(ring2);
-
-        // סמל אזהרה צהוב על החבית
-        const signMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-        const signGeo = new THREE.BoxGeometry(0.8, 0.8, 0.05);
-        const sign = new THREE.Mesh(signGeo, signMat);
-        sign.position.set(0, 1.2, 1.0);
-        sign.rotation.y = 0;
-        barrelGroup.add(sign);
-
-        return barrelGroup;
+        scene.add(barrelGroup);
+        barrels.push(barrelGroup);
     }
 
-    function spawnBarrels() {
-        // ניקוי חביות ישנות
-        for (let b of barrels) scene.remove(b);
-        barrels.length = 0;
-
-        for (let z = -120; z >= -1500; z -= 80 + Math.random() * 40) {
-            const barrel = createBarrelMesh();
-            const posX = (Math.random() - 0.5) * (trackWidth - 4);
-            barrel.position.set(posX, 0, z);
-            scene.add(barrel);
-            barrels.push(barrel);
-        }
-    }
-
-    function createExplosionEffect(pos) {
-        const count = 40;
-        const geometry = new THREE.BufferGeometry();
-        const positions = [];
-        const velocities = [];
-
-        for (let i = 0; i < count; i++) {
-            positions.push(pos.x, pos.y + 1.0, pos.z);
-            velocities.push(
-                (Math.random() - 0.5) * 1.2,
-                (Math.random() - 0.2) * 1.2 + 0.4,
-                (Math.random() - 0.5) * 1.2
-            );
-        }
-
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-        const material = new THREE.PointsMaterial({
-            color: 0xef4444,
-            size: 1.2,
-            transparent: true,
-            opacity: 1.0,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-
-        const system = new THREE.Points(geometry, material);
-        scene.add(system);
-        activeParticleSystems.push({ system, velocities, life: 1.2 });
-    }
-
-    function explodeBarrel(barrelIndex) {
-        const barrel = barrels[barrelIndex];
-        const pos = barrel.position.clone();
-
-        // אפקטים סאונד וויזואלי
+    function explodeBarrel(barrel, index) {
         playSound('explosion');
-        triggerCameraShake(1.2);
-        createExplosionEffect(pos);
+        triggerCameraShake(0.7);
 
-        // נזק ברדיוס הפיצוץ (AOE) ללטאות
+        // אפקט חלקיקי פיצוץ
+        createGateParticles(barrel.position, false);
+
+        // חיסול לטאות ברדיוס הפיצוץ
+        const blastRadius = 16.0;
         for (let i = lizards.length - 1; i >= 0; i--) {
             const liz = lizards[i];
-            if (liz.position.distanceTo(pos) <= explosionRadius) {
+            if (liz.position.distanceTo(barrel.position) <= blastRadius) {
+                score += liz.userData.scoreVal;
                 scene.remove(liz);
                 lizards.splice(i, 1);
-                score += 50;
-                const scoreVal = document.getElementById('score-val');
-                if (scoreVal) scoreVal.innerText = score;
             }
         }
 
-        // נזק ברדיוס לבוס
         if (isBossActive && activeBoss) {
-            if (activeBoss.position.distanceTo(pos) <= explosionRadius) {
+            if (activeBoss.position.distanceTo(barrel.position) <= blastRadius) {
                 activeBoss.userData.hp -= 15;
-                playSound('boss_hit');
                 if (activeBoss.userData.hp <= 0) {
+                    score += activeBoss.userData.scoreVal;
                     scene.remove(activeBoss);
                     activeBoss = null;
                     isBossActive = false;
-                    score += 1000;
                     currentLevel++;
                     levelProgress = 0;
                     updateLevelUI();
@@ -610,19 +498,14 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // אם התותח קרוב מדי הוא סופג נזק קל
-        if (cannonGroup.position.distanceTo(pos) <= explosionRadius / 2) {
-            currentHp -= 50;
-            updateHpBar();
-            if (currentHp <= 0) gameOver();
-        }
+        const scoreValEl = document.getElementById('score-val');
+        if (scoreValEl) scoreValEl.innerText = score;
 
-        // הסרת החבית
         scene.remove(barrel);
-        barrels.splice(barrelIndex, 1);
+        barrels.splice(index, 1);
     }
 
-    // --- 7. Cannon & Engine Fire ---
+    // --- 8. Cannon & Engine Fire ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -640,24 +523,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.9 });
     const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-    barrelL.rotation.x = Math.PI / 2;
-    barrelL.position.set(-0.45, 0.35, -1.0);
+    barrelL.rotation.x = Math.PI / 2; barrelL.position.set(-0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelL);
 
     const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-    barrelR.rotation.x = Math.PI / 2;
-    barrelR.position.set(0.45, 0.35, -1.0);
+    barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
     const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
-    thrusterL.rotation.z = Math.PI / 2;
-    thrusterL.position.set(-1.3, 0.2, 0);
+    thrusterL.rotation.z = Math.PI / 2; thrusterL.position.set(-1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterL);
 
     const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
-    thrusterR.rotation.z = -Math.PI / 2;
-    thrusterR.position.set(1.3, 0.2, 0);
+    thrusterR.rotation.z = -Math.PI / 2; thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
     // Fire Particles
@@ -678,10 +557,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const fireTexture = createFireTextureCanvas();
     const fireMaterialTemplate = new THREE.SpriteMaterial({
-        map: fireTexture,
-        blending: THREE.AdditiveBlending,
-        transparent: true,
-        depthWrite: false
+        map: fireTexture, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
     });
 
     function spawnEngineFireParticle(isLeft) {
@@ -695,11 +571,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const sideDir = isLeft ? -1 : 1;
         fireParticles.push({
-            sprite: sprite,
-            life: 1.0,
+            sprite: sprite, life: 1.0,
             speedX: sideDir * (10.0 + Math.random() * 5.0),
-            speedY: (Math.random() - 0.5) * 1.5,
-            speedZ: (Math.random() - 0.5) * 1.5,
+            speedY: (Math.random() - 0.5) * 1.5, speedZ: (Math.random() - 0.5) * 1.5,
             scaleSpeed: 2.0 + Math.random() * 1.5
         });
     }
@@ -770,13 +644,10 @@ window.addEventListener('DOMContentLoaded', () => {
         domeMat.color.set(hexColor);
     }
 
-    // --- 8. Bullets & Particle Effects ---
+    // --- 9. Bullets & Particles ---
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ 
-        color: 0xfacc15, 
-        emissive: 0xffea00, 
-        emissiveIntensity: 2.0,
-        roughness: 0.1 
+        color: 0xfacc15, emissive: 0xffea00, emissiveIntensity: 2.0, roughness: 0.1 
     });
 
     const trailGeo = new THREE.CylinderGeometry(0.04, 0.22, 2.8, 8);
@@ -801,84 +672,6 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(bulletGroup);
     }
 
-    function updateBullets(delta) {
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            const b = bullets[i];
-            b.position.z -= 80.0 * delta;
-
-            // בדיקת פגיעה בחביות מתפוצצות
-            let hitBarrel = false;
-            for (let j = barrels.length - 1; j >= 0; j--) {
-                const barrel = barrels[j];
-                if (b.position.distanceTo(barrel.position) < 1.8) {
-                    explodeBarrel(j);
-                    hitBarrel = true;
-                    break;
-                }
-            }
-
-            if (hitBarrel) {
-                scene.remove(b);
-                bullets.splice(i, 1);
-                continue;
-            }
-
-            // בדיקת פגיעה בלטאות
-            let hitEnemy = false;
-            for (let j = lizards.length - 1; j >= 0; j--) {
-                const liz = lizards[j];
-                if (b.position.distanceTo(liz.position) < 1.5) {
-                    liz.userData.hp--;
-                    if (liz.userData.hp <= 0) {
-                        score += liz.userData.scoreVal;
-                        levelProgress += 5;
-                        updateLevelUI();
-                        scene.remove(liz);
-                        lizards.splice(j, 1);
-                        if (levelProgress >= maxLevelProgress && !isBossActive) {
-                            spawnBoss();
-                        }
-                    }
-                    hitEnemy = true;
-                    playSound('hit');
-                    break;
-                }
-            }
-
-            if (hitEnemy) {
-                scene.remove(b);
-                bullets.splice(i, 1);
-                continue;
-            }
-
-            // בדיקת פגיעה בבוס
-            if (isBossActive && activeBoss && b.position.distanceTo(activeBoss.position) < 3.5) {
-                activeBoss.userData.hp--;
-                playSound('boss_hit');
-                triggerCameraShake(0.15);
-                scene.remove(b);
-                bullets.splice(i, 1);
-
-                if (activeBoss.userData.hp <= 0) {
-                    scene.remove(activeBoss);
-                    activeBoss = null;
-                    isBossActive = false;
-                    score += 1000;
-                    currentLevel++;
-                    levelProgress = 0;
-                    updateLevelUI();
-                }
-                continue;
-            }
-
-            // ניקוי כדורים שיצאו מהמסך
-            if (b.position.z < cannonGroup.position.z - 160) {
-                scene.remove(b);
-                bullets.splice(i, 1);
-            }
-        }
-    }
-
     // Gate Particles
     const activeParticleSystems = [];
     function createGateParticles(position, isMultiply) {
@@ -901,17 +694,11 @@ window.addEventListener('DOMContentLoaded', () => {
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
         const material = new THREE.PointsMaterial({
-            color: particleColor,
-            size: 0.4,
-            transparent: true,
-            opacity: 1.0,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
+            color: particleColor, size: 0.4, transparent: true, opacity: 1.0, blending: THREE.AdditiveBlending, depthWrite: false
         });
 
         const system = new THREE.Points(geometry, material);
         scene.add(system);
-
         activeParticleSystems.push({ system, velocities, life: 1.0 });
     }
 
@@ -939,7 +726,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Gates ---
+    // --- 10. GATES (DYNAMIC, MOVING & RED NEGATIVE GATES) ---
     const gates = [];
     let gateIdCounter = 1;
 
@@ -962,17 +749,21 @@ window.addEventListener('DOMContentLoaded', () => {
         return new THREE.CanvasTexture(canvas);
     }
 
-    function createGate(id, x, z, type, value) {
+    function createGate(id, x, z, type, value, isMoving = false) {
         const gateGroup = new THREE.Group();
         const gateWidth = trackWidth / 2 - 0.6;
         let label = `+${value}`, colorHex = 'rgba(2, 132, 199, 0.85)';
-        if (type === 'multiply') { label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; }
+        
+        if (type === 'multiply') { 
+            label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; 
+        } else if (type === 'subtract') { 
+            label = `-${value}`; colorHex = 'rgba(225, 29, 72, 0.85)'; 
+        } else if (type === 'divide') { 
+            label = `÷${value}`; colorHex = 'rgba(225, 29, 72, 0.85)'; 
+        }
 
         const frameMat = new THREE.MeshStandardMaterial({ 
-            map: createGateTexture(label, colorHex), 
-            transparent: true,
-            roughness: 0.1,
-            metalness: 0.2
+            map: createGateTexture(label, colorHex), transparent: true, roughness: 0.1, metalness: 0.2
         });
         const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.2, 0.2), frameMat);
         frame.position.y = 2.1;
@@ -981,7 +772,8 @@ window.addEventListener('DOMContentLoaded', () => {
         
         gateGroup.userData = { 
             id, type, value, width: gateWidth, height: 4.2, baseY: 0,
-            floatOffset: Math.random() * Math.PI * 2, hitScale: 1.0
+            floatOffset: Math.random() * Math.PI * 2, hitScale: 1.0,
+            isMoving: isMoving, initialX: x, moveSpeed: 2.0 + Math.random() * 1.5, moveRange: 3.0
         };
 
         scene.add(gateGroup);
@@ -991,7 +783,15 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateGates(elapsedTime, delta) {
         for (let g of gates) {
             const gData = g.userData;
+            
+            // תנועה אנכית (ציפה)
             g.position.y = gData.baseY + Math.sin(elapsedTime * 3 + gData.floatOffset) * 0.15;
+            
+            // שערים זזים אופקית (ימינה ושמאלה)
+            if (gData.isMoving) {
+                g.position.x = gData.initialX + Math.sin(elapsedTime * gData.moveSpeed) * gData.moveRange;
+            }
+
             if (gData.hitScale > 1.0) {
                 gData.hitScale = THREE.MathUtils.lerp(gData.hitScale, 1.0, delta * 12);
                 g.scale.set(gData.hitScale, gData.hitScale, gData.hitScale);
@@ -1001,18 +801,31 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function spawnGatePairAt(z) {
         const offset = trackWidth / 4;
-        if (Math.random() > 0.5) {
-            createGate(`g_${gateIdCounter++}`, -offset, z, 'multiply', 2);
-            createGate(`g_${gateIdCounter++}`, offset, z, 'add', 20);
+        const randType = Math.random();
+
+        if (randType > 0.65) {
+            // שילוב שער שלילי (אדום)
+            createGate(`g_${gateIdCounter++}`, -offset, z, 'subtract', 15);
+            createGate(`g_${gateIdCounter++}`, offset, z, 'multiply', 2);
+        } else if (randType > 0.35) {
+            // שערים זזים דינמיים
+            createGate(`g_${gateIdCounter++}`, -offset, z, 'add', 20, true);
+            createGate(`g_${gateIdCounter++}`, offset, z, 'divide', 2, true);
         } else {
-            createGate(`g_${gateIdCounter++}`, -offset, z, 'add', 15);
-            createGate(`g_${gateIdCounter++}`, offset, z, 'multiply', 3);
+            // שערים רגילים
+            createGate(`g_${gateIdCounter++}`, -offset, z, 'multiply', 3);
+            createGate(`g_${gateIdCounter++}`, offset, z, 'add', 15);
+        }
+
+        // ספציפית: סיכוי לחבית מתפוצצת ליד השערים
+        if (Math.random() > 0.4) {
+            spawnTNTBarrel((Math.random() - 0.5) * (trackWidth - 4), z - 18);
         }
     }
 
     for (let z = -80; z >= -800; z -= 65) spawnGatePairAt(z);
 
-    // --- 10. Controls ---
+    // --- 11. Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
 
     function stopInput() { isDragging = false; isFiring = false; }
@@ -1040,7 +853,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 11. UI & Game Loop State ---
+    // --- 12. UI & Game Loop State ---
     let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function resetGame() {
@@ -1052,12 +865,12 @@ window.addEventListener('DOMContentLoaded', () => {
         lizards.length = 0;
         for (let b of bullets) scene.remove(b);
         bullets.length = 0;
+        for (let bar of barrels) scene.remove(bar);
+        barrels.length = 0;
 
         cannonGroup.position.set(0, 1.2, 0);
         cannonMeshGroup.position.z = 0;
         targetX = 0;
-
-        spawnBarrels();
 
         const scoreVal = document.getElementById('score-val');
         if (scoreVal) scoreVal.innerText = '0';
@@ -1113,59 +926,154 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
 
-    // --- 12. Main Render Loop ---
-    let clock = new THREE.Clock();
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            const selectedColor = e.target.getAttribute('data-color');
+            if (selectedColor) updateCannonColor(selectedColor);
+        });
+    });
+
+    // --- 13. Main Render Loop ---
+    const clock = new THREE.Clock();
+    let currentX = 0;
 
     function animate() {
         requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+
+        if (!gameStarted || isPaused) return;
 
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
 
-        if (gameStarted && !isPaused) {
-            // תנועת התותח בציר ה-X
-            targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
-            cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, delta * 12);
+        galaxySky.rotation.y += delta * 0.01;
 
-            // ירי
-            shootTimer += delta;
-            if (isFiring && shootTimer >= 0.12) {
-                shootTimer = 0;
-                spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
-                spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
-                playSound('shoot');
-                triggerMuzzleFlash(cannonGroup.position.x - 0.45, 1.35, cannonGroup.position.z - 2.0);
-                triggerMuzzleFlash(cannonGroup.position.x + 0.45, 1.35, cannonGroup.position.z - 2.0);
-                cannonRecoilZ = 0.25;
-            }
+        updateEngineFire(delta);
+        updateLizards(delta);
+        updateParticles(delta);
+        updateGates(elapsedTime, delta);
+        updateMuzzleFlashes(delta);
 
-            // רתע של התותח (Recoil)
-            cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 10);
-            cannonMeshGroup.position.z = cannonRecoilZ;
+        targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
+        currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
+        cannonGroup.position.x = currentX;
 
-            // עדכוני רשת ומשחק
-            updateBullets(delta);
-            updateLizards(delta);
-            updateEngineFire(delta);
-            updateMuzzleFlashes(delta);
-            updateGates(elapsedTime, delta);
-            updateParticles(delta);
+        cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 15.0);
+        cannonMeshGroup.position.z = cannonRecoilZ;
 
-            // רעד מצלמה (Camera Shake)
-            if (cameraShakeIntensity > 0) {
-                cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8);
-                camera.position.x = cannonGroup.position.x + (Math.random() - 0.5) * cameraShakeIntensity;
-                camera.position.y = 8 + (Math.random() - 0.5) * cameraShakeIntensity;
-                camera.position.z = cannonGroup.position.z + 12 + (Math.random() - 0.5) * cameraShakeIntensity;
-            } else {
-                camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x, delta * 6);
-                camera.position.y = 8;
-                camera.position.z = cannonGroup.position.z + 12;
-            }
-            camera.lookAt(cannonGroup.position.x, 1.0, cannonGroup.position.z - 20);
+        let shakeOffsetX = 0, shakeOffsetY = 0;
+        if (cameraShakeIntensity > 0) {
+            shakeOffsetX = (Math.random() - 0.5) * cameraShakeIntensity;
+            shakeOffsetY = (Math.random() - 0.5) * cameraShakeIntensity;
+            cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8.0);
         }
 
-        renderer.render(scene, camera);
+        camera.position.x = cannonGroup.position.x * 0.15 + shakeOffsetX;
+        camera.position.y = cannonGroup.position.y + 12.5 + shakeOffsetY;
+        camera.position.z = cannonGroup.position.z + 18.0;
+        camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
+
+        shootTimer += delta;
+        if (isFiring && shootTimer >= 0.15) {
+            const lx = cannonGroup.position.x - 0.45;
+            const rx = cannonGroup.position.x + 0.45;
+            const fz = cannonGroup.position.z - 2.0;
+
+            spawnBullet(lx, cannonGroup.position.z - 1.2);
+            spawnBullet(rx, cannonGroup.position.z - 1.2);
+
+            triggerMuzzleFlash(lx, 1.35, fz);
+            triggerMuzzleFlash(rx, 1.35, fz);
+
+            cannonRecoilZ = 0.35;
+            playSound('shoot');
+            shootTimer = 0;
+        }
+
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const b = bullets[i];
+            b.position.z -= 80 * delta;
+
+            if (b.position.z < cannonGroup.position.z - 120) {
+                scene.remove(b);
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            // פגיעה בחביות TNT
+            for (let k = barrels.length - 1; k >= 0; k--) {
+                const bar = barrels[k];
+                if (b.position.distanceTo(bar.position) < 1.8) {
+                    bar.userData.hp--;
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    if (bar.userData.hp <= 0) explodeBarrel(bar, k);
+                    break;
+                }
+            }
+
+            // פגיעה בשערים
+            for (let g of gates) {
+                const gData = g.userData;
+                if (Math.abs(b.position.x - g.position.x) < gData.width / 2 && Math.abs(b.position.z - g.position.z) < 1.0) {
+                    createGateParticles(b.position, gData.type === 'multiply' || gData.type === 'add');
+                    gData.hitScale = 1.18;
+                    break;
+                }
+            }
+
+            if (isBossActive && activeBoss) {
+                if (b.position.distanceTo(activeBoss.position) < 4.0) {
+                    playSound('boss_hit');
+                    triggerCameraShake(0.12);
+                    activeBoss.userData.hp--;
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+
+                    if (activeBoss.userData.hp <= 0) {
+                        score += activeBoss.userData.scoreVal;
+                        const scoreValEl = document.getElementById('score-val');
+                        if (scoreValEl) scoreValEl.innerText = score;
+                        
+                        scene.remove(activeBoss);
+                        activeBoss = null;
+                        isBossActive = false;
+                        currentLevel++;
+                        levelProgress = 0;
+                        updateLevelUI();
+                    }
+                    continue;
+                }
+            }
+
+            for (let j = lizards.length - 1; j >= 0; j--) {
+                const liz = lizards[j];
+                if (b.position.distanceTo(liz.position) < 2.0) {
+                    playSound('hit');
+                    liz.userData.hp--;
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+
+                    if (liz.userData.hp <= 0) {
+                        score += liz.userData.scoreVal;
+                        const scoreValEl = document.getElementById('score-val');
+                        if (scoreValEl) scoreValEl.innerText = score;
+
+                        if (!isBossActive) {
+                            levelProgress += 5;
+                            updateLevelUI();
+                            if (levelProgress >= maxLevelProgress) spawnBoss();
+                        }
+
+                        scene.remove(liz);
+                        lizards.splice(j, 1);
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     animate();
