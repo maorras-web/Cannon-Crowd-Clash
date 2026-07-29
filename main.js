@@ -100,52 +100,59 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Renderer & Lighting (שיפור איכות וזרימה) ---
+    // --- 3. Scene, Renderer & Modern High-Res Graphics Setup ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.FogExp2(0x000000, 0.004);
+    scene.background = new THREE.Color(0x020208);
+    scene.fog = new THREE.FogExp2(0x020208, 0.0035);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // התאמה חלקה לאיכות המסך של המכשיר
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.35;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+    // תאורה מעוצבת ומודרנית
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
-    dirLight.position.set(20, 50, 20);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.6);
+    dirLight.position.set(20, 60, 20);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x333355, 0.6);
+    const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x030712, 0.8);
     scene.add(hemiLight);
 
-    // --- 4. Track & Environment ---
+    // --- 4. Modern Neon Track & Environment ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
     const trackLength = 2000;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
-    const trackMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 25 });
+    const trackMat = new THREE.MeshStandardMaterial({ 
+        color: 0x0b1329, 
+        roughness: 0.2, 
+        metalness: 0.5,
+        emissive: 0x030712,
+        emissiveIntensity: 0.2
+    });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
+    track.receiveShadow = true;
     scene.add(track);
 
-    // --- 4.1. 4000 כוכבים לבנים קטנים בצידי המסלול (Starfield) ---
+    // --- 4.1. 4000 כוכבים לבנים בחלל החיצון ---
     const starCount = 4000;
     const starPositions = new Float32Array(starCount * 3);
 
     for (let i = 0; i < starCount; i++) {
         const side = Math.random() < 0.5 ? -1 : 1;
-        // פיזור הכוכבים בשטחים המתים בצידי המסלול
         const x = side * (12 + Math.random() * 80);
         const y = (Math.random() - 0.5) * 80;
         const z = (Math.random() - 0.5) * trackLength;
@@ -160,9 +167,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const starMat = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.25,
+        size: 0.28,
         transparent: true,
-        opacity: 0.85
+        opacity: 0.9
     });
 
     const starField = new THREE.Points(starGeo, starMat);
@@ -201,11 +208,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
-        const skinMat = new THREE.MeshPhongMaterial({ color: typeConfig.skinColor, shininess: 50 });
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.3, metalness: 0.2 });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
 
         const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 1.0), skinMat);
         body.position.y = 1.2;
+        body.castShadow = true;
         lizardGroup.add(body);
 
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), skinMat);
@@ -296,22 +304,23 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. High-Detail Cannon with Side Thrusters ---
+    // --- 7. High-Detail Cannon with Thrusters & Flame Effects ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
-    const baseMat = new THREE.MeshPhongMaterial({ color: 0x2563eb, shininess: 80 });
-    const domeMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, shininess: 90 });
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.2, metalness: 0.7 });
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.1, metalness: 0.8 });
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 20), baseMat);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat);
     base.rotation.x = Math.PI / 12;
+    base.castShadow = true;
     cannonMeshGroup.add(base);
 
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
     dome.position.y = 0.3;
     cannonMeshGroup.add(dome);
 
-    const barrelMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 60 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.9 });
     const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
     barrelL.rotation.x = Math.PI / 2;
     barrelL.position.set(-0.45, 0.35, -1.0);
@@ -322,27 +331,35 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
-    // מדחפים בצידי התותח
-    const thrusterMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, shininess: 40 });
-    const glowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-
-    const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), thrusterMat);
+    // מנועי דחף צדיים
+    const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
+    
+    const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
     thrusterL.rotation.z = Math.PI / 2;
     thrusterL.position.set(-1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterL);
 
-    const glowL = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), glowMat);
-    glowL.position.set(-1.6, 0.2, 0);
-    cannonMeshGroup.add(glowL);
-
-    const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), thrusterMat);
+    const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
     thrusterR.rotation.z = -Math.PI / 2;
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    const glowR = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), glowMat);
-    glowR.position.set(1.6, 0.2, 0);
-    cannonMeshGroup.add(glowR);
+    // --- 7.1. להבות ננפלטות ממנועי הדחף בצידים (Thruster Flames) ---
+    const flameGeo = new THREE.ConeGeometry(0.22, 0.9, 12);
+    flameGeo.rotateZ(Math.PI / 2); // כיוון הלהבה כלפי חוץ
+
+    const flameMatL = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
+    const thrustFlameL = new THREE.Mesh(flameGeo, flameMatL);
+    thrustFlameL.position.set(-1.8, 0.2, 0);
+    cannonMeshGroup.add(thrustFlameL);
+
+    const flameGeoR = new THREE.ConeGeometry(0.22, 0.9, 12);
+    flameGeoR.rotateZ(-Math.PI / 2);
+
+    const flameMatR = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
+    const thrustFlameR = new THREE.Mesh(flameGeoR, flameMatR);
+    thrustFlameR.position.set(1.8, 0.2, 0);
+    cannonMeshGroup.add(thrustFlameR);
 
     cannonGroup.add(cannonMeshGroup);
     cannonGroup.position.set(0, 1.2, 0);
@@ -354,8 +371,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 8. Bullets ---
-    const bulletGeo = new THREE.SphereGeometry(0.25, 8, 8);
-    const bulletMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, emissive: 0xca8a04, shininess: 100 });
+    const bulletGeo = new THREE.SphereGeometry(0.25, 12, 12);
+    const bulletMat = new THREE.MeshStandardMaterial({ 
+        color: 0xfacc15, 
+        emissive: 0xeab308, 
+        emissiveIntensity: 1.5,
+        roughness: 0.1 
+    });
     const bullets = [];
 
     function spawnBullet(x, z) {
@@ -370,7 +392,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const activeParticleSystems = [];
 
     function createGateParticles(position, isMultiply) {
-        const count = 18;
+        const count = 20;
         const geometry = new THREE.BufferGeometry();
         const positions = [];
         const velocities = [];
@@ -390,7 +412,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const material = new THREE.PointsMaterial({
             color: particleColor,
-            size: 0.35,
+            size: 0.4,
             transparent: true,
             opacity: 1.0,
             blending: THREE.AdditiveBlending,
@@ -431,7 +453,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Gates ---
+    // --- 9. Modern Neon Gates ---
     const gates = [];
     let gateIdCounter = 1;
 
@@ -443,10 +465,10 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = colorHex;
         ctx.fillRect(0, 0, 256, 256);
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 14;
         ctx.strokeRect(6, 6, 244, 244);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 70px sans-serif';
+        ctx.font = 'bold 72px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(label, 128, 128);
@@ -460,7 +482,12 @@ window.addEventListener('DOMContentLoaded', () => {
         let label = `+${value}`, colorHex = 'rgba(2, 132, 199, 0.85)';
         if (type === 'multiply') { label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; }
 
-        const frameMat = new THREE.MeshBasicMaterial({ map: createGateTexture(label, colorHex), transparent: true });
+        const frameMat = new THREE.MeshStandardMaterial({ 
+            map: createGateTexture(label, colorHex), 
+            transparent: true,
+            roughness: 0.1,
+            metalness: 0.2
+        });
         const frame = new THREE.Mesh(new THREE.BoxGeometry(gateWidth, 4.2, 0.2), frameMat);
         frame.position.y = 2.1;
         gateGroup.add(frame);
@@ -625,7 +652,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- 12. Main Render Loop ---
+    // --- 12. Main Render Loop & Flame Animation ---
     const clock = new THREE.Clock();
     let currentX = 0;
 
@@ -637,6 +664,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
+
+        // אנימציית הבהוב והתרחבות ללהבות המנועים בצדדים
+        const flameScale = 0.85 + Math.sin(elapsedTime * 35) * 0.25;
+        thrustFlameL.scale.set(flameScale, flameScale, flameScale);
+        thrustFlameR.scale.set(flameScale, flameScale, flameScale);
+        flameMatL.opacity = 0.75 + Math.random() * 0.25;
+        flameMatR.opacity = 0.75 + Math.random() * 0.25;
 
         updateLizards(delta);
         updateParticles(delta);
