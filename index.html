@@ -1,364 +1,89 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cannon Crowd Clash</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            margin: 0;
-            padding: 0;
-        }
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        #game-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        #ui-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-        }
-        .stats-card {
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #00f3ff;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
-            border-radius: 12px;
-            padding: 12px 20px;
-            color: #fff;
-            font-size: 16px;
-            display: flex;
-            gap: 20px;
-            align-self: center;
-        }
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .stat-value {
-            color: #00f3ff;
-            font-weight: bold;
-        }
-        #start-btn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 16px 40px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #fff;
-            background: linear-gradient(45deg, #ff0055, #7a00ff);
-            border: none;
-            border-radius: 50px;
-            box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
-            cursor: pointer;
-            pointer-events: auto;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        #start-btn:active {
-            transform: translate(-50%, -50%) scale(0.95);
-        }
-    </style>
-    <!-- Three.js Library -->
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="game-container"></div>
-
-    <div id="ui-overlay">
-        <div class="stats-card">
-            <div class="stat-item">קנים: <span id="ui-bullets" class="stat-value">1</span></div>
-            <div class="stat-item">קצב ירי: <span id="ui-firerate" class="stat-value">100%</span></div>
-            <div class="stat-item">נזק: <span id="ui-damage" class="stat-value">10</span></div>
-        </div>
-        <button id="start-btn">התחל משחק</button>
+    <div id="mobile-only-warning">
+        <h2>Mobile Only</h2>
+        <p>This game is designed for mobile devices only.<br>Please open the link on your smartphone.</p>
     </div>
 
-    <script>
-        // --- 1. SETUP & SCENE ---
-        const container = document.getElementById('game-container');
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000511, 0.015);
+    <div id="ui-container" class="hud-container">
+        <div id="hp-container">
+            <div id="hp-bar"></div>
+            <span id="hp-text">500 / 500</span>
+        </div>
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 6, 12);
-        camera.lookAt(0, 0, -10);
+        <div id="level-bar-container">
+            <div id="level-text">LEVEL 1</div>
+            <div class="progress-outer">
+                <div id="level-progress-fill"></div>
+            </div>
+        </div>
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        container.appendChild(renderer.domElement);
+        <button id="pause-btn" class="icon-btn" aria-label="Pause Game">⏸️</button>
 
-        // --- 2. LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
+        <div id="score-card">
+            <span class="score-label">SCORE</span>
+            <span id="score-val">0</span>
+        </div>
+    </div>
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(10, 20, 10);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+    <div id="start-overlay" class="overlay">
+        <div id="start-menu">
+            <div class="header-section">
+                <h1 class="game-title">Cannon Crowd Clash</h1>
+                <p class="game-subtitle">Drag screen to control the cannon</p>
+            </div>
 
-        // --- 3. GAME VARIABLES & STATS ---
-        let isPlaying = false;
-        let bullets = [];
-        let gates = [];
-        let particles = [];
+            <div class="best-badge">
+                BEST SCORE: <span id="start-best-score">0</span>
+            </div>
 
-        // משתני שדרוג התותח
-        let cannonStats = {
-            fireRate: 250,      // מרווח במילישניות בין ירי לירי
-            bulletCount: 1,     // מספר כדורים במקביל
-            bulletDamage: 10,   // נזק לכל כדור
-            lastShotTime: 0
-        };
+            <div class="action-section">
+                <button id="start-btn" class="btn">START GAME</button>
+            </div>
+        </div>
+    </div>
 
-        // --- 4. PLAYER (CANNON) ---
-        const cannonGroup = new THREE.Group();
-        
-        // גוף התותח
-        const bodyGeo = new THREE.BoxGeometry(1.4, 0.8, 1.8);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 });
-        const cannonBody = new THREE.Mesh(bodyGeo, bodyMat);
-        cannonBody.castShadow = true;
-        cannonGroup.add(cannonBody);
-
-        // קני התותח
-        const barrelGeo = new THREE.CylinderGeometry(0.15, 0.18, 1.2, 16);
-        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, metalness: 0.9, roughness: 0.1 });
-        
-        const barrels = [];
-        for(let i = 0; i < 5; i++) {
-            const barrel = new THREE.Mesh(barrelGeo, barrelMat);
-            barrel.rotation.x = Math.PI / 2;
-            barrel.position.set((i - 2) * 0.3, 0.2, -0.8);
-            barrel.visible = i === 2; // מתחילים רק עם הקן המרכזי
-            cannonGroup.add(barrel);
-            barrels.push(barrel);
-        }
-
-        cannonGroup.position.set(0, 0.5, 0);
-        scene.add(cannonGroup);
-
-        // --- 5. TRACK & ENVIRONMENT ---
-        const trackGeo = new THREE.PlaneGeometry(18, 1000);
-        const trackMat = new THREE.MeshStandardMaterial({ color: 0x050b14, roughness: 0.4 });
-        const track = new THREE.Mesh(trackGeo, trackMat);
-        track.rotation.x = -Math.PI / 2;
-        track.position.z = -450;
-        track.receiveShadow = true;
-        scene.add(track);
-
-        // --- 6. GATES SYSTEM ---
-        function spawnGate(zPos, type, value) {
-            const gateGroup = new THREE.Group();
+    <div id="pause-menu" class="overlay hidden">
+        <div class="pause-card">
+            <h2>GAME PAUSED</h2>
             
-            const isMultiply = type === 'multiply';
-            const color = isMultiply ? 0x00ff88 : 0x00a2ff;
+            <div class="customization-section">
+                <span class="section-label">Select Cannon Color</span>
+                <div class="color-picker">
+                    <button class="color-btn active" data-color="#2563eb" style="background-color: #2563eb;"></button>
+                    <button class="color-btn" data-color="#dc2626" style="background-color: #dc2626;"></button>
+                    <button class="color-btn" data-color="#16a34a" style="background-color: #16a34a;"></button>
+                    <button class="color-btn" data-color="#9333ea" style="background-color: #9333ea;"></button>
+                </div>
+            </div>
 
-            const frameGeo = new THREE.BoxGeometry(6, 4, 0.3);
-            const frameMat = new THREE.MeshStandardMaterial({ 
-                color: color, 
-                transparent: true, 
-                opacity: 0.6,
-                metalness: 0.5 
-            });
-            const frame = new THREE.Mesh(frameGeo, frameMat);
-            gateGroup.add(frame);
+            <div class="volume-control-menu">
+                <label for="volume-slider">Volume</label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
+            </div>
 
-            gateGroup.position.set(type === 'multiply' ? 4 : -4, 2, zPos);
-            gateGroup.userData = { type: type, value: value, active: true };
+            <button id="resume-btn" class="btn">RESUME</button>
+        </div>
+    </div>
 
-            scene.add(gateGroup);
-            gates.push(gateGroup);
-        }
+    <div id="game-over-modal" class="overlay hidden">
+        <div class="pause-card">
+            <h1 style="font-size: 2.2rem; color: #ef4444; margin-bottom: 4px;">GAME OVER</h1>
+            <p style="font-size: 1.1rem; color: #cbd5e1;">SCORE: <span id="final-score-val" style="color: #fff; font-weight: bold;">0</span></p>
+            <p style="font-size: 1.1rem; color: #facc15;">BEST SCORE: <span id="best-score-val" style="color: #fff; font-weight: bold;">0</span></p>
+            <button id="restart-btn" class="btn btn-restart" style="margin-top: 10px;">TRY AGAIN</button>
+        </div>
+    </div>
 
-        // יצירת שערים לדוגמה לאורך המסלול
-        spawnGate(-30, 'add', 1);
-        spawnGate(-60, 'multiply', 1.5);
-        spawnGate(-90, 'add', 2);
-        spawnGate(-120, 'multiply', 2);
-
-        // --- 7. AUDIO (WEB AUDIO API) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playShootSound() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.08);
-            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.08);
-        }
-
-        // --- 8. UPGRADE LOGIC ---
-        function applyGateUpgrade(type, value) {
-            if (type === 'add') {
-                cannonStats.bulletCount = Math.min(cannonStats.bulletCount + Math.floor(value), 5);
-            } else if (type === 'multiply') {
-                cannonStats.fireRate = Math.max(cannonStats.fireRate / value, 60);
-            }
-
-            // עדכון המראה של קני התותח בהתאם למספר הכדורים
-            updateCannonBarrels();
-            updateUI();
-        }
-
-        function updateCannonBarrels() {
-            const count = cannonStats.bulletCount;
-            barrels.forEach((b, idx) => {
-                // הצגת הקנים בהתאם לכמות הנוכחית
-                if (count === 1) b.visible = (idx === 2);
-                else if (count === 2) b.visible = (idx === 1 || idx === 3);
-                else if (count === 3) b.visible = (idx === 1 || idx === 2 || idx === 3);
-                else if (count >= 4) b.visible = true;
-            });
-        }
-
-        function updateUI() {
-            document.getElementById('ui-bullets').innerText = cannonStats.bulletCount;
-            const ratePercent = Math.round((250 / cannonStats.fireRate) * 100);
-            document.getElementById('ui-firerate').innerText = ratePercent + '%';
-            document.getElementById('ui-damage').innerText = cannonStats.bulletDamage;
-        }
-
-        // --- 9. SHOOTING MECHANIC ---
-        function shootBullet() {
-            const now = Date.now();
-            if (now - cannonStats.lastShotTime < cannonStats.fireRate) return;
-            cannonStats.lastShotTime = now;
-
-            const count = cannonStats.bulletCount;
-            const spread = 0.35;
-
-            for (let i = 0; i < count; i++) {
-                const xOffset = (i - (count - 1) / 2) * spread;
-
-                const bGeo = new THREE.SphereGeometry(0.2, 8, 8);
-                const bMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
-                const bullet = new THREE.Mesh(bGeo, bMat);
-
-                bullet.position.set(
-                    cannonGroup.position.x + xOffset,
-                    cannonGroup.position.y + 0.2,
-                    cannonGroup.position.z - 1
-                );
-
-                bullet.userData = { damage: cannonStats.bulletDamage, speedZ: -1.8 };
-                scene.add(bullet);
-                bullets.push(bullet);
-            }
-
-            playShootSound();
-        }
-
-        // --- 10. CONTROLS (TOUCH & MOUSE) ---
-        let targetX = 0;
-        let isDragging = false;
-        let previousMouseX = 0;
-
-        window.addEventListener('pointerdown', (e) => {
-            if (!isPlaying) return;
-            isDragging = true;
-            previousMouseX = e.clientX;
-        });
-
-        window.addEventListener('pointermove', (e) => {
-            if (!isDragging || !isPlaying) return;
-            const deltaX = e.clientX - previousMouseX;
-            targetX += deltaX * 0.02;
-            targetX = Math.max(-7.5, Math.min(7.5, targetX));
-            previousMouseX = e.clientX;
-        });
-
-        window.addEventListener('pointerup', () => isDragging = false);
-
-        // --- 11. GAME LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (isPlaying) {
-                // תנועת התותח
-                cannonGroup.position.x += (targetX - cannonGroup.position.x) * 0.15;
-                camera.position.x = cannonGroup.position.x * 0.3;
-
-                // ירי אוטומטי
-                shootBullet();
-
-                // תנועת כדורים ובדיקת התנגשויות
-                for (let i = bullets.length - 1; i >= 0; i--) {
-                    const b = bullets[i];
-                    b.position.z += b.userData.speedZ;
-
-                    // בדיקת פגיעה בשערים
-                    gates.forEach(gate => {
-                        if (gate.userData.active) {
-                            const distZ = Math.abs(b.position.z - gate.position.z);
-                            const distX = Math.abs(b.position.x - gate.position.x);
-
-                            if (distZ < 0.5 && distX < 3) {
-                                // הפעלת שדרוג
-                                applyGateUpgrade(gate.userData.type, gate.userData.value);
-                                gate.userData.active = false;
-                                scene.remove(gate); // הסרת השער שנאסף
-                            }
-                        }
-                    });
-
-                    // הסרת כדורים שאינם במסך
-                    if (b.position.z < -200) {
-                        scene.remove(b);
-                        bullets.splice(i, 1);
-                    }
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        // --- 12. START GAME ---
-        document.getElementById('start-btn').addEventListener('click', () => {
-            document.getElementById('start-btn').style.display = 'none';
-            isPlaying = true;
-        });
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        animate();
-    </script>
+    <script src="main.js"></script>
 </body>
 </html>
