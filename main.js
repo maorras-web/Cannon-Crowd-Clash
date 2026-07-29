@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 0. Fix Mobile Touch Hijacking & Fullscreen Helper ---
+    // --- 0. Touch & Mobile Setup ---
     document.documentElement.style.touchAction = 'none';
     document.body.style.touchAction = 'none';
     
@@ -13,13 +13,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function requestFullScreen() {
         const docEl = document.documentElement;
-        if (docEl.requestFullscreen) {
-            docEl.requestFullscreen().catch(() => {});
-        } else if (docEl.webkitRequestFullscreen) {
-            docEl.webkitRequestFullscreen();
-        } else if (docEl.msRequestFullscreen) {
-            docEl.msRequestFullscreen();
-        }
+        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
     }
 
     // --- 1. Audio Engine ---
@@ -46,7 +41,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-
             osc.connect(gain);
             gain.connect(masterGainNode);
 
@@ -56,43 +50,30 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
                 gain.gain.setValueAtTime(0.15, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now);
-                osc.stop(now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
             } else if (type === 'hit') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(150, now);
                 osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
                 gain.gain.setValueAtTime(0.4, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
             } else if (type === 'gate') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(400, now);
                 osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
                 gain.gain.setValueAtTime(0.3, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
-                osc.start(now);
-                osc.stop(now + 0.12);
+                osc.start(now); osc.stop(now + 0.12);
             } else if (type === 'explosion') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(120, now);
                 osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
                 gain.gain.setValueAtTime(0.6, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now);
-                osc.stop(now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
             }
         } catch(e) {}
-    }
-
-    const volumeSlider = document.getElementById('volume-slider');
-    if (volumeSlider) {
-        volumeSlider.value = masterVolume;
-        volumeSlider.addEventListener('input', (e) => {
-            masterVolume = parseFloat(e.target.value);
-            if (masterGainNode) masterGainNode.gain.value = masterVolume;
-        });
     }
 
     // --- 2. Level State & HighScore ---
@@ -158,36 +139,35 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- SKYBOX ---
+    // --- 3.1 GALAXY SKYBOX WITH STARS ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 2048; canvas.height = 2048;
+        canvas.width = 1024; canvas.height = 1024;
         const ctx = canvas.getContext('2d');
 
         ctx.fillStyle = '#030108';
-        ctx.fillRect(0, 0, 2048, 2048);
+        ctx.fillRect(0, 0, 1024, 1024);
 
+        // Nebulae
         const nebulae = [
-            { x: 500,  y: 600,  r: 750, color: 'rgba(88, 28, 135, 0.70)' },
-            { x: 1500, y: 500,  r: 900, color: 'rgba(58, 12, 107, 0.75)' },
-            { x: 1000, y: 1400, r: 700, color: 'rgba(126, 34, 206, 0.60)' },
-            { x: 400,  y: 1600, r: 650, color: 'rgba(76, 29, 149, 0.65)' },
-            { x: 1600, y: 1500, r: 550, color: 'rgba(112, 26, 117, 0.50)' }
+            { x: 300, y: 300, r: 400, color: 'rgba(88, 28, 135, 0.6)' },
+            { x: 800, y: 250, r: 450, color: 'rgba(58, 12, 107, 0.7)' },
+            { x: 500, y: 700, r: 350, color: 'rgba(126, 34, 206, 0.5)' }
         ];
 
         nebulae.forEach(n => {
             const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
             grad.addColorStop(0, n.color);
-            grad.addColorStop(0.5, n.color.replace(/[\d\.]+\)$/, '0.30)'));
             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 2048, 2048);
+            ctx.fillRect(0, 0, 1024, 1024);
         });
 
-        for (let i = 0; i < 1200; i++) {
-            const x = Math.random() * 2048;
-            const y = Math.random() * 2048;
-            const radius = Math.random() * 1.8;
+        // Stars
+        for (let i = 0; i < 800; i++) {
+            const x = Math.random() * 1024;
+            const y = Math.random() * 1024;
+            const radius = Math.random() * 1.5;
             const opacity = Math.random() * 0.9 + 0.1;
             
             ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
@@ -196,7 +176,9 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
-        return new THREE.CanvasTexture(canvas);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return texture;
     }
 
     const galaxySkyGeo = new THREE.SphereGeometry(800, 32, 32);
@@ -214,11 +196,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
     const trackMat = new THREE.MeshStandardMaterial({ 
-        color: 0x0b1329, 
-        roughness: 0.2, 
-        metalness: 0.5,
-        emissive: 0x030712,
-        emissiveIntensity: 0.2
+        color: 0x0b1329, roughness: 0.2, metalness: 0.5, emissive: 0x030712, emissiveIntensity: 0.2
     });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.position.set(0, -0.25, -trackLength / 2 + 10);
@@ -247,35 +225,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 6. LIZARDS ---
-    function createLizardScaleBumpMap() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512; canvas.height = 512;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#808080';
-        ctx.fillRect(0, 0, 512, 512);
-
-        const scaleSize = 16;
-        for (let y = 0; y < 512; y += scaleSize) {
-            for (let x = 0; x < 512; x += scaleSize) {
-                const offsetX = (y / scaleSize) % 2 === 0 ? 0 : scaleSize / 2;
-                ctx.beginPath();
-                ctx.arc(x + offsetX, y, scaleSize * 0.6, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#202020';
-                ctx.stroke();
-            }
-        }
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(4, 4);
-        return texture;
-    }
-
-    const scaleBumpMap = createLizardScaleBumpMap();
-
     const lizards = [];
     let lizardSpawnTimer = 0;
 
@@ -288,10 +237,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
 
-        const skinMat = new THREE.MeshStandardMaterial({ 
-            color: typeConfig.skinColor, roughness: 0.3, metalness: 0.2, bumpMap: scaleBumpMap, bumpScale: 0.15 
-        });
-        const detailMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+        const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.3, metalness: 0.2 });
         const eyeMat = new THREE.MeshStandardMaterial({ color: typeConfig.eyeColor, emissive: typeConfig.eyeColor, emissiveIntensity: 4.0 });
 
         const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 2.6), skinMat);
@@ -349,7 +295,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateLizards(delta) {
         if (!isBossActive) {
             lizardSpawnTimer += delta;
-            if (lizardSpawnTimer >= 2.2) {
+            if (lizardSpawnTimer >= 2.0) {
                 lizardSpawnTimer = 0;
                 spawnLizard();
             }
@@ -412,7 +358,9 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.textBaseline = 'middle';
         ctx.fillText('TNT', 128, 135);
 
-        return new THREE.CanvasTexture(canvas);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        return tex;
     }
 
     const tntTexture = createTNTBarrelTexture();
@@ -426,7 +374,7 @@ window.addEventListener('DOMContentLoaded', () => {
         barrelGroup.add(mesh);
 
         barrelGroup.position.set(x, 0, z);
-        barrelGroup.userData = { hp: 2 };
+        barrelGroup.userData = { hp: 1 };
 
         scene.add(barrelGroup);
         barrels.push(barrelGroup);
@@ -438,7 +386,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         createGateParticles(barrel.position, false);
 
-        const blastRadius = 16.0;
+        const blastRadius = 18.0;
         for (let i = lizards.length - 1; i >= 0; i--) {
             const liz = lizards[i];
             if (liz.position.distanceTo(barrel.position) <= blastRadius) {
@@ -450,7 +398,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         if (isBossActive && activeBoss) {
             if (activeBoss.position.distanceTo(barrel.position) <= blastRadius) {
-                activeBoss.userData.hp -= 15;
+                activeBoss.userData.hp -= 20;
                 if (activeBoss.userData.hp <= 0) {
                     score += activeBoss.userData.scoreVal;
                     scene.remove(activeBoss);
@@ -470,7 +418,7 @@ window.addEventListener('DOMContentLoaded', () => {
         barrels.splice(index, 1);
     }
 
-    // --- 8. Cannon & Engine Fire ---
+    // --- 8. CANNON & THRUSTER ENGINES ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -495,7 +443,19 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
-    // Fire Particles
+    // SIDE THRUSTERS (מנועי הדחף הצידיים)
+    const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+    const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.2, 16), thrusterMat);
+    thrusterL.rotation.z = Math.PI / 2;
+    thrusterL.position.set(-1.6, 0.2, 0);
+    cannonMeshGroup.add(thrusterL);
+
+    const thrusterR = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.2, 16), thrusterMat);
+    thrusterR.rotation.z = -Math.PI / 2;
+    thrusterR.position.set(1.6, 0.2, 0);
+    cannonMeshGroup.add(thrusterR);
+
+    // FIRE PARTICLES FOR THRUSTERS
     const fireParticles = [];
     function createFireTextureCanvas() {
         const canvas = document.createElement('canvas');
@@ -518,18 +478,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function spawnEngineFireParticle(isLeft) {
         const sprite = new THREE.Sprite(fireMaterialTemplate.clone());
-        const localPos = new THREE.Vector3(isLeft ? -1.65 : 1.65, 0.2, 0);
+        const localPos = new THREE.Vector3(isLeft ? -2.0 : 2.0, 0.2, 0);
         const worldPos = localPos.applyMatrix4(cannonMeshGroup.matrixWorld);
 
         sprite.position.copy(worldPos);
-        sprite.scale.set(0.45, 0.45, 1.0);
+        sprite.scale.set(0.5, 0.5, 1.0);
         scene.add(sprite);
 
         const sideDir = isLeft ? -1 : 1;
         fireParticles.push({
             sprite: sprite, life: 1.0,
-            speedX: sideDir * (10.0 + Math.random() * 5.0),
-            speedY: (Math.random() - 0.5) * 1.5, speedZ: (Math.random() - 0.5) * 1.5,
+            speedX: sideDir * (12.0 + Math.random() * 4.0),
+            speedY: (Math.random() - 0.5) * 1.5,
+            speedZ: (Math.random() - 0.5) * 1.5,
             scaleSpeed: 2.0 + Math.random() * 1.5
         });
     }
@@ -545,7 +506,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         for (let i = fireParticles.length - 1; i >= 0; i--) {
             const p = fireParticles[i];
-            p.life -= delta * 4.5;
+            p.life -= delta * 5.0;
 
             if (p.life <= 0) {
                 scene.remove(p.sprite);
@@ -568,13 +529,8 @@ window.addEventListener('DOMContentLoaded', () => {
     cannonGroup.position.set(0, 1.2, 0);
     scene.add(cannonGroup);
 
-    function updateCannonColor(hexColor) {
-        baseMat.color.set(hexColor);
-        domeMat.color.set(hexColor);
-    }
-
     // --- 9. Bullets & Fire Multiplier ---
-    let fireRateMultiplier = 1; // משפיע על כמות הכדורים שנורים בכל פעם
+    let fireRateMultiplier = 1;
     const bulletGeo = new THREE.SphereGeometry(0.28, 12, 12);
     const bulletMat = new THREE.MeshStandardMaterial({ 
         color: 0xfacc15, emissive: 0xffea00, emissiveIntensity: 2.0, roughness: 0.1 
@@ -590,7 +546,7 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(mainBullet);
     }
 
-    // Gate Particles
+    // Gate & Explosive Particles
     const activeParticleSystems = [];
     function createGateParticles(position, isMultiply) {
         const count = 15;
@@ -644,7 +600,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 10. GATES (SMOOTH MOVEMENT & WORKING COLLISION) ---
+    // --- 10. GATES ---
     const gates = [];
 
     function createGateTexture(label, colorHex) {
@@ -663,7 +619,9 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.textBaseline = 'middle';
         ctx.fillText(label, 128, 128);
 
-        return new THREE.CanvasTexture(canvas);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        return tex;
     }
 
     function createGate(x, z, type, value, isMoving = false) {
@@ -671,13 +629,8 @@ window.addEventListener('DOMContentLoaded', () => {
         const gateWidth = trackWidth / 2 - 0.8;
         let label = `+${value}`, colorHex = 'rgba(2, 132, 199, 0.85)';
         
-        if (type === 'multiply') { 
-            label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; 
-        } else if (type === 'subtract') { 
-            label = `-${value}`; colorHex = 'rgba(225, 29, 72, 0.85)'; 
-        } else if (type === 'divide') { 
-            label = `÷${value}`; colorHex = 'rgba(225, 29, 72, 0.85)'; 
-        }
+        if (type === 'multiply') { label = `x${value}`; colorHex = 'rgba(16, 185, 129, 0.85)'; } 
+        else if (type === 'subtract') { label = `-${value}`; colorHex = 'rgba(225, 29, 72, 0.85)'; }
 
         const frameMat = new THREE.MeshStandardMaterial({ 
             map: createGateTexture(label, colorHex), transparent: true, roughness: 0.1, metalness: 0.2
@@ -689,7 +642,7 @@ window.addEventListener('DOMContentLoaded', () => {
         
         gateGroup.userData = { 
             type, value, width: gateWidth, height: 4.0,
-            isMoving: isMoving, initialX: x, moveSpeed: 1.2, moveRange: 2.0,
+            isMoving, initialX: x, moveSpeed: 1.2, moveRange: 2.0,
             hasCollided: false
         };
 
@@ -697,42 +650,35 @@ window.addEventListener('DOMContentLoaded', () => {
         gates.push(gateGroup);
     }
 
-    function updateGates(elapsedTime, delta) {
+    function updateGates(elapsedTime) {
         for (let g of gates) {
-            const gData = g.userData;
-            
-            // תנועה אופקית חלקה מאוד שנשארת במסלול בלבד
-            if (gData.isMoving) {
-                g.position.x = gData.initialX + Math.sin(elapsedTime * gData.moveSpeed) * gData.moveRange;
+            if (g.userData.isMoving) {
+                g.position.x = g.userData.initialX + Math.sin(elapsedTime * g.userData.moveSpeed) * g.userData.moveRange;
             }
         }
     }
 
-    function spawnGateSetAt(z) {
+    function generateWorldTrack() {
         const offset = trackWidth / 4;
-        const rand = Math.random();
+        for (let z = -60; z >= -1200; z -= 60) {
+            const rand = Math.random();
+            if (rand > 0.5) {
+                createGate(-offset, z, 'multiply', 2, true);
+                createGate(offset, z, 'subtract', 10, true);
+            } else {
+                createGate(-offset, z, 'add', 15, false);
+                createGate(offset, z, 'multiply', 3, false);
+            }
 
-        if (rand > 0.6) {
-            // שערים זזים במתכונת בטוחה
-            createGate(-offset, z, 'multiply', 2, true);
-            createGate(offset, z, 'subtract', 10, true);
-        } else if (rand > 0.3) {
-            // שערים שליליים
-            createGate(-offset, z, 'subtract', 15, false);
-            createGate(offset, z, 'add', 20, false);
-        } else {
-            // שערים רגילים
-            createGate(-offset, z, 'multiply', 3, false);
-            createGate(offset, z, 'add', 10, false);
-        }
-
-        // יצירת חבית TNT בדרכים
-        if (Math.random() > 0.35) {
-            spawnTNTBarrel((Math.random() - 0.5) * (trackWidth - 4), z - 25);
+            // יצירת חביות TNT באופן קבוע
+            if (Math.random() > 0.3) {
+                const barrelX = (Math.random() - 0.5) * (trackWidth - 4);
+                spawnTNTBarrel(barrelX, z - 30);
+            }
         }
     }
 
-    for (let z = -60; z >= -1000; z -= 70) spawnGateSetAt(z);
+    generateWorldTrack();
 
     // --- 11. Controls ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
@@ -775,8 +721,6 @@ window.addEventListener('DOMContentLoaded', () => {
         lizards.length = 0;
         for (let b of bullets) scene.remove(b);
         bullets.length = 0;
-        for (let bar of barrels) scene.remove(bar);
-        barrels.length = 0;
 
         cannonGroup.position.set(0, 1.2, 0);
         cannonMeshGroup.position.z = 0;
@@ -836,15 +780,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
 
-    document.querySelectorAll('.color-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            const selectedColor = e.target.getAttribute('data-color');
-            if (selectedColor) updateCannonColor(selectedColor);
-        });
-    });
-
     // --- 13. Main Render Loop ---
     const clock = new THREE.Clock();
     let currentX = 0;
@@ -863,7 +798,7 @@ window.addEventListener('DOMContentLoaded', () => {
         updateEngineFire(delta);
         updateLizards(delta);
         updateParticles(delta);
-        updateGates(elapsedTime, delta);
+        updateGates(elapsedTime);
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
@@ -884,11 +819,11 @@ window.addEventListener('DOMContentLoaded', () => {
         camera.position.z = cannonGroup.position.z + 18.0;
         camera.lookAt(cannonGroup.position.x, cannonGroup.position.y + 0.5, cannonGroup.position.z - 10.0);
 
-        // ירי כדורים לפי המכפיל המעודכן מהשערים
+        // ירי כדורים
         shootTimer += delta;
         if (isFiring && shootTimer >= 0.15) {
             const spread = 0.35;
-            const numBullets = Math.min(fireRateMultiplier, 5); // מוגבל לעד 5 כדורים במקביל
+            const numBullets = Math.min(fireRateMultiplier, 5);
             for (let bIdx = 0; bIdx < numBullets; bIdx++) {
                 const offsetX = (bIdx - (numBullets - 1) / 2) * spread;
                 spawnBullet(cannonGroup.position.x + offsetX, cannonGroup.position.z - 1.2);
@@ -899,7 +834,7 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
-        // בדיקת פגיעה של כדורים בלטאות, TNT ושערים
+        // התנגשויות של כדורים
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 80 * delta;
@@ -910,7 +845,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // פגיעה בשערים (המרה של סוג השער לתוצאה בפועל)
+            // פגיעה בשערים
             for (let g of gates) {
                 const gData = g.userData;
                 if (!gData.hasCollided && Math.abs(b.position.x - g.position.x) < gData.width / 2 && Math.abs(b.position.z - g.position.z) < 1.2) {
@@ -921,7 +856,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (gData.type === 'multiply') fireRateMultiplier *= gData.value;
                     else if (gData.type === 'add') fireRateMultiplier += 1;
                     else if (gData.type === 'subtract') fireRateMultiplier = Math.max(1, fireRateMultiplier - 1);
-                    else if (gData.type === 'divide') fireRateMultiplier = Math.max(1, Math.floor(fireRateMultiplier / gData.value));
 
                     scene.remove(g);
                     break;
@@ -931,11 +865,10 @@ window.addEventListener('DOMContentLoaded', () => {
             // פגיעה בחביות TNT
             for (let k = barrels.length - 1; k >= 0; k--) {
                 const bar = barrels[k];
-                if (b.position.distanceTo(bar.position) < 1.8) {
-                    bar.userData.hp--;
+                if (b.position.distanceTo(bar.position) < 2.0) {
                     scene.remove(b);
                     bullets.splice(i, 1);
-                    if (bar.userData.hp <= 0) explodeBarrel(bar, k);
+                    explodeBarrel(bar, k);
                     break;
                 }
             }
@@ -943,7 +876,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // פגיעה בבוס
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 4.0) {
-                    playSound('boss_hit');
+                    playSound('hit');
                     triggerCameraShake(0.12);
                     activeBoss.userData.hp--;
                     scene.remove(b);
