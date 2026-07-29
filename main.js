@@ -14,7 +14,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 1. Audio Engine ---
     let audioCtx = null;
     let masterGainNode = null;
-    let masterVolume = 0.25;
+    let masterVolume = 0.15;
 
     function initAudio() {
         try {
@@ -100,7 +100,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Renderer & Lighting (משודרג לחדות וצבעים חיים) ---
+    // --- 3. Scene, Renderer & Lighting ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.FogExp2(0x000000, 0.005);
@@ -108,26 +108,23 @@ window.addEventListener('DOMContentLoaded', () => {
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // מונע מראה מטושטש
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;          // מעשיר צבעים וניגודיות
-    renderer.toneMappingExposure = 1.25;                         // מחזיר אור ובהירות לסצנה
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
 
-    // תאורת סביבה מוגברת
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
     scene.add(ambientLight);
 
-    // תאורה כיוונית ראשית ליצירת ברק ועומק
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
     dirLight.position.set(20, 50, 20);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    // תאורה משלימה למעלה/למטה מעניקה עומק לתלת-ממד
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x333355, 0.6);
     scene.add(hemiLight);
 
@@ -355,7 +352,7 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(b);
     }
 
-    // --- 8.5. מערכת החלקיקים (Particles System) לפגיעה בשערים ---
+    // --- 8.5. מערכת החלקיקים (Particles System) ---
     const activeParticleSystems = [];
 
     function createGateParticles(position, isMultiply) {
@@ -364,7 +361,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const positions = [];
         const velocities = [];
 
-        // צבע זוהר: ירוק/טורקיז בהתאם לסוג השער
         const particleColor = isMultiply ? 0x10b981 : 0x0284c7;
 
         for (let i = 0; i < count; i++) {
@@ -421,7 +417,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Gates ---
+    // --- 9. Gates (שערים עם משתני ציפה וגודל) ---
     const gates = [];
     let gateIdCounter = 1;
 
@@ -456,10 +452,36 @@ window.addEventListener('DOMContentLoaded', () => {
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
         
-        gateGroup.userData = { id, type, value, width: gateWidth, height: 4.2 };
+        // נתונים נדרשים לאנימציית הציפה וה-Punch
+        gateGroup.userData = { 
+            id, 
+            type, 
+            value, 
+            width: gateWidth, 
+            height: 4.2,
+            baseY: 0,
+            floatOffset: Math.random() * Math.PI * 2,
+            hitScale: 1.0
+        };
 
         scene.add(gateGroup);
         gates.push(gateGroup);
+    }
+
+    function updateGates(elapsedTime, delta) {
+        for (let g of gates) {
+            const gData = g.userData;
+
+            // 1. ציפה קלה בלולאה למעלה/למטה
+            const floatY = Math.sin(elapsedTime * 3 + gData.floatOffset) * 0.15;
+            g.position.y = gData.baseY + floatY;
+
+            // 2. החזרת גודל השער בהדרגה לקדמותו לאחר פגיעה
+            if (gData.hitScale > 1.0) {
+                gData.hitScale = THREE.MathUtils.lerp(gData.hitScale, 1.0, delta * 12);
+                g.scale.set(gData.hitScale, gData.hitScale, gData.hitScale);
+            }
+        }
     }
 
     function spawnGatePairAt(z) {
@@ -603,9 +625,11 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!gameStarted || isPaused) return;
 
         const delta = Math.min(clock.getDelta(), 0.1);
+        const elapsedTime = clock.getElapsedTime();
 
         updateLizards(delta);
-        updateParticles(delta); // עדכון אנימציית החלקיקים בשערים
+        updateParticles(delta);
+        updateGates(elapsedTime, delta); // מעדכן ציפה ורעד שערים
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
@@ -624,7 +648,6 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
-        // --- בודק כדורים, פגיעה באויבים ובשערים ---
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 80 * delta;
@@ -635,14 +658,13 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // פגיעה בשערים + הפעלת אפקט החלקיקים
-            let hitGate = false;
+            // פגיעה בשערים + הפעלת חלקיקים ואפקט Scale Punch לשער
             for (let g of gates) {
                 const gData = g.userData;
                 const halfW = gData.width / 2;
                 if (Math.abs(b.position.x - g.position.x) < halfW && Math.abs(b.position.z - g.position.z) < 1.0) {
                     createGateParticles(b.position, gData.type === 'multiply');
-                    hitGate = true;
+                    gData.hitScale = 1.18; // הגדלת השער לשבריר שנייה בזמן פגיעה
                     break;
                 }
             }
