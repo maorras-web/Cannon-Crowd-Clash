@@ -14,7 +14,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 1. Audio Engine ---
     let audioCtx = null;
     let masterGainNode = null;
-    let masterVolume = 0.15;
+    let masterVolume = 0.25;
 
     function initAudio() {
         try {
@@ -100,15 +100,15 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 3. Scene, Renderer & Lighting ---
+    // --- 3. Scene, Renderer & Lighting (שיפור איכות וזרימה) ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.FogExp2(0x000000, 0.005);
+    scene.fog = new THREE.FogExp2(0x000000, 0.004);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // התאמה חלקה לאיכות המסך של המכשיר
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
     renderer.shadowMap.enabled = true;
@@ -139,20 +139,34 @@ window.addEventListener('DOMContentLoaded', () => {
     track.position.set(0, -0.25, -trackLength / 2 + 10);
     scene.add(track);
 
-    const starGroup = new THREE.Group();
-    const starGeo = new THREE.SphereGeometry(0.2, 4, 4);
-    const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    for (let i = 0; i < 200; i++) {
-        const star = new THREE.Mesh(starGeo, starMat);
+    // --- 4.1. 4000 כוכבים לבנים קטנים בצידי המסלול (Starfield) ---
+    const starCount = 4000;
+    const starPositions = new Float32Array(starCount * 3);
+
+    for (let i = 0; i < starCount; i++) {
         const side = Math.random() < 0.5 ? -1 : 1;
-        star.position.set(
-            side * (12 + Math.random() * 50),
-            (Math.random() - 0.5) * 60,
-            (Math.random() - 0.5) * trackLength
-        );
-        starGroup.add(star);
+        // פיזור הכוכבים בשטחים המתים בצידי המסלול
+        const x = side * (12 + Math.random() * 80);
+        const y = (Math.random() - 0.5) * 80;
+        const z = (Math.random() - 0.5) * trackLength;
+
+        starPositions[i * 3]     = x;
+        starPositions[i * 3 + 1] = y;
+        starPositions[i * 3 + 2] = z;
     }
-    scene.add(starGroup);
+
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+
+    const starMat = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.25,
+        transparent: true,
+        opacity: 0.85
+    });
+
+    const starField = new THREE.Points(starGeo, starMat);
+    scene.add(starField);
 
     // --- 5. HP Mechanics ---
     const maxHp = 500;
@@ -352,7 +366,7 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(b);
     }
 
-    // --- 8.5. מערכת החלקיקים (Particles System) ---
+    // --- 8.5. מערכת החלקיקים ---
     const activeParticleSystems = [];
 
     function createGateParticles(position, isMultiply) {
@@ -417,7 +431,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Gates (שערים עם משתני ציפה וגודל) ---
+    // --- 9. Gates ---
     const gates = [];
     let gateIdCounter = 1;
 
@@ -452,7 +466,6 @@ window.addEventListener('DOMContentLoaded', () => {
         gateGroup.add(frame);
         gateGroup.position.set(x, 0, z);
         
-        // נתונים נדרשים לאנימציית הציפה וה-Punch
         gateGroup.userData = { 
             id, 
             type, 
@@ -472,11 +485,9 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let g of gates) {
             const gData = g.userData;
 
-            // 1. ציפה קלה בלולאה למעלה/למטה
             const floatY = Math.sin(elapsedTime * 3 + gData.floatOffset) * 0.15;
             g.position.y = gData.baseY + floatY;
 
-            // 2. החזרת גודל השער בהדרגה לקדמותו לאחר פגיעה
             if (gData.hitScale > 1.0) {
                 gData.hitScale = THREE.MathUtils.lerp(gData.hitScale, 1.0, delta * 12);
                 g.scale.set(gData.hitScale, gData.hitScale, gData.hitScale);
@@ -629,7 +640,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         updateLizards(delta);
         updateParticles(delta);
-        updateGates(elapsedTime, delta); // מעדכן ציפה ורעד שערים
+        updateGates(elapsedTime, delta);
 
         targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
@@ -658,13 +669,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // פגיעה בשערים + הפעלת חלקיקים ואפקט Scale Punch לשער
             for (let g of gates) {
                 const gData = g.userData;
                 const halfW = gData.width / 2;
                 if (Math.abs(b.position.x - g.position.x) < halfW && Math.abs(b.position.z - g.position.z) < 1.0) {
                     createGateParticles(b.position, gData.type === 'multiply');
-                    gData.hitScale = 1.18; // הגדלת השער לשבריר שנייה בזמן פגיעה
+                    gData.hitScale = 1.18;
                     break;
                 }
             }
