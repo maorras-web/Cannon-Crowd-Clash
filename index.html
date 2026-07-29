@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D - Boss HP & Plasma Orb</title>
+    <title>Track Shooter 3D - Fixed Particles & Plasma Orb</title>
     <style>
         * { box-sizing: border-box; }
         body, html {
@@ -334,6 +334,21 @@
         const railR = new THREE.Mesh(railGeo, railMat); railR.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
         scene.add(railL, railR);
 
+        // --- Custom Soft Circle Texture for Particles & Stars ---
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            grad.addColorStop(0.4, 'rgba(255, 255, 255, 0.6)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(32, 32, 32, 0, Math.PI * 2); ctx.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+        const circleTexture = createCircleTexture();
+
         // Particles System
         const particles = [];
         const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
@@ -356,22 +371,42 @@
             }
         }
 
-        // Stars
-        const starCount = 1400; const starGeo = new THREE.BufferGeometry();
-        const starPos = new Float32Array(starCount * 3); const starSpeeds = new Float32Array(starCount);
+        // --- Star Field Fix (Round Stars) ---
+        const starCount = 1200; 
+        const starGeo = new THREE.BufferGeometry();
+        const starPos = new Float32Array(starCount * 3); 
+        const starSpeeds = new Float32Array(starCount);
+
         for (let i = 0; i < starCount; i++) {
-            starPos[i * 3] = (Math.random() - 0.5) * 220; starPos[i * 3 + 1] = (Math.random() - 0.3) * 120;
-            starPos[i * 3 + 2] = -Math.random() * 300; starSpeeds[i] = 35 + Math.random() * 55;
+            starPos[i * 3] = (Math.random() - 0.5) * 220; 
+            starPos[i * 3 + 1] = (Math.random() - 0.3) * 120;
+            starPos[i * 3 + 2] = -Math.random() * 300; 
+            starSpeeds[i] = 35 + Math.random() * 55;
         }
+
         starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2.2, transparent: true, blending: THREE.AdditiveBlending }));
+
+        const starMaterial = new THREE.PointsMaterial({
+            size: 2.8,
+            map: circleTexture,
+            transparent: true,
+            alphaTest: 0.01,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const starField = new THREE.Points(starGeo, starMaterial);
         scene.add(starField);
 
         function updateStars(delta) {
             const pos = starField.geometry.attributes.position.array;
             for (let i = 0; i < starCount; i++) {
                 pos[i * 3 + 2] += starSpeeds[i] * delta;
-                if (pos[i * 3 + 2] > 15) { pos[i * 3 + 2] = -280; pos[i * 3] = (Math.random() - 0.5) * 220; pos[i * 3 + 1] = (Math.random() - 0.3) * 120; }
+                if (pos[i * 3 + 2] > 15) { 
+                    pos[i * 3 + 2] = -280; 
+                    pos[i * 3] = (Math.random() - 0.5) * 220; 
+                    pos[i * 3 + 1] = (Math.random() - 0.3) * 120; 
+                }
             }
             starField.geometry.attributes.position.needsUpdate = true;
         }
