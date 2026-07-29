@@ -289,7 +289,6 @@
             const size = Math.random() * 4 + 2;
             const astGeo = new THREE.DodecahedronGeometry(size, 1);
             
-            // Randomize vertices for jagged rocky shape
             const posAttr = astGeo.attributes.position;
             for (let j = 0; j < posAttr.count; j++) {
                 posAttr.setXYZ(
@@ -388,33 +387,34 @@
             }
         }
 
-        // Starfield
+        // --- ✨ EXPANDED STARFIELD (Fills screen corners) ---
         function createRoundStarTexture() {
             const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
             grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-            grad.addColorStop(0.35, 'rgba(56, 189, 248, 0.85)');
+            grad.addColorStop(0.35, 'rgba(186, 230, 253, 0.9)');
             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(32, 32, 32, 0, Math.PI * 2); ctx.fill();
             return new THREE.CanvasTexture(canvas);
         }
 
-        const starCount = 700;
+        const starCount = 1400; // Increased count
         const starGeo = new THREE.BufferGeometry();
         const starPos = new Float32Array(starCount * 3);
         const starSpeeds = new Float32Array(starCount);
 
         for (let i = 0; i < starCount; i++) {
-            starPos[i * 3]     = (Math.random() - 0.5) * 70;
-            starPos[i * 3 + 1] = Math.random() * 35 - 3;
-            starPos[i * 3 + 2] = -Math.random() * 250;
-            starSpeeds[i]      = 40 + Math.random() * 50;
+            // Wider spread in X and Y to fill black screen corners
+            starPos[i * 3]     = (Math.random() - 0.5) * 220; 
+            starPos[i * 3 + 1] = (Math.random() - 0.3) * 120;
+            starPos[i * 3 + 2] = -Math.random() * 300;
+            starSpeeds[i]      = 35 + Math.random() * 55;
         }
         starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
 
         const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({
-            size: 1.8, map: createRoundStarTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+            size: 2.2, map: createRoundStarTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
         }));
         scene.add(starField);
 
@@ -423,9 +423,9 @@
             for (let i = 0; i < starCount; i++) {
                 positions[i * 3 + 2] += starSpeeds[i] * delta;
                 if (positions[i * 3 + 2] > 15) {
-                    positions[i * 3 + 2] = -230;
-                    positions[i * 3] = (Math.random() - 0.5) * 70;
-                    positions[i * 3 + 1] = Math.random() * 35 - 3;
+                    positions[i * 3 + 2] = -280;
+                    positions[i * 3]     = (Math.random() - 0.5) * 220;
+                    positions[i * 3 + 1] = (Math.random() - 0.3) * 120;
                 }
             }
             starField.geometry.attributes.position.needsUpdate = true;
@@ -448,7 +448,7 @@
             hpBar.style.backgroundColor = colorHex;
         }
 
-        // --- TALL RED DEMONS ---
+        // Demons
         const demons = []; let demonSpawnTimer = 0;
         const DEMON_TYPES = {
             STANDARD: { bodyColor: 0xd97706, heightScale: 1.8, speed: 15.0, hp: 1, scoreVal: 30 },
@@ -582,9 +582,9 @@
 
         cannonGroup.add(cannonMeshGroup); cannonGroup.position.set(0, 1.2, 0); scene.add(cannonGroup);
 
-        // Bullets
-        const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
-        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        // --- 🔵 GLOWING BLUE ENERGY BULLETS WITH DYNAMIC LIGHT ---
+        const bulletGeo = new THREE.SphereGeometry(0.4, 16, 16);
+        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 }); // Bright Cyan Energy Core
         const bullets = [];
 
         function triggerDualMuzzleFlash() {
@@ -601,52 +601,77 @@
             }
         }
 
-        function spawnBullet(x, z) {
-            const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-            bullet.scale.set(1, 1, 2.2); bullet.position.set(x, 1.1, z);
-            scene.add(bullet); bullets.push(bullet);
+        function spawnBulletPair(x1, x2, z) {
+            // Left Bullet
+            const bL = new THREE.Mesh(bulletGeo, bulletMat);
+            bL.position.set(x1, 1.1, z);
+            scene.add(bL);
+
+            // Right Bullet
+            const bR = new THREE.Mesh(bulletGeo, bulletMat);
+            bR.position.set(x2, 1.1, z);
+            scene.add(bR);
+
+            // Dynamic light source attached to the pair that casts light on surroundings
+            const energyLight = new THREE.PointLight(0x38bdf8, 2.5, 12);
+            energyLight.position.set((x1 + x2) / 2, 1.1, z);
+            scene.add(energyLight);
+
+            bullets.push({ bL, bR, light: energyLight });
         }
 
         function updateBullets(delta) {
             for (let i = bullets.length - 1; i >= 0; i--) {
-                const b = bullets[i];
-                b.position.z -= 95.0 * delta;
+                const pair = bullets[i];
+                const moveDist = 95.0 * delta;
 
-                let hitEnemy = false;
-                for (let j = demons.length - 1; j >= 0; j--) {
-                    const dem = demons[j];
-                    if (b.position.distanceTo(dem.position) < 1.8) {
-                        dem.userData.hp--;
-                        createExplosion(b.position, 0x38bdf8);
-                        if (dem.userData.hp <= 0) {
-                            score += dem.userData.scoreVal;
-                            levelProgress += 5;
-                            document.getElementById('score-val').innerText = score;
-                            updateLevelUI();
-                            createExplosion(dem.position, dem.userData.color);
-                            scene.remove(dem); demons.splice(j, 1);
-                            if (levelProgress >= maxLevelProgress && !isBossActive) spawnBoss();
+                pair.bL.position.z -= moveDist;
+                pair.bR.position.z -= moveDist;
+                pair.light.position.z -= moveDist;
+
+                let removePair = false;
+
+                // Collision logic for left and right energy balls
+                [pair.bL, pair.bR].forEach(b => {
+                    if (removePair) return;
+
+                    for (let j = demons.length - 1; j >= 0; j--) {
+                        const dem = demons[j];
+                        if (b.position.distanceTo(dem.position) < 1.8) {
+                            dem.userData.hp--;
+                            createExplosion(b.position, 0x38bdf8);
+                            if (dem.userData.hp <= 0) {
+                                score += dem.userData.scoreVal;
+                                levelProgress += 5;
+                                document.getElementById('score-val').innerText = score;
+                                updateLevelUI();
+                                createExplosion(dem.position, dem.userData.color);
+                                scene.remove(dem); demons.splice(j, 1);
+                                if (levelProgress >= maxLevelProgress && !isBossActive) spawnBoss();
+                            }
+                            removePair = true; playSound('hit'); break;
                         }
-                        hitEnemy = true; playSound('hit'); break;
                     }
-                }
 
-                if (hitEnemy) { scene.remove(b); bullets.splice(i, 1); continue; }
+                    if (isBossActive && activeBoss && b.position.distanceTo(activeBoss.position) < 3.5) {
+                        activeBoss.userData.hp--; playSound('hit'); triggerCameraShake(0.1);
+                        createExplosion(b.position, 0xef4444);
+                        removePair = true;
 
-                if (isBossActive && activeBoss && b.position.distanceTo(activeBoss.position) < 3.5) {
-                    activeBoss.userData.hp--; playSound('hit'); triggerCameraShake(0.1);
-                    createExplosion(b.position, 0xef4444);
-                    scene.remove(b); bullets.splice(i, 1);
-
-                    if (activeBoss.userData.hp <= 0) {
-                        createExplosion(activeBoss.position, 0xf59e0b);
-                        scene.remove(activeBoss); activeBoss = null; isBossActive = false;
-                        score += 1000; currentLevel++; levelProgress = 0; updateLevelUI();
+                        if (activeBoss.userData.hp <= 0) {
+                            createExplosion(activeBoss.position, 0xf59e0b);
+                            scene.remove(activeBoss); activeBoss = null; isBossActive = false;
+                            score += 1000; currentLevel++; levelProgress = 0; updateLevelUI();
+                        }
                     }
-                    continue;
-                }
+                });
 
-                if (b.position.z < cannonGroup.position.z - 160) { scene.remove(b); bullets.splice(i, 1); }
+                if (removePair || pair.bL.position.z < cannonGroup.position.z - 160) {
+                    scene.remove(pair.bL);
+                    scene.remove(pair.bR);
+                    scene.remove(pair.light);
+                    bullets.splice(i, 1);
+                }
             }
         }
 
@@ -684,7 +709,7 @@
             
             if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
             for (let dem of demons) scene.remove(dem); demons.length = 0;
-            for (let b of bullets) scene.remove(b); bullets.length = 0;
+            for (let pair of bullets) { scene.remove(pair.bL); scene.remove(pair.bR); scene.remove(pair.light); } bullets.length = 0;
             for (let p of particles) scene.remove(p); particles.length = 0;
 
             cannonGroup.position.set(0, 1.2, 0); targetX = 0;
@@ -744,8 +769,11 @@
                 shootTimer += delta;
                 if (isFiring && shootTimer >= 0.11) {
                     shootTimer = 0;
-                    spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
-                    spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
+                    spawnBulletPair(
+                        cannonGroup.position.x - 0.45, 
+                        cannonGroup.position.x + 0.45, 
+                        cannonGroup.position.z - 1.2
+                    );
                     triggerDualMuzzleFlash();
                     playSound('shoot'); cannonRecoilZ = 0.2;
                 }
