@@ -153,35 +153,42 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. REALISTIC NEBULA & GALAXY SKYBOX ---
+    // --- 3.1. DARK PURPLE NEBULA & GALAXY SKYBOX ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 1024; canvas.height = 1024;
+        canvas.width = 2048; 
+        canvas.height = 2048;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#02020a';
-        ctx.fillRect(0, 0, 1024, 1024);
+        // בסיס סגול-שחור כהה ועמוק
+        ctx.fillStyle = '#030108';
+        ctx.fillRect(0, 0, 2048, 2048);
 
+        // ענני ערפילית בסגול כהה, אינדיגו ומג'נטה
         const nebulae = [
-            { x: 300, y: 400, r: 350, color: 'rgba(147, 51, 234, 0.35)' },
-            { x: 750, y: 300, r: 400, color: 'rgba(59, 130, 246, 0.30)' },
-            { x: 500, y: 700, r: 300, color: 'rgba(236, 72, 153, 0.25)' },
-            { x: 200, y: 800, r: 250, color: 'rgba(99, 102, 241, 0.30)' }
+            { x: 500,  y: 600,  r: 750, color: 'rgba(88, 28, 135, 0.70)' },  // סגול כהה עמוק
+            { x: 1500, y: 500,  r: 900, color: 'rgba(58, 12, 107, 0.75)' },  // סגול אינדיגו
+            { x: 1000, y: 1400, r: 700, color: 'rgba(126, 34, 206, 0.60)' }, // סגול עז
+            { x: 400,  y: 1600, r: 650, color: 'rgba(76, 29, 149, 0.65)' },  // סגול מלכותי
+            { x: 1600, y: 1500, r: 550, color: 'rgba(112, 26, 117, 0.50)' }  // מג'נטה כהה
         ];
 
         nebulae.forEach(n => {
             const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
             grad.addColorStop(0, n.color);
+            grad.addColorStop(0.5, n.color.replace(/[\d\.]+\)$/, '0.30)'));
             grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 1024, 1024);
+            ctx.fillRect(0, 0, 2048, 2048);
         });
 
-        for (let i = 0; i < 500; i++) {
-            const x = Math.random() * 1024;
-            const y = Math.random() * 1024;
-            const radius = Math.random() * 1.5;
-            const opacity = Math.random() * 0.8;
+        // כוכבים ברקע
+        for (let i = 0; i < 1200; i++) {
+            const x = Math.random() * 2048;
+            const y = Math.random() * 2048;
+            const radius = Math.random() * 1.8;
+            const opacity = Math.random() * 0.9 + 0.1;
+            
             ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -403,7 +410,7 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
-    // מנועי דחף צדיים (אגזוזים)
+    // מנועי דחף צדיים
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
     
     const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
@@ -798,7 +805,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
-        requestFullScreen(); // הפעלת מסך מלא ברגע הסטארט
+        requestFullScreen();
         initAudio();
         resetGame();
         gameStarted = true;
