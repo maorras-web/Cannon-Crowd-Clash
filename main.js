@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 0. Fix Mobile Touch Hijacking ---
+    // --- 0. Fix Mobile Touch Hijacking & Fullscreen Helper ---
     document.documentElement.style.touchAction = 'none';
     document.body.style.touchAction = 'none';
     
@@ -9,6 +9,18 @@ window.addEventListener('DOMContentLoaded', () => {
         uiContainer.style.pointerEvents = 'none';
         const pauseBtn = document.getElementById('pause-btn');
         if (pauseBtn) pauseBtn.style.pointerEvents = 'auto';
+    }
+
+    // פונקציה להפעלת מסך מלא אמיתי
+    function requestFullScreen() {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch(() => {});
+        } else if (docEl.webkitRequestFullscreen) { /* Safari / iOS */
+            docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+        }
     }
 
     // --- 1. Audio Engine ---
@@ -114,6 +126,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
+
+    // התאמת גודל המסך בשינוי אוריאנטציה / יציאה וכניסה ממסך מלא
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
@@ -397,7 +416,7 @@ window.addEventListener('DOMContentLoaded', () => {
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    // --- 7.1. REALISTIC SIDE-ENGINE FIRE PARTICLES (FIXED) ---
+    // --- 7.1. REALISTIC SIDE-ENGINE FIRE PARTICLES ---
     const fireParticles = [];
 
     function createFireTextureCanvas() {
@@ -406,7 +425,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const ctx = canvas.getContext('2d');
         const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
         grad.addColorStop(0, 'rgba(255, 255, 220, 1)');
-        grad.addColorStop(0.3, 'rgba(255, 140, 0, 0.8)');
+        grad.addColorStop(0.3, 'rgba(255, 140, 0, 0.85)');
         grad.addColorStop(0.7, 'rgba(220, 38, 38, 0.5)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
@@ -424,29 +443,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function spawnEngineFireParticle(isLeft) {
         const sprite = new THREE.Sprite(fireMaterialTemplate.clone());
-        
-        // 1. איתור האובייקט של האגזוז הרלוונטי ועדכון המטריצה שלו
-        const targetThruster = isLeft ? thrusterL : thrusterR;
-        targetThruster.updateMatrixWorld(true);
-
-        // 2. הוצאת המיקום המדויק בעולם של האגזוז
-        const worldPos = new THREE.Vector3();
-        targetThruster.getWorldPosition(worldPos);
+        const localPos = new THREE.Vector3(isLeft ? -1.65 : 1.65, 0.2, 0);
+        const worldPos = localPos.applyMatrix4(cannonMeshGroup.matrixWorld);
 
         sprite.position.copy(worldPos);
-        sprite.scale.set(0.4, 0.4, 1.0);
+        sprite.scale.set(0.45, 0.45, 1.0);
         scene.add(sprite);
 
-        // 3. הגדרת כיוון הפליטה: שמאלה (-X) לאגזוז שמאל, ימינה (+X) לאגזוז ימין
         const sideDir = isLeft ? -1 : 1;
 
         fireParticles.push({
             sprite: sprite,
             life: 1.0,
-            speedX: sideDir * (12.0 + Math.random() * 6.0),
-            speedY: (Math.random() - 0.5) * 2.0,
-            speedZ: (Math.random() - 0.5) * 2.0,
-            scaleSpeed: 2.5 + Math.random() * 1.5
+            speedX: sideDir * (10.0 + Math.random() * 5.0),
+            speedY: (Math.random() - 0.5) * 1.5,
+            speedZ: (Math.random() - 0.5) * 1.5,
+            scaleSpeed: 2.0 + Math.random() * 1.5
         });
     }
 
@@ -455,14 +467,14 @@ window.addEventListener('DOMContentLoaded', () => {
             cannonMeshGroup.updateMatrixWorld(true);
 
             for (let i = 0; i < 2; i++) {
-                spawnEngineFireParticle(true);  // אגזוז שמאל
-                spawnEngineFireParticle(false); // אגזוז ימין
+                spawnEngineFireParticle(true);
+                spawnEngineFireParticle(false);
             }
         }
 
         for (let i = fireParticles.length - 1; i >= 0; i--) {
             const p = fireParticles[i];
-            p.life -= delta * 4.0;
+            p.life -= delta * 4.5;
 
             if (p.life <= 0) {
                 scene.remove(p.sprite);
@@ -475,7 +487,7 @@ window.addEventListener('DOMContentLoaded', () => {
             p.sprite.position.y += p.speedY * delta;
             p.sprite.position.z += p.speedZ * delta;
 
-            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.3;
+            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.35;
             p.sprite.scale.set(currentScale, currentScale, 1.0);
             p.sprite.material.opacity = p.life * p.life; 
         }
@@ -779,12 +791,14 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
+        requestFullScreen();
         document.getElementById('game-over-modal')?.classList.add('hidden');
         resetGame();
         gameStarted = true;
     });
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
+        requestFullScreen(); // הפעלת מסך מלא ברגע הסטארט
         initAudio();
         resetGame();
         gameStarted = true;
@@ -802,6 +816,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => { 
+        requestFullScreen();
         isPaused = false; 
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
@@ -828,7 +843,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
 
-        // סיבוב איטי של גלקסיית הרקע
         galaxySky.rotation.y += delta * 0.01;
 
         updateEngineFire(delta);
@@ -841,11 +855,9 @@ window.addEventListener('DOMContentLoaded', () => {
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
         cannonGroup.position.x = currentX;
 
-        // Recoil
         cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 15.0);
         cannonMeshGroup.position.z = cannonRecoilZ;
 
-        // Camera Shake
         let shakeOffsetX = 0;
         let shakeOffsetY = 0;
         if (cameraShakeIntensity > 0) {
@@ -877,7 +889,6 @@ window.addEventListener('DOMContentLoaded', () => {
             shootTimer = 0;
         }
 
-        // ניהול כדורים והתנגשויות
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.position.z -= 80 * delta;
@@ -888,7 +899,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // פגיעה בשערים
             for (let g of gates) {
                 const gData = g.userData;
                 const halfW = gData.width / 2;
@@ -899,7 +909,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // פגיעה בבוס
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 3.2) {
                     playSound('boss_hit');
@@ -924,7 +933,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // פגיעה באויבים רגילים
             for (let j = lizards.length - 1; j >= 0; j--) {
                 const liz = lizards[j];
                 if (b.position.distanceTo(liz.position) < 1.4) {
