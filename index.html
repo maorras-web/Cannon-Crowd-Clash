@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D - Space Edition</title>
+    <title>Track Shooter 3D - Dynamic Environments</title>
     <style>
         * { box-sizing: border-box; }
         body, html {
@@ -20,12 +20,10 @@
         .top-ui { display: flex; justify-content: space-between; align-items: flex-start; }
         .stats-box { color: #fff; text-shadow: 0 0 8px #38bdf8; font-weight: bold; font-size: 16px; text-align: right; }
         
-        /* HP Bar */
         #hp-container { width: 140px; background: rgba(0,0,0,0.6); border: 2px solid #1e293b; border-radius: 10px; padding: 3px; }
         #hp-bar { height: 12px; background: #22c55e; width: 100%; border-radius: 6px; transition: width 0.2s, background-color 0.2s; }
         #hp-text { color: #fff; font-size: 11px; text-align: center; margin-top: 2px; font-weight: bold; }
 
-        /* Level Progress Bar */
         #level-progress-bg { width: 120px; height: 8px; background: rgba(255,255,255,0.15); border-radius: 4px; margin: 4px auto 0 auto; overflow: hidden; }
         #level-progress-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.2s; }
         #level-text { color: #38bdf8; font-weight: bold; text-align: center; font-size: 13px; text-shadow: 0 0 6px rgba(56, 189, 248, 0.6); }
@@ -37,7 +35,6 @@
         }
         .btn:active { transform: scale(0.95); }
 
-        /* Color Picker UI */
         .color-picker-title { font-size: 14px; color: #cbd5e1; margin-bottom: 8px; }
         .color-options { display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; pointer-events: auto; }
         .color-dot {
@@ -47,7 +44,6 @@
         }
         .color-dot:hover, .color-dot.active { transform: scale(1.25); box-shadow: 0 0 15px #fff; }
 
-        /* Modals & Overlays */
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(3, 7, 18, 0.88); backdrop-filter: blur(8px); z-index: 20;
@@ -62,7 +58,6 @@
 </head>
 <body>
 
-    <!-- UI Overlay -->
     <div id="ui-container">
         <div class="top-ui">
             <div>
@@ -82,7 +77,6 @@
         </div>
     </div>
 
-    <!-- Start Overlay -->
     <div id="start-overlay" class="overlay">
         <h1>TRACK SHOOTER 3D</h1>
         <p>BEST SCORE: <span id="start-best-score">0</span></p>
@@ -99,13 +93,11 @@
         <button id="start-btn" class="btn" style="font-size: 20px; padding: 14px 40px;">START GAME</button>
     </div>
 
-    <!-- Pause Menu -->
     <div id="pause-menu" class="overlay hidden">
         <h1>GAME PAUSED</h1>
         <button id="resume-btn" class="btn" style="font-size: 18px; padding: 12px 30px;">RESUME</button>
     </div>
 
-    <!-- Game Over Modal -->
     <div id="game-over-modal" class="overlay hidden">
         <h1 style="color: #ef4444; text-shadow: 0 0 15px rgba(239, 68, 68, 0.8);">GAME OVER</h1>
         <p>FINAL SCORE: <span id="final-score-val">0</span></p>
@@ -203,7 +195,7 @@
             }
         }
 
-        // --- Scene & Graphics ---
+        // --- Scene Setup ---
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x030712, 0.007);
 
@@ -230,117 +222,111 @@
         let cameraShakeIntensity = 0, cannonRecoilZ = 0;
         function triggerCameraShake(intensity) { cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity); }
 
-        // Skybox
-        function createGalaxyTexture() {
-            const canvas = document.createElement('canvas'); canvas.width = 2048; canvas.height = 2048;
+        // --- 🌌 DYNAMIC BACKGROUND SYSTEM (3 STAGES) ---
+        function createGalaxyTexture(theme = 1) {
+            const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1024;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#020208'; ctx.fillRect(0, 0, 2048, 2048);
+            
+            let bgGradient = ctx.createLinearGradient(0, 0, 0, 1024);
+            let nebulae = [];
 
-            const nebulae = [
-                { x: 500,  y: 600,  r: 800, color: 'rgba(99, 102, 241, 0.65)' },
-                { x: 1500, y: 500,  r: 950, color: 'rgba(168, 85, 247, 0.70)' },
-                { x: 1000, y: 1400, r: 750, color: 'rgba(236, 72, 153, 0.50)' }
-            ];
+            if (theme === 1) { // Level 1: Deep Space (Blue/Purple)
+                bgGradient.addColorStop(0, '#020208'); bgGradient.addColorStop(1, '#08051a');
+                nebulae = [
+                    { x: 250, y: 300, r: 400, color: 'rgba(99, 102, 241, 0.6)' },
+                    { x: 750, y: 250, r: 450, color: 'rgba(168, 85, 247, 0.65)' }
+                ];
+            } else if (theme === 2) { // Level 2: Inferno Space (Fiery Red/Orange)
+                bgGradient.addColorStop(0, '#0d0202'); bgGradient.addColorStop(1, '#260404');
+                nebulae = [
+                    { x: 300, y: 400, r: 500, color: 'rgba(239, 68, 68, 0.7)' },
+                    { x: 800, y: 300, r: 450, color: 'rgba(245, 158, 11, 0.65)' }
+                ];
+            } else { // Level 3: Cyberpunk (Dark Cyan/Purple)
+                bgGradient.addColorStop(0, '#020d1a'); bgGradient.addColorStop(1, '#110226');
+                nebulae = [
+                    { x: 400, y: 300, r: 450, color: 'rgba(6, 182, 212, 0.65)' },
+                    { x: 700, y: 600, r: 500, color: 'rgba(217, 70, 239, 0.6)' }
+                ];
+            }
+
+            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, 1024, 1024);
 
             nebulae.forEach(n => {
                 const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
                 grad.addColorStop(0, n.color);
-                grad.addColorStop(0.5, n.color.replace(/[\d\.]+\)$/, '0.25)'));
                 grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                ctx.fillStyle = grad; ctx.fillRect(0, 0, 2048, 2048);
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, 1024, 1024);
             });
             return new THREE.CanvasTexture(canvas);
         }
 
-        const galaxySky = new THREE.Mesh(
-            new THREE.SphereGeometry(800, 32, 32),
-            new THREE.MeshBasicMaterial({ map: createGalaxyTexture(), side: THREE.BackSide })
-        );
+        const galaxySkyMat = new THREE.MeshBasicMaterial({ map: createGalaxyTexture(1), side: THREE.BackSide });
+        const galaxySky = new THREE.Mesh(new THREE.SphereGeometry(800, 32, 32), galaxySkyMat);
         scene.add(galaxySky);
 
-        // --- 🪐 DYNAMIC BACKGROUND OBJECTS (Planets, Moon & Asteroids) ---
-        const bgObjectsGroup = new THREE.Group();
+        // Cyberpunk City Skyline Group (Hidden until Level 3)
+        const cityGroup = new THREE.Group();
+        cityGroup.position.set(0, -60, -400);
+        const bldgMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.2, metalness: 0.8 });
+        const windowMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
 
-        // 1. Giant Ringed Planet (Saturn-like)
-        const planetGeo = new THREE.SphereGeometry(45, 32, 32);
-        const planetMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.6, metalness: 0.2, emissive: 0x1e1b4b, emissiveIntensity: 0.4 });
-        const ringedPlanet = new THREE.Mesh(planetGeo, planetMat);
-        ringedPlanet.position.set(-180, 70, -350);
-
-        const ringGeo = new THREE.RingGeometry(55, 85, 64);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x818cf8, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
-        const planetRing = new THREE.Mesh(ringGeo, ringMat);
-        planetRing.rotation.x = Math.PI / 2.4;
-        ringedPlanet.add(planetRing);
-        bgObjectsGroup.add(ringedPlanet);
-
-        // 2. Glowing Red/Purple Moon
-        const moonGeo = new THREE.SphereGeometry(22, 24, 24);
-        const moonMat = new THREE.MeshStandardMaterial({ color: 0xdb2777, roughness: 0.8, emissive: 0x831843, emissiveIntensity: 0.5 });
-        const moon = new THREE.Mesh(moonGeo, moonMat);
-        moon.position.set(220, 110, -450);
-        bgObjectsGroup.add(moon);
-
-        // 3. Floating Asteroids
-        const asteroids = [];
-        const asteroidMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9, metalness: 0.1 });
-
-        for (let i = 0; i < 18; i++) {
-            const size = Math.random() * 4 + 2;
-            const astGeo = new THREE.DodecahedronGeometry(size, 1);
+        for (let i = -15; i <= 15; i++) {
+            const h = Math.random() * 120 + 60;
+            const w = Math.random() * 20 + 15;
+            const bldg = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), bldgMat);
+            bldg.position.set(i * 22, h / 2, Math.random() * 60);
             
-            const posAttr = astGeo.attributes.position;
-            for (let j = 0; j < posAttr.count; j++) {
-                posAttr.setXYZ(
-                    j,
-                    posAttr.getX(j) + (Math.random() - 0.5) * (size * 0.3),
-                    posAttr.getY(j) + (Math.random() - 0.5) * (size * 0.3),
-                    posAttr.getZ(j) + (Math.random() - 0.5) * (size * 0.3)
-                );
+            // Glowing neon top
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 1, 3, w + 1), windowMat);
+            cap.position.y = h / 2 + 1.5;
+            bldg.add(cap);
+
+            cityGroup.add(bldg);
+        }
+        cityGroup.visible = false;
+        scene.add(cityGroup);
+
+        // Function to update environment per level
+        function setEnvironmentForLevel(level) {
+            const theme = ((level - 1) % 3) + 1; // Cycle themes: 1, 2, 3, 1...
+            
+            // 1. Texture & Skybox
+            galaxySkyMat.map = createGalaxyTexture(theme);
+            galaxySkyMat.needsUpdate = true;
+
+            // 2. Fog & Ambient Lights
+            if (theme === 1) {
+                scene.fog.color.setHex(0x030712);
+                ambientLight.color.setHex(0x1e1b4b);
+                mainLight.color.setHex(0x38bdf8);
+                trackMat.color.setHex(0x070d1e);
+                trackMat.emissive.setHex(0x0284c7);
+                railMat.color.setHex(0x38bdf8);
+                cityGroup.visible = false;
+            } else if (theme === 2) { // Inferno
+                scene.fog.color.setHex(0x1a0303);
+                ambientLight.color.setHex(0x450a0a);
+                mainLight.color.setHex(0xf97316);
+                trackMat.color.setHex(0x1c0505);
+                trackMat.emissive.setHex(0xd97706);
+                railMat.color.setHex(0xef4444);
+                cityGroup.visible = false;
+            } else if (theme === 3) { // Cyberpunk
+                scene.fog.color.setHex(0x040d1a);
+                ambientLight.color.setHex(0x1e1b4b);
+                mainLight.color.setHex(0x06b6d4);
+                trackMat.color.setHex(0x090514);
+                trackMat.emissive.setHex(0xd946ef);
+                railMat.color.setHex(0xd946ef);
+                cityGroup.visible = true;
             }
-            astGeo.computeVertexNormals();
-
-            const ast = new THREE.Mesh(astGeo, asteroidMat);
-            const side = i % 2 === 0 ? 1 : -1;
-            ast.position.set(
-                side * (Math.random() * 60 + 35),
-                (Math.random() - 0.2) * 40,
-                -Math.random() * 400 - 50
-            );
-
-            ast.userData = {
-                rotSpeedX: (Math.random() - 0.5) * 0.8,
-                rotSpeedY: (Math.random() - 0.5) * 0.8,
-                speedZ: Math.random() * 10 + 5
-            };
-
-            bgObjectsGroup.add(ast);
-            asteroids.push(ast);
         }
 
-        scene.add(bgObjectsGroup);
-
-        function updateBackgroundObjects(delta) {
-            ringedPlanet.rotation.y += delta * 0.05;
-            moon.rotation.y -= delta * 0.03;
-
-            asteroids.forEach(ast => {
-                ast.rotation.x += ast.userData.rotSpeedX * delta;
-                ast.rotation.y += ast.userData.rotSpeedY * delta;
-                ast.position.z += ast.userData.speedZ * delta;
-
-                if (ast.position.z > 20) {
-                    ast.position.z = -450;
-                }
-            });
-        }
-
-        // Track
+        // Track Setup
         const trackWidth = 18, maxBoundX = trackWidth / 2 - 1.2, trackLength = 2000;
-        const track = new THREE.Mesh(
-            new THREE.BoxGeometry(trackWidth, 0.5, trackLength),
-            new THREE.MeshStandardMaterial({ color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.08 })
-        );
+        const trackMat = new THREE.MeshStandardMaterial({ color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.08 });
+        const track = new THREE.Mesh(new THREE.BoxGeometry(trackWidth, 0.5, trackLength), trackMat);
         track.position.set(0, -0.25, -trackLength / 2 + 10);
         scene.add(track);
 
@@ -350,7 +336,7 @@
         const railR = new THREE.Mesh(railGeo, railMat); railR.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
         scene.add(railL, railR);
 
-        // Particle System
+        // Particles
         const particles = [];
         const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
 
@@ -361,15 +347,10 @@
                 const p = new THREE.Mesh(particleGeo, pMat);
                 p.position.copy(position);
                 p.userData = {
-                    vel: new THREE.Vector3(
-                        (Math.random() - 0.5) * 14,
-                        Math.random() * 10 + 2,
-                        (Math.random() - 0.5) * 14
-                    ),
+                    vel: new THREE.Vector3((Math.random() - 0.5) * 14, Math.random() * 10 + 2, (Math.random() - 0.5) * 14),
                     life: 0.45
                 };
-                scene.add(p);
-                particles.push(p);
+                scene.add(p); particles.push(p);
             }
         }
 
@@ -387,7 +368,7 @@
             }
         }
 
-        // --- ✨ EXPANDED STARFIELD (Fills screen corners) ---
+        // Starfield
         function createRoundStarTexture() {
             const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
@@ -399,13 +380,12 @@
             return new THREE.CanvasTexture(canvas);
         }
 
-        const starCount = 1400; // Increased count
+        const starCount = 1400;
         const starGeo = new THREE.BufferGeometry();
         const starPos = new Float32Array(starCount * 3);
         const starSpeeds = new Float32Array(starCount);
 
         for (let i = 0; i < starCount; i++) {
-            // Wider spread in X and Y to fill black screen corners
             starPos[i * 3]     = (Math.random() - 0.5) * 220; 
             starPos[i * 3 + 1] = (Math.random() - 0.3) * 120;
             starPos[i * 3 + 2] = -Math.random() * 300;
@@ -431,7 +411,7 @@
             starField.geometry.attributes.position.needsUpdate = true;
         }
 
-        // HP Mechanics
+        // HP Engine
         const maxHp = 500; let currentHp = 500;
         function updateHpBar() {
             const hpBar = document.getElementById('hp-bar');
@@ -448,7 +428,7 @@
             hpBar.style.backgroundColor = colorHex;
         }
 
-        // Demons
+        // Demons & Boss
         const demons = []; let demonSpawnTimer = 0;
         const DEMON_TYPES = {
             STANDARD: { bodyColor: 0xd97706, heightScale: 1.8, speed: 15.0, hp: 1, scoreVal: 30 },
@@ -464,23 +444,15 @@
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
             const hornMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.2 });
 
-            const torsoGeo = new THREE.CylinderGeometry(0.7, 0.4, 3.2, 10);
-            const torso = new THREE.Mesh(torsoGeo, demonMat);
-            torso.position.y = 1.6;
-            demonGroup.add(torso);
-
-            const headGeo = new THREE.BoxGeometry(0.9, 1.0, 0.9);
-            const head = new THREE.Mesh(headGeo, demonMat);
-            head.position.set(0, 3.4, 0);
-            demonGroup.add(head);
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.4, 3.2, 10), demonMat); torso.position.y = 1.6; demonGroup.add(torso);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.9), demonMat); head.position.set(0, 3.4, 0); demonGroup.add(head);
 
             const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
             const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.25, 3.5, 0.45);
             const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.25, 3.5, 0.45);
             demonGroup.add(eyeL, eyeR);
 
-            const hornGeo = new THREE.ConeGeometry(0.18, 1.2, 6);
-            hornGeo.rotateX(-0.2);
+            const hornGeo = new THREE.ConeGeometry(0.18, 1.2, 6); hornGeo.rotateX(-0.2);
             const hornL = new THREE.Mesh(hornGeo, hornMat); hornL.position.set(-0.35, 4.3, 0.1); hornL.rotation.z = 0.2;
             const hornR = new THREE.Mesh(hornGeo, hornMat); hornR.position.set(0.35, 4.3, 0.1); hornR.rotation.z = -0.2;
             demonGroup.add(hornL, hornR);
@@ -491,12 +463,7 @@
             demonGroup.add(armL, armR);
 
             demonGroup.scale.set(1.2, typeConfig.heightScale, 1.2);
-            demonGroup.userData = { 
-                hp: typeConfig.hp, 
-                speed: typeConfig.speed, 
-                scoreVal: typeConfig.scoreVal, 
-                color: typeConfig.bodyColor 
-            };
+            demonGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal, color: typeConfig.bodyColor };
             return demonGroup;
         }
 
@@ -514,7 +481,7 @@
 
         function spawnBoss() {
             isBossActive = true; updateLevelUI();
-            const bossConfig = { bodyColor: 0x7f1d1d, heightScale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
+            const bossConfig = { bodyColor: 0x7f1d1d, heightScale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 25), scoreVal: 1000 };
             activeBoss = createDemonMesh(bossConfig);
             activeBoss.scale.set(2.5, 3.5, 2.5);
             activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
@@ -525,7 +492,7 @@
         function updateDemons(delta) {
             if (!isBossActive) {
                 demonSpawnTimer += delta;
-                if (demonSpawnTimer >= 1.8) { demonSpawnTimer = 0; spawnDemon(); }
+                if (demonSpawnTimer >= 1.7) { demonSpawnTimer = 0; spawnDemon(); }
             }
 
             for (let i = demons.length - 1; i >= 0; i--) {
@@ -551,7 +518,7 @@
             }
         }
 
-        // Cannon & Dual Muzzle Flashes
+        // Cannon & Muzzles
         const cannonGroup = new THREE.Group();
         const cannonMeshGroup = new THREE.Group();
 
@@ -582,15 +549,14 @@
 
         cannonGroup.add(cannonMeshGroup); cannonGroup.position.set(0, 1.2, 0); scene.add(cannonGroup);
 
-        // --- 🔵 GLOWING BLUE ENERGY BULLETS WITH DYNAMIC LIGHT ---
+        // Bullets
         const bulletGeo = new THREE.SphereGeometry(0.4, 16, 16);
-        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 }); // Bright Cyan Energy Core
+        const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
         const bullets = [];
 
         function triggerDualMuzzleFlash() {
             flashMat.opacity = 1.0;
-            flashLightL.intensity = 5.0;
-            flashLightR.intensity = 5.0;
+            flashLightL.intensity = 5.0; flashLightR.intensity = 5.0;
         }
 
         function updateMuzzleFlashes(delta) {
@@ -602,21 +568,9 @@
         }
 
         function spawnBulletPair(x1, x2, z) {
-            // Left Bullet
-            const bL = new THREE.Mesh(bulletGeo, bulletMat);
-            bL.position.set(x1, 1.1, z);
-            scene.add(bL);
-
-            // Right Bullet
-            const bR = new THREE.Mesh(bulletGeo, bulletMat);
-            bR.position.set(x2, 1.1, z);
-            scene.add(bR);
-
-            // Dynamic light source attached to the pair that casts light on surroundings
-            const energyLight = new THREE.PointLight(0x38bdf8, 2.5, 12);
-            energyLight.position.set((x1 + x2) / 2, 1.1, z);
-            scene.add(energyLight);
-
+            const bL = new THREE.Mesh(bulletGeo, bulletMat); bL.position.set(x1, 1.1, z); scene.add(bL);
+            const bR = new THREE.Mesh(bulletGeo, bulletMat); bR.position.set(x2, 1.1, z); scene.add(bR);
+            const energyLight = new THREE.PointLight(0x38bdf8, 2.5, 12); energyLight.position.set((x1 + x2) / 2, 1.1, z); scene.add(energyLight);
             bullets.push({ bL, bR, light: energyLight });
         }
 
@@ -625,13 +579,9 @@
                 const pair = bullets[i];
                 const moveDist = 95.0 * delta;
 
-                pair.bL.position.z -= moveDist;
-                pair.bR.position.z -= moveDist;
-                pair.light.position.z -= moveDist;
-
+                pair.bL.position.z -= moveDist; pair.bR.position.z -= moveDist; pair.light.position.z -= moveDist;
                 let removePair = false;
 
-                // Collision logic for left and right energy balls
                 [pair.bL, pair.bR].forEach(b => {
                     if (removePair) return;
 
@@ -642,7 +592,7 @@
                             createExplosion(b.position, 0x38bdf8);
                             if (dem.userData.hp <= 0) {
                                 score += dem.userData.scoreVal;
-                                levelProgress += 5;
+                                levelProgress += 6;
                                 document.getElementById('score-val').innerText = score;
                                 updateLevelUI();
                                 createExplosion(dem.position, dem.userData.color);
@@ -661,21 +611,25 @@
                         if (activeBoss.userData.hp <= 0) {
                             createExplosion(activeBoss.position, 0xf59e0b);
                             scene.remove(activeBoss); activeBoss = null; isBossActive = false;
-                            score += 1000; currentLevel++; levelProgress = 0; updateLevelUI();
+                            score += 1000;
+                            
+                            // LEVEL ADVANCEMENT & ENVIRONMENT CHANGE
+                            currentLevel++;
+                            levelProgress = 0;
+                            setEnvironmentForLevel(currentLevel);
+                            updateLevelUI();
                         }
                     }
                 });
 
                 if (removePair || pair.bL.position.z < cannonGroup.position.z - 160) {
-                    scene.remove(pair.bL);
-                    scene.remove(pair.bR);
-                    scene.remove(pair.light);
+                    scene.remove(pair.bL); scene.remove(pair.bR); scene.remove(pair.light);
                     bullets.splice(i, 1);
                 }
             }
         }
 
-        // Controls
+        // Touch / Mouse Controls
         let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
         function stopInput() { isDragging = false; isFiring = false; }
 
@@ -700,13 +654,15 @@
             }
         });
 
-        // Game Loop
+        // Game Loop State
         let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
         function resetGame() {
             score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
             isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
             
+            setEnvironmentForLevel(1);
+
             if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
             for (let dem of demons) scene.remove(dem); demons.length = 0;
             for (let pair of bullets) { scene.remove(pair.bL); scene.remove(pair.bR); scene.remove(pair.light); } bullets.length = 0;
@@ -742,7 +698,7 @@
         });
 
         document.getElementById('resume-btn')?.addEventListener('click', () => { 
-            requestFullScreen(); isPaused = false; document.getElementById('pause-menu')?.classList.add('hidden'); 
+            requestFullScreen(); isPaused = false; document.getElementById('pause-menu')?.classList.hidden = true; 
         });
 
         let clock = new THREE.Clock();
@@ -755,7 +711,11 @@
 
             updateStars(delta);
             updateParticles(delta);
-            updateBackgroundObjects(delta);
+
+            if (cityGroup.visible) {
+                cityGroup.position.z += 8.0 * delta;
+                if (cityGroup.position.z > -200) cityGroup.position.z = -400;
+            }
 
             if (gameStarted && !isPaused) {
                 targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
