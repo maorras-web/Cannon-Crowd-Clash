@@ -425,28 +425,34 @@ window.addEventListener('DOMContentLoaded', () => {
     function spawnEngineFireParticle(isLeft) {
         const sprite = new THREE.Sprite(fireMaterialTemplate.clone());
         
-        // יצירת וקטור מיקום מדויק של קצה האגזוז הצדי (שמאל או ימין)
-        const localPos = new THREE.Vector3(isLeft ? -1.3 : 1.3, 0.2, 0.3);
-        const worldPos = localPos.applyMatrix4(cannonMeshGroup.matrixWorld);
+        // 1. איתור האובייקט של האגזוז הרלוונטי ועדכון המטריצה שלו
+        const targetThruster = isLeft ? thrusterL : thrusterR;
+        targetThruster.updateMatrixWorld(true);
+
+        // 2. הוצאת המיקום המדויק בעולם של האגזוז
+        const worldPos = new THREE.Vector3();
+        targetThruster.getWorldPosition(worldPos);
 
         sprite.position.copy(worldPos);
-        sprite.scale.set(0.5, 0.5, 1.0);
+        sprite.scale.set(0.4, 0.4, 1.0);
         scene.add(sprite);
+
+        // 3. הגדרת כיוון הפליטה: שמאלה (-X) לאגזוז שמאל, ימינה (+X) לאגזוז ימין
+        const sideDir = isLeft ? -1 : 1;
 
         fireParticles.push({
             sprite: sprite,
             life: 1.0,
-            speedZ: 25.0 + Math.random() * 8.0,
-            spreadX: (Math.random() - 0.5) * 0.4,
-            spreadY: (Math.random() - 0.5) * 0.4,
-            scaleSpeed: 3.0 + Math.random() * 2.0
+            speedX: sideDir * (12.0 + Math.random() * 6.0),
+            speedY: (Math.random() - 0.5) * 2.0,
+            speedZ: (Math.random() - 0.5) * 2.0,
+            scaleSpeed: 2.5 + Math.random() * 1.5
         });
     }
 
     function updateEngineFire(delta) {
         if (gameStarted && !isPaused) {
-            // לוודא שהמטריצה המרחבית מעודכנת לפני חישוב מיקום האגזוזים
-            cannonMeshGroup.updateMatrixWorld();
+            cannonMeshGroup.updateMatrixWorld(true);
 
             for (let i = 0; i < 2; i++) {
                 spawnEngineFireParticle(true);  // אגזוז שמאל
@@ -456,7 +462,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         for (let i = fireParticles.length - 1; i >= 0; i--) {
             const p = fireParticles[i];
-            p.life -= delta * 3.2;
+            p.life -= delta * 4.0;
 
             if (p.life <= 0) {
                 scene.remove(p.sprite);
@@ -465,11 +471,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
+            p.sprite.position.x += p.speedX * delta;
+            p.sprite.position.y += p.speedY * delta;
             p.sprite.position.z += p.speedZ * delta;
-            p.sprite.position.x += p.spreadX * delta;
-            p.sprite.position.y += p.spreadY * delta;
 
-            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.4;
+            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.3;
             p.sprite.scale.set(currentScale, currentScale, 1.0);
             p.sprite.material.opacity = p.life * p.life; 
         }
