@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D - Dynamic Environments</title>
+    <title>Track Shooter 3D - Boss HP & Plasma Orb</title>
     <style>
         * { box-sizing: border-box; }
         body, html {
@@ -24,8 +24,8 @@
         #hp-bar { height: 12px; background: #22c55e; width: 100%; border-radius: 6px; transition: width 0.2s, background-color 0.2s; }
         #hp-text { color: #fff; font-size: 11px; text-align: center; margin-top: 2px; font-weight: bold; }
 
-        #level-progress-bg { width: 120px; height: 8px; background: rgba(255,255,255,0.15); border-radius: 4px; margin: 4px auto 0 auto; overflow: hidden; }
-        #level-progress-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.2s; }
+        #level-progress-bg { width: 140px; height: 10px; background: rgba(255,255,255,0.15); border-radius: 5px; margin: 4px auto 0 auto; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+        #level-progress-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.15s ease-out, background-color 0.3s; }
         #level-text { color: #38bdf8; font-weight: bold; text-align: center; font-size: 13px; text-shadow: 0 0 6px rgba(56, 189, 248, 0.6); }
 
         .btn {
@@ -34,6 +34,18 @@
             box-shadow: 0 0 12px rgba(2, 132, 199, 0.5); transition: transform 0.1s, background 0.2s;
         }
         .btn:active { transform: scale(0.95); }
+
+        /* Plasma Ultimate Button */
+        #plasma-btn {
+            position: absolute; bottom: 35px; right: 20px; width: 80px; height: 80px;
+            border-radius: 50%; background: linear-gradient(135deg, #a855f7, #6b21a8);
+            border: 3px solid #e9d5ff; color: white; font-weight: bold; font-size: 12px;
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.9); cursor: pointer; pointer-events: auto;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-shadow: 0 0 6px #000; transition: transform 0.1s, opacity 0.3s;
+        }
+        #plasma-btn:active { transform: scale(0.9); }
+        #plasma-btn.disabled { opacity: 0.35; filter: grayscale(1); pointer-events: none; }
 
         .color-picker-title { font-size: 14px; color: #cbd5e1; margin-bottom: 8px; }
         .color-options { display: flex; gap: 12px; justify-content: center; margin-bottom: 20px; pointer-events: auto; }
@@ -48,8 +60,7 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(3, 7, 18, 0.88); backdrop-filter: blur(8px); z-index: 20;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            color: #fff; text-align: center; transition: opacity 0.3s;
-            pointer-events: auto;
+            color: #fff; text-align: center; transition: opacity 0.3s; pointer-events: auto;
         }
         .hidden { display: none !important; }
         .overlay h1 { font-size: 34px; color: #38bdf8; margin-bottom: 10px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.8); }
@@ -76,6 +87,8 @@
                 <button id="pause-btn" class="btn" style="margin-top: 5px; padding: 5px 12px; font-size: 12px;">PAUSE</button>
             </div>
         </div>
+
+        <button id="plasma-btn" class="hidden">⚡<br>PLASMA</button>
     </div>
 
     <div id="start-overlay" class="overlay">
@@ -124,6 +137,7 @@
         if (uiContainer) {
             uiContainer.style.pointerEvents = 'none';
             document.getElementById('pause-btn').style.pointerEvents = 'auto';
+            document.getElementById('plasma-btn').style.pointerEvents = 'auto';
         }
 
         function requestFullScreen() {
@@ -172,6 +186,13 @@
                     gain.gain.setValueAtTime(0.4, now);
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
                     osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'plasma') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
+                    gain.gain.setValueAtTime(0.6, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now); osc.stop(now + 0.6);
                 }
             } catch(e) {}
         }
@@ -186,13 +207,30 @@
         function updateLevelUI() {
             const progressFill = document.getElementById('level-progress-fill');
             const levelText = document.getElementById('level-text');
+            const plasmaBtn = document.getElementById('plasma-btn');
             
-            if (progressFill) {
-                const percentage = isBossActive ? 100 : Math.min(100, (levelProgress / maxLevelProgress) * 100);
-                progressFill.style.width = `${percentage}%`;
-            }
-            if (levelText) {
-                levelText.innerText = isBossActive ? `LEVEL ${currentLevel} - BOSS!` : `LEVEL ${currentLevel}`;
+            if (isBossActive && activeBoss) {
+                const percentage = Math.max(0, (activeBoss.userData.hp / activeBoss.userData.maxHp) * 100);
+                if (progressFill) {
+                    progressFill.style.width = `${percentage}%`;
+                    progressFill.style.backgroundColor = '#ef4444';
+                }
+                if (levelText) {
+                    levelText.innerText = `BOSS HP: ${Math.max(0, activeBoss.userData.hp)} / ${activeBoss.userData.maxHp}`;
+                    levelText.style.color = '#ef4444';
+                }
+                if (plasmaBtn) plasmaBtn.classList.remove('hidden');
+            } else {
+                const percentage = Math.min(100, (levelProgress / maxLevelProgress) * 100);
+                if (progressFill) {
+                    progressFill.style.width = `${percentage}%`;
+                    progressFill.style.backgroundColor = '#38bdf8';
+                }
+                if (levelText) {
+                    levelText.innerText = `LEVEL ${currentLevel}`;
+                    levelText.style.color = '#38bdf8';
+                }
+                if (plasmaBtn) plasmaBtn.classList.add('hidden');
             }
         }
 
@@ -223,40 +261,28 @@
         let cameraShakeIntensity = 0, cannonRecoilZ = 0;
         function triggerCameraShake(intensity) { cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity); }
 
-        // --- DYNAMIC BACKGROUND SYSTEM (3 STAGES) ---
+        // Dynamic Backgrounds
         function createGalaxyTexture(theme = 1) {
             const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1024;
             const ctx = canvas.getContext('2d');
-            
             let bgGradient = ctx.createLinearGradient(0, 0, 0, 1024);
             let nebulae = [];
 
-            if (theme === 1) { // Level 1: Deep Space (Blue/Purple)
+            if (theme === 1) {
                 bgGradient.addColorStop(0, '#020208'); bgGradient.addColorStop(1, '#08051a');
-                nebulae = [
-                    { x: 250, y: 300, r: 400, color: 'rgba(99, 102, 241, 0.6)' },
-                    { x: 750, y: 250, r: 450, color: 'rgba(168, 85, 247, 0.65)' }
-                ];
-            } else if (theme === 2) { // Level 2: Inferno Space (Fiery Red/Orange)
+                nebulae = [{ x: 250, y: 300, r: 400, color: 'rgba(99, 102, 241, 0.6)' }, { x: 750, y: 250, r: 450, color: 'rgba(168, 85, 247, 0.65)' }];
+            } else if (theme === 2) {
                 bgGradient.addColorStop(0, '#0d0202'); bgGradient.addColorStop(1, '#260404');
-                nebulae = [
-                    { x: 300, y: 400, r: 500, color: 'rgba(239, 68, 68, 0.7)' },
-                    { x: 800, y: 300, r: 450, color: 'rgba(245, 158, 11, 0.65)' }
-                ];
-            } else { // Level 3: Cyberpunk (Dark Cyan/Purple)
+                nebulae = [{ x: 300, y: 400, r: 500, color: 'rgba(239, 68, 68, 0.7)' }, { x: 800, y: 300, r: 450, color: 'rgba(245, 158, 11, 0.65)' }];
+            } else {
                 bgGradient.addColorStop(0, '#020d1a'); bgGradient.addColorStop(1, '#110226');
-                nebulae = [
-                    { x: 400, y: 300, r: 450, color: 'rgba(6, 182, 212, 0.65)' },
-                    { x: 700, y: 600, r: 500, color: 'rgba(217, 70, 239, 0.6)' }
-                ];
+                nebulae = [{ x: 400, y: 300, r: 450, color: 'rgba(6, 182, 212, 0.65)' }, { x: 700, y: 600, r: 500, color: 'rgba(217, 70, 239, 0.6)' }];
             }
 
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, 1024, 1024);
-
             nebulae.forEach(n => {
                 const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
-                grad.addColorStop(0, n.color);
-                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                grad.addColorStop(0, n.color); grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 ctx.fillStyle = grad; ctx.fillRect(0, 0, 1024, 1024);
             });
             return new THREE.CanvasTexture(canvas);
@@ -266,57 +292,33 @@
         const galaxySky = new THREE.Mesh(new THREE.SphereGeometry(800, 32, 32), galaxySkyMat);
         scene.add(galaxySky);
 
-        // Cyberpunk City Skyline Group (Level 3)
         const cityGroup = new THREE.Group();
         cityGroup.position.set(0, -60, -400);
         const bldgMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.2, metalness: 0.8 });
         const windowMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
 
         for (let i = -15; i <= 15; i++) {
-            const h = Math.random() * 120 + 60;
-            const w = Math.random() * 20 + 15;
+            const h = Math.random() * 120 + 60, w = Math.random() * 20 + 15;
             const bldg = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), bldgMat);
             bldg.position.set(i * 22, h / 2, Math.random() * 60);
-            
             const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 1, 3, w + 1), windowMat);
-            cap.position.y = h / 2 + 1.5;
-            bldg.add(cap);
-
-            cityGroup.add(bldg);
+            cap.position.y = h / 2 + 1.5; bldg.add(cap); cityGroup.add(bldg);
         }
-        cityGroup.visible = false;
-        scene.add(cityGroup);
+        cityGroup.visible = false; scene.add(cityGroup);
 
         function setEnvironmentForLevel(level) {
             const theme = ((level - 1) % 3) + 1;
-            
-            galaxySkyMat.map = createGalaxyTexture(theme);
-            galaxySkyMat.needsUpdate = true;
+            galaxySkyMat.map = createGalaxyTexture(theme); galaxySkyMat.needsUpdate = true;
 
             if (theme === 1) {
-                scene.fog.color.setHex(0x030712);
-                ambientLight.color.setHex(0x1e1b4b);
-                mainLight.color.setHex(0x38bdf8);
-                trackMat.color.setHex(0x070d1e);
-                trackMat.emissive.setHex(0x0284c7);
-                railMat.color.setHex(0x38bdf8);
-                cityGroup.visible = false;
+                scene.fog.color.setHex(0x030712); ambientLight.color.setHex(0x1e1b4b); mainLight.color.setHex(0x38bdf8);
+                trackMat.color.setHex(0x070d1e); trackMat.emissive.setHex(0x0284c7); railMat.color.setHex(0x38bdf8); cityGroup.visible = false;
             } else if (theme === 2) {
-                scene.fog.color.setHex(0x1a0303);
-                ambientLight.color.setHex(0x450a0a);
-                mainLight.color.setHex(0xf97316);
-                trackMat.color.setHex(0x1c0505);
-                trackMat.emissive.setHex(0xd97706);
-                railMat.color.setHex(0xef4444);
-                cityGroup.visible = false;
+                scene.fog.color.setHex(0x1a0303); ambientLight.color.setHex(0x450a0a); mainLight.color.setHex(0xf97316);
+                trackMat.color.setHex(0x1c0505); trackMat.emissive.setHex(0xd97706); railMat.color.setHex(0xef4444); cityGroup.visible = false;
             } else if (theme === 3) {
-                scene.fog.color.setHex(0x040d1a);
-                ambientLight.color.setHex(0x1e1b4b);
-                mainLight.color.setHex(0x06b6d4);
-                trackMat.color.setHex(0x090514);
-                trackMat.emissive.setHex(0xd946ef);
-                railMat.color.setHex(0xd946ef);
-                cityGroup.visible = true;
+                scene.fog.color.setHex(0x040d1a); ambientLight.color.setHex(0x1e1b4b); mainLight.color.setHex(0x06b6d4);
+                trackMat.color.setHex(0x090514); trackMat.emissive.setHex(0xd946ef); railMat.color.setHex(0xd946ef); cityGroup.visible = true;
             }
         }
 
@@ -324,8 +326,7 @@
         const trackWidth = 18, maxBoundX = trackWidth / 2 - 1.2, trackLength = 2000;
         const trackMat = new THREE.MeshStandardMaterial({ color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.08 });
         const track = new THREE.Mesh(new THREE.BoxGeometry(trackWidth, 0.5, trackLength), trackMat);
-        track.position.set(0, -0.25, -trackLength / 2 + 10);
-        scene.add(track);
+        track.position.set(0, -0.25, -trackLength / 2 + 10); scene.add(track);
 
         const railGeo = new THREE.BoxGeometry(0.3, 0.6, trackLength);
         const railMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
@@ -333,77 +334,44 @@
         const railR = new THREE.Mesh(railGeo, railMat); railR.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
         scene.add(railL, railR);
 
-        // Particles
+        // Particles System
         const particles = [];
         const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
 
-        function createExplosion(position, colorHex = 0xef4444) {
-            const count = 16;
+        function createExplosion(position, colorHex = 0xef4444, count = 16) {
             const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
             for (let i = 0; i < count; i++) {
                 const p = new THREE.Mesh(particleGeo, pMat);
                 p.position.copy(position);
-                p.userData = {
-                    vel: new THREE.Vector3((Math.random() - 0.5) * 14, Math.random() * 10 + 2, (Math.random() - 0.5) * 14),
-                    life: 0.45
-                };
+                p.userData = { vel: new THREE.Vector3((Math.random() - 0.5) * 16, Math.random() * 12 + 2, (Math.random() - 0.5) * 16), life: 0.5 };
                 scene.add(p); particles.push(p);
             }
         }
 
         function updateParticles(delta) {
             for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.userData.life -= delta;
-                p.position.addScaledVector(p.userData.vel, delta);
-                p.scale.multiplyScalar(0.92);
-
-                if (p.userData.life <= 0) {
-                    scene.remove(p);
-                    particles.splice(i, 1);
-                }
+                const p = particles[i]; p.userData.life -= delta;
+                p.position.addScaledVector(p.userData.vel, delta); p.scale.multiplyScalar(0.92);
+                if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
             }
         }
 
-        // Starfield
-        function createRoundStarTexture() {
-            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-            grad.addColorStop(0.35, 'rgba(186, 230, 253, 0.9)');
-            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(32, 32, 32, 0, Math.PI * 2); ctx.fill();
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        const starCount = 1400;
-        const starGeo = new THREE.BufferGeometry();
-        const starPos = new Float32Array(starCount * 3);
-        const starSpeeds = new Float32Array(starCount);
-
+        // Stars
+        const starCount = 1400; const starGeo = new THREE.BufferGeometry();
+        const starPos = new Float32Array(starCount * 3); const starSpeeds = new Float32Array(starCount);
         for (let i = 0; i < starCount; i++) {
-            starPos[i * 3]     = (Math.random() - 0.5) * 220; 
-            starPos[i * 3 + 1] = (Math.random() - 0.3) * 120;
-            starPos[i * 3 + 2] = -Math.random() * 300;
-            starSpeeds[i]      = 35 + Math.random() * 55;
+            starPos[i * 3] = (Math.random() - 0.5) * 220; starPos[i * 3 + 1] = (Math.random() - 0.3) * 120;
+            starPos[i * 3 + 2] = -Math.random() * 300; starSpeeds[i] = 35 + Math.random() * 55;
         }
         starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-
-        const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({
-            size: 2.2, map: createRoundStarTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
-        }));
+        const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2.2, transparent: true, blending: THREE.AdditiveBlending }));
         scene.add(starField);
 
         function updateStars(delta) {
-            const positions = starField.geometry.attributes.position.array;
+            const pos = starField.geometry.attributes.position.array;
             for (let i = 0; i < starCount; i++) {
-                positions[i * 3 + 2] += starSpeeds[i] * delta;
-                if (positions[i * 3 + 2] > 15) {
-                    positions[i * 3 + 2] = -280;
-                    positions[i * 3]     = (Math.random() - 0.5) * 220;
-                    positions[i * 3 + 1] = (Math.random() - 0.3) * 120;
-                }
+                pos[i * 3 + 2] += starSpeeds[i] * delta;
+                if (pos[i * 3 + 2] > 15) { pos[i * 3 + 2] = -280; pos[i * 3] = (Math.random() - 0.5) * 220; pos[i * 3 + 1] = (Math.random() - 0.3) * 120; }
             }
             starField.geometry.attributes.position.needsUpdate = true;
         }
@@ -411,17 +379,12 @@
         // HP Engine
         const maxHp = 500; let currentHp = 500;
         function updateHpBar() {
-            const hpBar = document.getElementById('hp-bar');
-            const hpText = document.getElementById('hp-text');
+            const hpBar = document.getElementById('hp-bar'); const hpText = document.getElementById('hp-text');
             if (!hpBar || !hpText) return;
-
             const percentage = Math.max(0, (currentHp / maxHp) * 100);
-            hpBar.style.width = `${percentage}%`;
-            hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
-
+            hpBar.style.width = `${percentage}%`; hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
             let colorHex = '#22c55e';
-            if (percentage < 30) colorHex = '#ef4444';
-            else if (percentage < 60) colorHex = '#eab308';
+            if (percentage < 30) colorHex = '#ef4444'; else if (percentage < 60) colorHex = '#eab308';
             hpBar.style.backgroundColor = colorHex;
         }
 
@@ -435,11 +398,9 @@
 
         function createDemonMesh(typeConfig) {
             const demonGroup = new THREE.Group();
-            
-            const demonMat = new THREE.MeshStandardMaterial({ color: typeConfig.bodyColor, roughness: 0.3, metalness: 0.3 });
-            const darkMat = new THREE.MeshStandardMaterial({ color: 0x450a0a, roughness: 0.5 });
+            const demonMat = new THREE.MeshStandardMaterial({ color: typeConfig.bodyColor, roughness: 0.3 });
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            const hornMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.2 });
+            const hornMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8 });
 
             const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.4, 3.2, 10), demonMat); torso.position.y = 1.6; demonGroup.add(torso);
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.9), demonMat); head.position.set(0, 3.4, 0); demonGroup.add(head);
@@ -454,11 +415,6 @@
             const hornR = new THREE.Mesh(hornGeo, hornMat); hornR.position.set(0.35, 4.3, 0.1); hornR.rotation.z = -0.2;
             demonGroup.add(hornL, hornR);
 
-            const armGeo = new THREE.BoxGeometry(0.3, 2.2, 0.3);
-            const armL = new THREE.Mesh(armGeo, darkMat); armL.position.set(-0.95, 2.0, 0); armL.rotation.z = 0.15;
-            const armR = new THREE.Mesh(armGeo, darkMat); armR.position.set(0.95, 2.0, 0); armR.rotation.z = -0.15;
-            demonGroup.add(armL, armR);
-
             demonGroup.scale.set(1.2, typeConfig.heightScale, 1.2);
             demonGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal, color: typeConfig.bodyColor };
             return demonGroup;
@@ -468,8 +424,7 @@
             if (isBossActive) return;
             const rand = Math.random();
             let config = DEMON_TYPES.STANDARD;
-            if (rand > 0.75) config = DEMON_TYPES.ARMORED;
-            else if (rand > 0.5) config = DEMON_TYPES.FAST;
+            if (rand > 0.75) config = DEMON_TYPES.ARMORED; else if (rand > 0.5) config = DEMON_TYPES.FAST;
 
             const demon = createDemonMesh(config);
             demon.position.set((Math.random() - 0.5) * (trackWidth - 3), 0, cannonGroup.position.z - 120 - Math.random() * 30);
@@ -477,13 +432,15 @@
         }
 
         function spawnBoss() {
-            isBossActive = true; updateLevelUI();
-            const bossConfig = { bodyColor: 0x7f1d1d, heightScale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 25), scoreVal: 1000 };
+            isBossActive = true;
+            const bossHp = 60 + (currentLevel * 35);
+            const bossConfig = { bodyColor: 0x7f1d1d, heightScale: 3.5, speed: 4.5, hp: bossHp, scoreVal: 1000 };
             activeBoss = createDemonMesh(bossConfig);
             activeBoss.scale.set(2.5, 3.5, 2.5);
             activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
-            activeBoss.userData.maxHp = bossConfig.hp;
+            activeBoss.userData.maxHp = bossHp;
             scene.add(activeBoss);
+            updateLevelUI();
         }
 
         function updateDemons(delta) {
@@ -493,9 +450,7 @@
             }
 
             for (let i = demons.length - 1; i >= 0; i--) {
-                const dem = demons[i];
-                dem.position.z += dem.userData.speed * delta;
-
+                const dem = demons[i]; dem.position.z += dem.userData.speed * delta;
                 if (dem.position.distanceTo(cannonGroup.position) < 2.5) {
                     currentHp -= 100; updateHpBar(); playSound('hit'); triggerCameraShake(0.35);
                     createExplosion(dem.position, dem.userData.color);
@@ -515,7 +470,7 @@
             }
         }
 
-        // Cannon & Muzzles
+        // Cannon Mesh & Openable Dome
         const cannonGroup = new THREE.Group();
         const cannonMeshGroup = new THREE.Group();
 
@@ -523,60 +478,142 @@
         const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9 });
         const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.95 });
 
-        changeCannonColorFn = function(hexColor) {
-            baseMat.color.setHex(hexColor);
-            flashLightL.color.setHex(hexColor);
-            flashLightR.color.setHex(hexColor);
-        };
+        changeCannonColorFn = function(hexColor) { baseMat.color.setHex(hexColor); };
 
         const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat); base.rotation.x = Math.PI / 12; cannonMeshGroup.add(base);
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat); dome.position.y = 0.3; cannonMeshGroup.add(dome);
         
+        // Dome Lid that slides back when plasma fires
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat); 
+        dome.position.y = 0.3; cannonMeshGroup.add(dome);
+
         const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelL.rotation.x = Math.PI / 2; barrelL.position.set(-0.45, 0.35, -1.0); cannonMeshGroup.add(barrelL);
         const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0); cannonMeshGroup.add(barrelR);
 
-        const flashGeo = new THREE.SphereGeometry(0.4, 12, 12);
-        const flashMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0 });
-
-        const muzzleFlashL = new THREE.Mesh(flashGeo, flashMat); muzzleFlashL.position.set(-0.45, 0.35, -2.1); cannonMeshGroup.add(muzzleFlashL);
-        const muzzleFlashR = new THREE.Mesh(flashGeo, flashMat); muzzleFlashR.position.set(0.45, 0.35, -2.1); cannonMeshGroup.add(muzzleFlashR);
-
-        const flashLightL = new THREE.PointLight(0x38bdf8, 0, 8); flashLightL.position.set(-0.45, 0.35, -2.1); cannonMeshGroup.add(flashLightL);
-        const flashLightR = new THREE.PointLight(0x38bdf8, 0, 8); flashLightR.position.set(0.45, 0.35, -2.1); cannonMeshGroup.add(flashLightR);
-
         cannonGroup.add(cannonMeshGroup); cannonGroup.position.set(0, 1.2, 0); scene.add(cannonGroup);
 
-        // Bullets
+        // Bullets & Plasma Orbs Systems
         const bulletGeo = new THREE.SphereGeometry(0.4, 16, 16);
         const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
         const bullets = [];
-
-        function triggerDualMuzzleFlash() {
-            flashMat.opacity = 1.0;
-            flashLightL.intensity = 5.0; flashLightR.intensity = 5.0;
-        }
-
-        function updateMuzzleFlashes(delta) {
-            if (flashMat.opacity > 0) {
-                flashMat.opacity = THREE.MathUtils.lerp(flashMat.opacity, 0, delta * 25);
-                flashLightL.intensity = THREE.MathUtils.lerp(flashLightL.intensity, 0, delta * 25);
-                flashLightR.intensity = THREE.MathUtils.lerp(flashLightR.intensity, 0, delta * 25);
-            }
-        }
+        const activePlasmaOrbs = [];
+        let domeOpenAnimation = 0; // 0 = closed, 1 = open
 
         function spawnBulletPair(x1, x2, z) {
             const bL = new THREE.Mesh(bulletGeo, bulletMat); bL.position.set(x1, 1.1, z); scene.add(bL);
             const bR = new THREE.Mesh(bulletGeo, bulletMat); bR.position.set(x2, 1.1, z); scene.add(bR);
-            const energyLight = new THREE.PointLight(0x38bdf8, 2.5, 12); energyLight.position.set((x1 + x2) / 2, 1.1, z); scene.add(energyLight);
-            bullets.push({ bL, bR, light: energyLight });
+            bullets.push({ bL, bR });
+        }
+
+        // --- Electric Plasma Orb Generator ---
+        function createPlasmaOrbMesh() {
+            const orbGroup = new THREE.Group();
+            
+            // Core Plasma Sphere
+            const coreGeo = new THREE.SphereGeometry(1.4, 24, 24);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            orbGroup.add(core);
+
+            // Glowing Energy Aura
+            const auraGeo = new THREE.SphereGeometry(1.9, 24, 24);
+            const auraMat = new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+            const aura = new THREE.Mesh(auraGeo, auraMat);
+            orbGroup.add(aura);
+
+            // Electric Bolts Ring
+            const ringGeo = new THREE.TorusGeometry(2.3, 0.08, 8, 24);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+            const ring1 = new THREE.Mesh(ringGeo, ringMat);
+            const ring2 = new THREE.Mesh(ringGeo, ringMat); ring2.rotation.x = Math.PI / 2;
+            orbGroup.add(ring1, ring2);
+
+            const plasmaLight = new THREE.PointLight(0xc084fc, 8, 30);
+            orbGroup.add(plasmaLight);
+
+            orbGroup.userData = { ring1, ring2, aura };
+            return orbGroup;
+        }
+
+        // Plasma Launch Trigger
+        let plasmaCooldown = false;
+        document.getElementById('plasma-btn').onclick = function() {
+            if (!isBossActive || plasmaCooldown || !activeBoss) return;
+            
+            plasmaCooldown = true;
+            this.classList.add('disabled');
+            
+            // Slide open Cannon Dome
+            domeOpenAnimation = 1.0;
+            playSound('plasma');
+
+            setTimeout(() => {
+                const plasmaOrb = createPlasmaOrbMesh();
+                plasmaOrb.position.set(cannonGroup.position.x, 1.8, cannonGroup.position.z - 1.2);
+                scene.add(plasmaOrb);
+                activePlasmaOrbs.push(plasmaOrb);
+
+                // Close dome after shot
+                setTimeout(() => { domeOpenAnimation = 0; }, 500);
+            }, 250);
+
+            // Cooldown Timer (5s)
+            setTimeout(() => {
+                plasmaCooldown = false;
+                document.getElementById('plasma-btn')?.classList.remove('disabled');
+            }, 5000);
+        };
+
+        function updatePlasmaOrbs(delta) {
+            // Smoothly animate Dome Lid opening/closing
+            dome.position.z = THREE.MathUtils.lerp(dome.position.z, domeOpenAnimation * 0.9, delta * 12);
+            dome.position.y = THREE.MathUtils.lerp(dome.position.y, 0.3 - (domeOpenAnimation * 0.2), delta * 12);
+
+            for (let i = activePlasmaOrbs.length - 1; i >= 0; i--) {
+                const orb = activePlasmaOrbs[i];
+                orb.position.z -= 65.0 * delta;
+
+                // Rotate Electric Plasma Rings & Pulse Aura
+                orb.userData.ring1.rotation.z += 15 * delta;
+                orb.userData.ring2.rotation.y += 15 * delta;
+                orb.userData.aura.scale.setScalar(1 + Math.sin(Date.now() * 0.02) * 0.15);
+
+                // Spark trail particles
+                createExplosion(orb.position, 0xc084fc, 3);
+                createExplosion(orb.position, 0x38bdf8, 2);
+
+                if (activeBoss && orb.position.distanceTo(activeBoss.position) < 4.5) {
+                    // MASSIVE DAMAGE TO BOSS
+                    const damage = 35;
+                    activeBoss.userData.hp -= damage;
+                    playSound('hit');
+                    triggerCameraShake(0.7);
+
+                    // HUGE PLASMA BURST
+                    createExplosion(orb.position, 0xa855f7, 50);
+                    createExplosion(orb.position, 0x38bdf8, 40);
+                    createExplosion(orb.position, 0xffffff, 30);
+                    updateLevelUI();
+
+                    scene.remove(orb);
+                    activePlasmaOrbs.splice(i, 1);
+
+                    if (activeBoss.userData.hp <= 0) {
+                        createExplosion(activeBoss.position, 0xc084fc, 70);
+                        scene.remove(activeBoss); activeBoss = null; isBossActive = false;
+                        score += 1500; currentLevel++; levelProgress = 0;
+                        setEnvironmentForLevel(currentLevel); updateLevelUI();
+                    }
+                } else if (orb.position.z < cannonGroup.position.z - 170) {
+                    scene.remove(orb); activePlasmaOrbs.splice(i, 1);
+                }
+            }
         }
 
         function updateBullets(delta) {
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const pair = bullets[i];
                 const moveDist = 95.0 * delta;
-
-                pair.bL.position.z -= moveDist; pair.bR.position.z -= moveDist; pair.light.position.z -= moveDist;
+                pair.bL.position.z -= moveDist; pair.bR.position.z -= moveDist;
                 let removePair = false;
 
                 [pair.bL, pair.bR].forEach(b => {
@@ -588,8 +625,7 @@
                             dem.userData.hp--;
                             createExplosion(b.position, 0x38bdf8);
                             if (dem.userData.hp <= 0) {
-                                score += dem.userData.scoreVal;
-                                levelProgress += 6;
+                                score += dem.userData.scoreVal; levelProgress += 6;
                                 document.getElementById('score-val').innerText = score;
                                 updateLevelUI();
                                 createExplosion(dem.position, dem.userData.color);
@@ -601,26 +637,22 @@
                     }
 
                     if (isBossActive && activeBoss && b.position.distanceTo(activeBoss.position) < 3.5) {
-                        activeBoss.userData.hp--; playSound('hit'); triggerCameraShake(0.1);
+                        activeBoss.userData.hp--; playSound('hit'); triggerCameraShake(0.08);
                         createExplosion(b.position, 0xef4444);
+                        updateLevelUI();
                         removePair = true;
 
                         if (activeBoss.userData.hp <= 0) {
-                            createExplosion(activeBoss.position, 0xf59e0b);
+                            createExplosion(activeBoss.position, 0xf59e0b, 50);
                             scene.remove(activeBoss); activeBoss = null; isBossActive = false;
-                            score += 1000;
-                            
-                            currentLevel++;
-                            levelProgress = 0;
-                            setEnvironmentForLevel(currentLevel);
-                            updateLevelUI();
+                            score += 1000; currentLevel++; levelProgress = 0;
+                            setEnvironmentForLevel(currentLevel); updateLevelUI();
                         }
                     }
                 });
 
                 if (removePair || pair.bL.position.z < cannonGroup.position.z - 160) {
-                    scene.remove(pair.bL); scene.remove(pair.bR); scene.remove(pair.light);
-                    bullets.splice(i, 1);
+                    scene.remove(pair.bL); scene.remove(pair.bR); bullets.splice(i, 1);
                 }
             }
         }
@@ -633,7 +665,7 @@
             if (!gameStarted || isPaused) return;
             e.preventDefault(); isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; 
         }, { passive: false });
-        renderer.domElement.addEventListener('touchend', (e) => { stopInput(); });
+        renderer.domElement.addEventListener('touchend', stopInput);
         renderer.domElement.addEventListener('touchmove', (e) => {
             if (isDragging && gameStarted && !isPaused) {
                 targetX += (e.touches[0].clientX - previousTouchX) * 0.045;
@@ -653,18 +685,19 @@
             }
         });
 
-        // Game State Engine
+        // Game Loop State
         let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
         function resetGame() {
             score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-            isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
+            isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0; domeOpenAnimation = 0;
             
             setEnvironmentForLevel(1);
 
             if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
             for (let dem of demons) scene.remove(dem); demons.length = 0;
-            for (let pair of bullets) { scene.remove(pair.bL); scene.remove(pair.bR); scene.remove(pair.light); } bullets.length = 0;
+            for (let pair of bullets) { scene.remove(pair.bL); scene.remove(pair.bR); } bullets.length = 0;
+            for (let orb of activePlasmaOrbs) scene.remove(orb); activePlasmaOrbs.length = 0;
             for (let p of particles) scene.remove(p); particles.length = 0;
 
             cannonGroup.position.set(0, 1.2, 0); targetX = 0;
@@ -680,17 +713,15 @@
             document.getElementById('game-over-modal').classList.remove('hidden');
         }
 
-        // --- BUTTON EVENTS ---
+        // Button Listeners
         document.getElementById('start-btn').onclick = function() {
             requestFullScreen(); initAudio(); resetGame(); gameStarted = true;
             const startOverlay = document.getElementById('start-overlay');
-            startOverlay.style.opacity = '0'; 
-            setTimeout(() => startOverlay.classList.add('hidden'), 300);
+            startOverlay.style.opacity = '0'; setTimeout(() => startOverlay.classList.add('hidden'), 300);
         };
 
         document.getElementById('restart-btn').onclick = function() {
-            requestFullScreen(); 
-            document.getElementById('game-over-modal').classList.add('hidden');
+            requestFullScreen(); document.getElementById('game-over-modal').classList.add('hidden');
             resetGame(); gameStarted = true;
         };
 
@@ -700,8 +731,7 @@
         };
 
         document.getElementById('resume-btn').onclick = function() { 
-            requestFullScreen(); isPaused = false; 
-            document.getElementById('pause-menu').classList.add('hidden'); 
+            requestFullScreen(); isPaused = false; document.getElementById('pause-menu').classList.add('hidden'); 
         };
 
         let clock = new THREE.Clock();
@@ -732,21 +762,15 @@
                 shootTimer += delta;
                 if (isFiring && shootTimer >= 0.11) {
                     shootTimer = 0;
-                    spawnBulletPair(
-                        cannonGroup.position.x - 0.45, 
-                        cannonGroup.position.x + 0.45, 
-                        cannonGroup.position.z - 1.2
-                    );
-                    triggerDualMuzzleFlash();
+                    spawnBulletPair(cannonGroup.position.x - 0.45, cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
                     playSound('shoot'); cannonRecoilZ = 0.2;
                 }
-
-                updateMuzzleFlashes(delta);
 
                 cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 10);
                 cannonMeshGroup.position.z = cannonRecoilZ;
 
                 updateBullets(delta);
+                updatePlasmaOrbs(delta);
                 updateDemons(delta);
 
                 if (cameraShakeIntensity > 0) {
