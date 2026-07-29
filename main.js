@@ -254,27 +254,25 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 6. REALISTIC LIZARD GEOMETRY & PROCEDURAL TEXTURES ---
     
-    // יצירת BumpMap של קשקשים דרך Canvas
     function createLizardScaleBumpMap() {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#808080'; // אפור ניטרלי לבסיס Bump
+        ctx.fillStyle = '#808080';
         ctx.fillRect(0, 0, 512, 512);
 
-        // ציור דפוס קשקשים
         const scaleSize = 16;
         for (let y = 0; y < 512; y += scaleSize) {
             for (let x = 0; x < 512; x += scaleSize) {
                 const offsetX = (y / scaleSize) % 2 === 0 ? 0 : scaleSize / 2;
                 ctx.beginPath();
                 ctx.arc(x + offsetX, y, scaleSize * 0.6, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff'; // קשקש בולט
+                ctx.fillStyle = '#ffffff';
                 ctx.fill();
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = '#202020'; // שקע
+                ctx.strokeStyle = '#202020';
                 ctx.stroke();
             }
         }
@@ -299,91 +297,94 @@ window.addEventListener('DOMContentLoaded', () => {
     function createLizardMesh(typeConfig) {
         const lizardGroup = new THREE.Group();
 
-        // חומר עור ריאליסטי עם BumpMap קשקשים
         const skinMat = new THREE.MeshStandardMaterial({ 
             color: typeConfig.skinColor, 
-            roughness: 0.45, 
-            metalness: 0.15,
+            roughness: 0.3, 
+            metalness: 0.2,
             bumpMap: scaleBumpMap,
-            bumpScale: 0.08
+            bumpScale: 0.15
         });
 
-        // עיניים זרחניות Emissive
+        const detailMat = new THREE.MeshStandardMaterial({ 
+            color: 0x0f172a, 
+            roughness: 0.5 
+        });
+
         const eyeMat = new THREE.MeshStandardMaterial({ 
             color: typeConfig.eyeColor, 
             emissive: typeConfig.eyeColor, 
-            emissiveIntensity: 2.5,
-            roughness: 0.1
+            emissiveIntensity: 4.0
         });
 
-        // 1. גוף הידרודינמי (גליל מתוח)
-        const bodyGeo = new THREE.CylinderGeometry(0.5, 0.35, 2.2, 12);
-        bodyGeo.rotateX(Math.PI / 2);
+        // 1. גוף רחב ומסיבי
+        const bodyGeo = new THREE.BoxGeometry(1.6, 0.9, 2.6);
         const body = new THREE.Mesh(bodyGeo, skinMat);
-        body.position.set(0, 0.7, 0);
+        body.position.set(0, 0.8, 0);
         body.castShadow = true;
         lizardGroup.add(body);
 
-        // 2. ראש מוארך עם חרטום מחודד
-        const headGeo = new THREE.ConeGeometry(0.48, 1.2, 10);
+        // 2. ראש מואץ ומשולשי
+        const headGeo = new THREE.ConeGeometry(1.1, 1.8, 4);
         headGeo.rotateX(-Math.PI / 2);
+        headGeo.rotateY(Math.PI / 4);
         const head = new THREE.Mesh(headGeo, skinMat);
-        head.position.set(0, 0.85, 1.4);
+        head.position.set(0, 1.0, 1.8);
         head.castShadow = true;
         lizardGroup.add(head);
 
-        // 3. עיניים פלואורסצנטיות בולטות
-        const eyeGeo = new THREE.SphereGeometry(0.12, 10, 10);
+        // 3. עיניים בוהקות מוגדלות
+        const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
         
         const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeL.position.set(-0.3, 1.0, 1.3);
+        eyeL.position.set(-0.75, 1.2, 1.8);
         lizardGroup.add(eyeL);
 
         const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeR.position.set(0.3, 1.0, 1.3);
+        eyeR.position.set(0.75, 1.2, 1.8);
         lizardGroup.add(eyeR);
 
-        // 4. גפיים כפופות (4 רגליים בצדדים)
-        const legGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9, 8);
+        // 4. קוצים אגרסיביים לאורך הגב
+        for (let z = -0.8; z <= 0.8; z += 0.5) {
+            const spikeGeo = new THREE.ConeGeometry(0.25, 0.7, 4);
+            const spike = new THREE.Mesh(spikeGeo, detailMat);
+            spike.position.set(0, 1.5, z);
+            lizardGroup.add(spike);
+        }
 
-        // רגליים קדמיות
+        // 5. רגליים עבות ופרוסות לצדדים
+        const legGeo = new THREE.BoxGeometry(1.1, 0.35, 0.45);
+
         const legFL = new THREE.Mesh(legGeo, skinMat);
-        legFL.position.set(-0.6, 0.4, 0.6);
-        legFL.rotation.z = Math.PI / 4;
-        legFL.rotation.x = -Math.PI / 6;
+        legFL.position.set(-1.1, 0.5, 0.7);
+        legFL.rotation.z = 0.3;
         lizardGroup.add(legFL);
 
         const legFR = new THREE.Mesh(legGeo, skinMat);
-        legFR.position.set(0.6, 0.4, 0.6);
-        legFR.rotation.z = -Math.PI / 4;
-        legFR.rotation.x = -Math.PI / 6;
+        legFR.position.set(1.1, 0.5, 0.7);
+        legFR.rotation.z = -0.3;
         lizardGroup.add(legFR);
 
-        // רגליים אחוריות
         const legBL = new THREE.Mesh(legGeo, skinMat);
-        legBL.position.set(-0.6, 0.4, -0.6);
-        legBL.rotation.z = Math.PI / 4;
-        legBL.rotation.x = Math.PI / 6;
+        legBL.position.set(-1.1, 0.5, -0.7);
+        legBL.rotation.z = 0.3;
         lizardGroup.add(legBL);
 
         const legBR = new THREE.Mesh(legGeo, skinMat);
-        legBR.position.set(0.6, 0.4, -0.6);
-        legBR.rotation.z = -Math.PI / 4;
-        legBR.rotation.x = Math.PI / 6;
+        legBR.position.set(1.1, 0.5, -0.7);
+        legBR.rotation.z = -0.3;
         lizardGroup.add(legBR);
 
-        // 5. זנב ארוך
-        const tailGeo = new THREE.ConeGeometry(0.3, 2.0, 8);
+        // 6. זנב ארוך
+        const tailGeo = new THREE.ConeGeometry(0.55, 2.5, 5);
         tailGeo.rotateX(Math.PI / 2);
         const tail = new THREE.Mesh(tailGeo, skinMat);
-        tail.position.set(0, 0.6, -1.8);
+        tail.position.set(0, 0.7, -2.2);
         tail.castShadow = true;
         lizardGroup.add(tail);
 
-        // סיבוב הלטאה שתביט לכיוון התותח (+Z)
         lizardGroup.rotation.y = Math.PI;
 
-        lizardGroup.scale.setScalar(typeConfig.scale);
+        lizardGroup.scale.setScalar(typeConfig.scale * 1.35);
         lizardGroup.userData = { 
             hp: typeConfig.hp, 
             speed: typeConfig.speed, 
@@ -440,7 +441,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const liz = lizards[i];
             liz.position.z += liz.userData.speed * delta;
 
-            if (liz.position.distanceTo(cannonGroup.position) < 2.0) {
+            if (liz.position.distanceTo(cannonGroup.position) < 2.5) {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
@@ -462,7 +463,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeBoss.position.z += activeBoss.userData.speed * delta;
             }
 
-            if (activeBoss.position.distanceTo(cannonGroup.position) < 4.5) {
+            if (activeBoss.position.distanceTo(cannonGroup.position) < 5.0) {
                 currentHp -= 200;
                 updateHpBar();
                 playSound('hit');
@@ -969,7 +970,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             if (isBossActive && activeBoss) {
-                if (b.position.distanceTo(activeBoss.position) < 3.5) {
+                if (b.position.distanceTo(activeBoss.position) < 4.0) {
                     playSound('boss_hit');
                     triggerCameraShake(0.12);
                     activeBoss.userData.hp--;
@@ -994,7 +995,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             for (let j = lizards.length - 1; j >= 0; j--) {
                 const liz = lizards[j];
-                if (b.position.distanceTo(liz.position) < 1.6) {
+                if (b.position.distanceTo(liz.position) < 2.0) {
                     playSound('hit');
                     liz.userData.hp--;
                     scene.remove(b);
