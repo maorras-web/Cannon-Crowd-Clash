@@ -117,7 +117,6 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
 
-    // תאורה מעוצבת ומודרנית
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
@@ -129,7 +128,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x030712, 0.8);
     scene.add(hemiLight);
 
-    // --- 3.1. משתנים עבור Camera Shake & Recoil ---
+    // Camera Shake & Recoil
     let cameraShakeIntensity = 0;
     let cannonRecoilZ = 0;
 
@@ -155,7 +154,7 @@ window.addEventListener('DOMContentLoaded', () => {
     track.receiveShadow = true;
     scene.add(track);
 
-    // --- 4.1. 4000 כוכבים בחלל החיצון ---
+    // Stars
     const starCount = 4000;
     const starPositions = new Float32Array(starCount * 3);
 
@@ -286,7 +285,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
-                triggerCameraShake(0.4); // רעד מצלמה בלקיחת נזק
+                triggerCameraShake(0.4);
                 scene.remove(liz);
                 lizards.splice(i, 1);
                 if (currentHp <= 0) { gameOver(); return; }
@@ -308,13 +307,13 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentHp -= 200;
                 updateHpBar();
                 playSound('hit');
-                triggerCameraShake(0.6); // רעד רציני כשבוס פוגע בנו
+                triggerCameraShake(0.6);
                 if (currentHp <= 0) gameOver();
             }
         }
     }
 
-    // --- 7. High-Detail Cannon with Thrusters & Flame Effects ---
+    // --- 7. High-Detail Cannon with Realistic Long Fire Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -354,24 +353,82 @@ window.addEventListener('DOMContentLoaded', () => {
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    // להבות מנועי דחף
-    const flameGeo = new THREE.ConeGeometry(0.22, 0.9, 12);
-    flameGeo.rotateZ(Math.PI / 2);
+    // --- 7.1. REALISTIC FIRE PARTICLES SYSTEM (מדחפי אש ריאליסטיים וארוכים) ---
+    const fireParticles = [];
+    const fireParticleGeo = new THREE.SphereGeometry(0.35, 8, 8);
 
-    const flameMatL = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
-    const thrustFlameL = new THREE.Mesh(flameGeo, flameMatL);
-    thrustFlameL.position.set(-1.8, 0.2, 0);
-    cannonMeshGroup.add(thrustFlameL);
+    function createFireTextureCanvas() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64; canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        grad.addColorStop(0, 'rgba(255, 255, 220, 1)');
+        grad.addColorStop(0.3, 'rgba(255, 140, 0, 0.8)');
+        grad.addColorStop(0.7, 'rgba(220, 38, 38, 0.5)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(canvas);
+    }
 
-    const flameGeoR = new THREE.ConeGeometry(0.22, 0.9, 12);
-    flameGeoR.rotateZ(-Math.PI / 2);
+    const fireTexture = createFireTextureCanvas();
+    const fireMaterialTemplate = new THREE.SpriteMaterial({
+        map: fireTexture,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false
+    });
 
-    const flameMatR = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
-    const thrustFlameR = new THREE.Mesh(flameGeoR, flameMatR);
-    thrustFlameR.position.set(1.8, 0.2, 0);
-    cannonMeshGroup.add(thrustFlameR);
+    function spawnEngineFireParticle(localX, localY, localZ) {
+        const sprite = new THREE.Sprite(fireMaterialTemplate.clone());
+        const worldPos = new THREE.Vector3(localX, localY, localZ);
+        cannonMeshGroup.localToWorld(worldPos);
 
-    // --- 7.1. Muzzle Flash System ---
+        sprite.position.copy(worldPos);
+        sprite.scale.set(0.6, 0.6, 1.0);
+        scene.add(sprite);
+
+        fireParticles.push({
+            sprite: sprite,
+            life: 1.0,
+            speedZ: 25.0 + Math.random() * 10.0,
+            spreadX: (Math.random() - 0.5) * 0.8,
+            spreadY: (Math.random() - 0.5) * 0.5,
+            scaleSpeed: 3.5 + Math.random() * 2.0
+        });
+    }
+
+    function updateEngineFire(delta) {
+        // פליטת חלקיקי אש רציפה מהמנועים הימני והשמאלי
+        if (gameStarted && !isPaused) {
+            for (let i = 0; i < 3; i++) {
+                spawnEngineFireParticle(-1.6, 0.2, 0.3);
+                spawnEngineFireParticle(1.6, 0.2, 0.3);
+            }
+        }
+
+        for (let i = fireParticles.length - 1; i >= 0; i--) {
+            const p = fireParticles[i];
+            p.life -= delta * 3.2;
+
+            if (p.life <= 0) {
+                scene.remove(p.sprite);
+                p.sprite.material.dispose();
+                fireParticles.splice(i, 1);
+                continue;
+            }
+
+            p.sprite.position.z += p.speedZ * delta;
+            p.sprite.position.x += p.spreadX * delta;
+            p.sprite.position.y += p.spreadY * delta;
+
+            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.5;
+            p.sprite.scale.set(currentScale, currentScale, 1.0);
+            p.sprite.material.opacity = p.life * p.life; 
+        }
+    }
+
+    // --- 7.2. Muzzle Flash System ---
     const muzzleFlashes = [];
     const muzzleFlashGeo = new THREE.SphereGeometry(0.5, 12, 12);
     const muzzleFlashMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1.0 });
@@ -438,7 +495,7 @@ window.addEventListener('DOMContentLoaded', () => {
         bullets.push(bulletGroup);
     }
 
-    // --- 8.5. מערכת החלקיקים ---
+    // --- 8.5. Gate Particle System ---
     const activeParticleSystems = [];
 
     function createGateParticles(position, isMultiply) {
@@ -718,12 +775,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
 
-        const flameScale = 0.85 + Math.sin(elapsedTime * 35) * 0.25;
-        thrustFlameL.scale.set(flameScale, flameScale, flameScale);
-        thrustFlameR.scale.set(flameScale, flameScale, flameScale);
-        flameMatL.opacity = 0.75 + Math.random() * 0.25;
-        flameMatR.opacity = 0.75 + Math.random() * 0.25;
-
+        updateEngineFire(delta);
         updateLizards(delta);
         updateParticles(delta);
         updateGates(elapsedTime, delta);
@@ -733,11 +785,11 @@ window.addEventListener('DOMContentLoaded', () => {
         currentX = THREE.MathUtils.lerp(currentX, targetX, 0.25);
         cannonGroup.position.x = currentX;
 
-        // חישוב הרתע (Recoil)
+        // Recoil
         cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 15.0);
         cannonMeshGroup.position.z = cannonRecoilZ;
 
-        // חישוב רעד המצלמה (Camera Shake)
+        // Camera Shake
         let shakeOffsetX = 0;
         let shakeOffsetY = 0;
         if (cameraShakeIntensity > 0) {
@@ -746,7 +798,6 @@ window.addEventListener('DOMContentLoaded', () => {
             cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8.0);
         }
 
-        // עדכון מיקום המצלמה כולל רעד
         camera.position.x = cannonGroup.position.x * 0.15 + shakeOffsetX;
         camera.position.y = cannonGroup.position.y + 12.5 + shakeOffsetY;
         camera.position.z = cannonGroup.position.z + 18.0;
@@ -764,7 +815,6 @@ window.addEventListener('DOMContentLoaded', () => {
             triggerMuzzleFlash(lx, 1.35, fz);
             triggerMuzzleFlash(rx, 1.35, fz);
 
-            // הפעלת רתע בכל ירייה
             cannonRecoilZ = 0.35;
 
             playSound('shoot');
@@ -794,7 +844,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (isBossActive && activeBoss) {
                 if (b.position.distanceTo(activeBoss.position) < 3.2) {
                     playSound('boss_hit');
-                    triggerCameraShake(0.12); // רעד קל במכה בבוס
+                    triggerCameraShake(0.12);
                     activeBoss.userData.hp -= 1;
                     scene.remove(b);
                     bullets.splice(i, 1);
@@ -802,7 +852,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (activeBoss.userData.hp <= 0) {
                         score += activeBoss.userData.scoreVal;
                         document.getElementById('score-val').innerText = score;
-                        triggerCameraShake(0.5); // רעד חזק בהשמדת הבוס
+                        triggerCameraShake(0.5);
                         scene.remove(activeBoss);
                         activeBoss = null;
                         isBossActive = false;
@@ -825,7 +875,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (liz.userData.hp <= 0) {
                         score += liz.userData.scoreVal;
                         document.getElementById('score-val').innerText = score;
-                        triggerCameraShake(0.08); // רעד קל בהריגת אויב
+                        triggerCameraShake(0.08);
 
                         if (!isBossActive) {
                             levelProgress += 10;
