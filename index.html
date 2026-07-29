@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D - Deluxe Edition</title>
+    <title>Track Shooter 3D - Demon Edition</title>
     <style>
         * { box-sizing: border-box; }
         body, html {
@@ -124,7 +124,6 @@
 
     window.addEventListener('DOMContentLoaded', () => {
 
-        // --- 0. Touch & UI Hijacking ---
         document.documentElement.style.touchAction = 'none';
         document.body.style.touchAction = 'none';
         
@@ -140,7 +139,7 @@
             else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
         }
 
-        // --- 1. Audio Engine ---
+        // --- Audio System ---
         let audioCtx = null, masterGainNode = null, masterVolume = 0.25;
 
         function initAudio() {
@@ -184,7 +183,7 @@
             } catch(e) {}
         }
 
-        // --- 2. Game State & HighScore ---
+        // --- Game Logic & Progress ---
         let currentLevel = 1, levelProgress = 0, maxLevelProgress = 100;
         let isBossActive = false, activeBoss = null;
         let highScore = localStorage.getItem('cannon_high_score') || 0;
@@ -204,7 +203,7 @@
             }
         }
 
-        // --- 3. Scene & Graphics ---
+        // --- Three.js Setup ---
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x030712, 0.008);
 
@@ -274,23 +273,23 @@
         const railR = new THREE.Mesh(railGeo, railMat); railR.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
         scene.add(railL, railR);
 
-        // Particle System for Explosions
+        // Particle System
         const particles = [];
         const particleGeo = new THREE.SphereGeometry(0.12, 6, 6);
 
-        function createExplosion(position, colorHex = 0x38bdf8) {
-            const count = 12;
+        function createExplosion(position, colorHex = 0xef4444) {
+            const count = 16;
             const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
             for (let i = 0; i < count; i++) {
                 const p = new THREE.Mesh(particleGeo, pMat);
                 p.position.copy(position);
                 p.userData = {
                     vel: new THREE.Vector3(
-                        (Math.random() - 0.5) * 12,
-                        Math.random() * 8 + 2,
-                        (Math.random() - 0.5) * 12
+                        (Math.random() - 0.5) * 14,
+                        Math.random() * 10 + 2,
+                        (Math.random() - 0.5) * 14
                     ),
-                    life: 0.4
+                    life: 0.45
                 };
                 scene.add(p);
                 particles.push(p);
@@ -371,72 +370,103 @@
             hpBar.style.backgroundColor = colorHex;
         }
 
-        // Enemies & Boss
-        const lizards = []; let lizardSpawnTimer = 0;
-        const ENEMY_TYPES = {
-            STANDARD: { skinColor: 0x16a34a, eyeColor: 0xef4444, scale: 1.1, speed: 16.0, hp: 1, scoreVal: 30 },
-            FAST:     { skinColor: 0xca8a04, eyeColor: 0x38bdf8, scale: 0.85, speed: 24.0, hp: 1, scoreVal: 50 },
-            ARMORED:  { skinColor: 0x7e22ce, eyeColor: 0xfacc15, scale: 1.5, speed: 10.0, hp: 4, scoreVal: 100 }
+        // --- TALL RED DEMONS (Replaces Lizards) ---
+        const demons = []; let demonSpawnTimer = 0;
+        const DEMON_TYPES = {
+            STANDARD: { bodyColor: 0xd97706, heightScale: 1.8, speed: 15.0, hp: 1, scoreVal: 30 },
+            FAST:     { bodyColor: 0xef4444, heightScale: 2.1, speed: 23.0, hp: 1, scoreVal: 50 },
+            ARMORED:  { bodyColor: 0x991b1b, heightScale: 2.6, speed: 9.0,  hp: 4, scoreVal: 100 }
         };
 
-        function createLizardMesh(typeConfig) {
-            const lizardGroup = new THREE.Group();
-            const skinMat = new THREE.MeshStandardMaterial({ color: typeConfig.skinColor, roughness: 0.25, metalness: 0.4 });
-            const eyeMat = new THREE.MeshBasicMaterial({ color: typeConfig.eyeColor });
+        function createDemonMesh(typeConfig) {
+            const demonGroup = new THREE.Group();
+            
+            const demonMat = new THREE.MeshStandardMaterial({ color: typeConfig.bodyColor, roughness: 0.3, metalness: 0.3 });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x450a0a, roughness: 0.5 });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const hornMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.2 });
 
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 2.6), skinMat); body.position.set(0, 0.8, 0); lizardGroup.add(body);
-            const headGeo = new THREE.ConeGeometry(1.1, 1.8, 4); headGeo.rotateX(-Math.PI / 2); headGeo.rotateY(Math.PI / 4);
-            const head = new THREE.Mesh(headGeo, skinMat); head.position.set(0, 1.0, 1.8); lizardGroup.add(head);
+            // Tall Torso
+            const torsoGeo = new THREE.CylinderGeometry(0.7, 0.4, 3.2, 10);
+            const torso = new THREE.Mesh(torsoGeo, demonMat);
+            torso.position.y = 1.6;
+            demonGroup.add(torso);
 
-            const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.75, 1.2, 1.8); lizardGroup.add(eyeL);
-            const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.75, 1.2, 1.8); lizardGroup.add(eyeR);
+            // Head
+            const headGeo = new THREE.BoxGeometry(0.9, 1.0, 0.9);
+            const head = new THREE.Mesh(headGeo, demonMat);
+            head.position.set(0, 3.4, 0);
+            demonGroup.add(head);
 
-            lizardGroup.rotation.y = Math.PI;
-            lizardGroup.scale.setScalar(typeConfig.scale * 1.35);
-            lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal, color: typeConfig.skinColor };
-            return lizardGroup;
+            // Glowing Red Eyes
+            const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.25, 3.5, 0.45);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.25, 3.5, 0.45);
+            demonGroup.add(eyeL, eyeR);
+
+            // Sharp Tall Horns
+            const hornGeo = new THREE.ConeGeometry(0.18, 1.2, 6);
+            hornGeo.rotateX(-0.2);
+            const hornL = new THREE.Mesh(hornGeo, hornMat); hornL.position.set(-0.35, 4.3, 0.1); hornL.rotation.z = 0.2;
+            const hornR = new THREE.Mesh(hornGeo, hornMat); hornR.position.set(0.35, 4.3, 0.1); hornR.rotation.z = -0.2;
+            demonGroup.add(hornL, hornR);
+
+            // Long Arms
+            const armGeo = new THREE.BoxGeometry(0.3, 2.2, 0.3);
+            const armL = new THREE.Mesh(armGeo, darkMat); armL.position.set(-0.95, 2.0, 0); armL.rotation.z = 0.15;
+            const armR = new THREE.Mesh(armGeo, darkMat); armR.position.set(0.95, 2.0, 0); armR.rotation.z = -0.15;
+            demonGroup.add(armL, armR);
+
+            demonGroup.scale.set(1.2, typeConfig.heightScale, 1.2);
+            demonGroup.userData = { 
+                hp: typeConfig.hp, 
+                speed: typeConfig.speed, 
+                scoreVal: typeConfig.scoreVal, 
+                color: typeConfig.bodyColor 
+            };
+            return demonGroup;
         }
 
-        function spawnLizard() {
+        function spawnDemon() {
             if (isBossActive) return;
             const rand = Math.random();
-            let config = ENEMY_TYPES.STANDARD;
-            if (rand > 0.75) config = ENEMY_TYPES.ARMORED;
-            else if (rand > 0.5) config = ENEMY_TYPES.FAST;
+            let config = DEMON_TYPES.STANDARD;
+            if (rand > 0.75) config = DEMON_TYPES.ARMORED;
+            else if (rand > 0.5) config = DEMON_TYPES.FAST;
 
-            const lizard = createLizardMesh(config);
-            lizard.position.set((Math.random() - 0.5) * (trackWidth - 3), 0, cannonGroup.position.z - 120 - Math.random() * 30);
-            scene.add(lizard); lizards.push(lizard);
+            const demon = createDemonMesh(config);
+            demon.position.set((Math.random() - 0.5) * (trackWidth - 3), 0, cannonGroup.position.z - 120 - Math.random() * 30);
+            scene.add(demon); demons.push(demon);
         }
 
         function spawnBoss() {
             isBossActive = true; updateLevelUI();
-            const bossConfig = { skinColor: 0xd97706, eyeColor: 0xef4444, scale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
-            activeBoss = createLizardMesh(bossConfig);
+            const bossConfig = { bodyColor: 0x7f1d1d, heightScale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
+            activeBoss = createDemonMesh(bossConfig);
+            activeBoss.scale.set(2.5, 3.5, 2.5);
             activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
             activeBoss.userData.maxHp = bossConfig.hp;
             scene.add(activeBoss);
         }
 
-        function updateLizards(delta) {
+        function updateDemons(delta) {
             if (!isBossActive) {
-                lizardSpawnTimer += delta;
-                if (lizardSpawnTimer >= 2.0) { lizardSpawnTimer = 0; spawnLizard(); }
+                demonSpawnTimer += delta;
+                if (demonSpawnTimer >= 1.8) { demonSpawnTimer = 0; spawnDemon(); }
             }
 
-            for (let i = lizards.length - 1; i >= 0; i--) {
-                const liz = lizards[i];
-                liz.position.z += liz.userData.speed * delta;
+            for (let i = demons.length - 1; i >= 0; i--) {
+                const dem = demons[i];
+                dem.position.z += dem.userData.speed * delta;
 
-                if (liz.position.distanceTo(cannonGroup.position) < 2.5) {
-                    currentHp -= 100; updateHpBar(); playSound('hit'); triggerCameraShake(0.3);
-                    createExplosion(liz.position, liz.userData.color);
-                    scene.remove(liz); lizards.splice(i, 1);
+                if (dem.position.distanceTo(cannonGroup.position) < 2.5) {
+                    currentHp -= 100; updateHpBar(); playSound('hit'); triggerCameraShake(0.35);
+                    createExplosion(dem.position, dem.userData.color);
+                    scene.remove(dem); demons.splice(i, 1);
                     if (currentHp <= 0) { gameOver(); return; }
                     continue;
                 }
-                if (liz.position.z > cannonGroup.position.z + 10) { scene.remove(liz); lizards.splice(i, 1); }
+                if (dem.position.z > cannonGroup.position.z + 10) { scene.remove(dem); demons.splice(i, 1); }
             }
 
             if (isBossActive && activeBoss) {
@@ -448,7 +478,7 @@
             }
         }
 
-        // Cannon & Color Customization
+        // --- Cannon Setup & BOTH BARRELS MUZZLE FLASH ---
         const cannonGroup = new THREE.Group();
         const cannonMeshGroup = new THREE.Group();
 
@@ -458,23 +488,47 @@
 
         changeCannonColorFn = function(hexColor) {
             baseMat.color.setHex(hexColor);
-            bulletLight.color.setHex(hexColor);
+            flashLightL.color.setHex(hexColor);
+            flashLightR.color.setHex(hexColor);
         };
 
         const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat); base.rotation.x = Math.PI / 12; cannonMeshGroup.add(base);
         const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat); dome.position.y = 0.3; cannonMeshGroup.add(dome);
+        
         const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelL.rotation.x = Math.PI / 2; barrelL.position.set(-0.45, 0.35, -1.0); cannonMeshGroup.add(barrelL);
         const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat); barrelR.rotation.x = Math.PI / 2; barrelR.position.set(0.45, 0.35, -1.0); cannonMeshGroup.add(barrelR);
 
+        // Visual Flash Glow Mesh for BOTH Barrels
+        const flashGeo = new THREE.SphereGeometry(0.4, 12, 12);
+        const flashMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0 });
+
+        const muzzleFlashL = new THREE.Mesh(flashGeo, flashMat); muzzleFlashL.position.set(-0.45, 0.35, -2.1); cannonMeshGroup.add(muzzleFlashL);
+        const muzzleFlashR = new THREE.Mesh(flashGeo, flashMat); muzzleFlashR.position.set(0.45, 0.35, -2.1); cannonMeshGroup.add(muzzleFlashR);
+
+        // Point Lights for BOTH Barrels
+        const flashLightL = new THREE.PointLight(0x38bdf8, 0, 8); flashLightL.position.set(-0.45, 0.35, -2.1); cannonMeshGroup.add(flashLightL);
+        const flashLightR = new THREE.PointLight(0x38bdf8, 0, 8); flashLightR.position.set(0.45, 0.35, -2.1); cannonMeshGroup.add(flashLightR);
+
         cannonGroup.add(cannonMeshGroup); cannonGroup.position.set(0, 1.2, 0); scene.add(cannonGroup);
 
-        // Bullets & Muzzle Light
+        // Bullets
         const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
         const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
         const bullets = [];
 
-        const bulletLight = new THREE.PointLight(0x38bdf8, 4.0, 25);
-        bulletLight.visible = false; scene.add(bulletLight);
+        function triggerDualMuzzleFlash() {
+            flashMat.opacity = 1.0;
+            flashLightL.intensity = 5.0;
+            flashLightR.intensity = 5.0;
+        }
+
+        function updateMuzzleFlashes(delta) {
+            if (flashMat.opacity > 0) {
+                flashMat.opacity = THREE.MathUtils.lerp(flashMat.opacity, 0, delta * 25);
+                flashLightL.intensity = THREE.MathUtils.lerp(flashLightL.intensity, 0, delta * 25);
+                flashLightR.intensity = THREE.MathUtils.lerp(flashLightR.intensity, 0, delta * 25);
+            }
+        }
 
         function spawnBullet(x, z) {
             const bullet = new THREE.Mesh(bulletGeo, bulletMat);
@@ -483,29 +537,23 @@
         }
 
         function updateBullets(delta) {
-            if (bullets.length > 0) {
-                bulletLight.visible = true;
-                const leadBullet = bullets[bullets.length - 1];
-                bulletLight.position.set(leadBullet.position.x, 1.5, leadBullet.position.z);
-            } else { bulletLight.visible = false; }
-
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
                 b.position.z -= 95.0 * delta;
 
                 let hitEnemy = false;
-                for (let j = lizards.length - 1; j >= 0; j--) {
-                    const liz = lizards[j];
-                    if (b.position.distanceTo(liz.position) < 1.6) {
-                        liz.userData.hp--;
+                for (let j = demons.length - 1; j >= 0; j--) {
+                    const dem = demons[j];
+                    if (b.position.distanceTo(dem.position) < 1.8) {
+                        dem.userData.hp--;
                         createExplosion(b.position, 0x38bdf8);
-                        if (liz.userData.hp <= 0) {
-                            score += liz.userData.scoreVal;
+                        if (dem.userData.hp <= 0) {
+                            score += dem.userData.scoreVal;
                             levelProgress += 5;
                             document.getElementById('score-val').innerText = score;
                             updateLevelUI();
-                            createExplosion(liz.position, liz.userData.color);
-                            scene.remove(liz); lizards.splice(j, 1);
+                            createExplosion(dem.position, dem.userData.color);
+                            scene.remove(dem); demons.splice(j, 1);
                             if (levelProgress >= maxLevelProgress && !isBossActive) spawnBoss();
                         }
                         hitEnemy = true; playSound('hit'); break;
@@ -531,7 +579,7 @@
             }
         }
 
-        // Controls
+        // Touch & Mouse Controls
         let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
         function stopInput() { isDragging = false; isFiring = false; }
 
@@ -564,7 +612,7 @@
             isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
             
             if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
-            for (let liz of lizards) scene.remove(liz); lizards.length = 0;
+            for (let dem of demons) scene.remove(dem); demons.length = 0;
             for (let b of bullets) scene.remove(b); bullets.length = 0;
             for (let p of particles) scene.remove(p); particles.length = 0;
 
@@ -626,14 +674,17 @@
                     shootTimer = 0;
                     spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
                     spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
+                    triggerDualMuzzleFlash();
                     playSound('shoot'); cannonRecoilZ = 0.2;
                 }
+
+                updateMuzzleFlashes(delta);
 
                 cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 10);
                 cannonMeshGroup.position.z = cannonRecoilZ;
 
                 updateBullets(delta);
-                updateLizards(delta);
+                updateDemons(delta);
 
                 if (cameraShakeIntensity > 0) {
                     cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8);
