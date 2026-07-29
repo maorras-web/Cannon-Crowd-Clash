@@ -361,7 +361,7 @@ window.addEventListener('DOMContentLoaded', () => {
     thrustFlameR.position.set(1.8, 0.2, 0);
     cannonMeshGroup.add(thrustFlameR);
 
-    // --- 7.1. Muzzle Flash System (הבזק לוע ברגע ירייה) ---
+    // --- 7.1. Muzzle Flash System ---
     const muzzleFlashes = [];
     const muzzleFlashGeo = new THREE.SphereGeometry(0.5, 12, 12);
     const muzzleFlashMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1.0 });
@@ -376,7 +376,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateMuzzleFlashes(delta) {
         for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
             const f = muzzleFlashes[i];
-            f.life -= delta * 15.0; // נעלם מהר מאוד
+            f.life -= delta * 15.0;
             if (f.life <= 0) {
                 scene.remove(f.mesh);
                 f.mesh.material.dispose();
@@ -406,9 +406,8 @@ window.addEventListener('DOMContentLoaded', () => {
         roughness: 0.1 
     });
 
-    // גיאומטריית שובל האור (Bullet Trail)
     const trailGeo = new THREE.CylinderGeometry(0.04, 0.22, 2.8, 8);
-    trailGeo.rotateX(Math.PI / 2); // הטיות הזנב לאורך ציר ה-Z
+    trailGeo.rotateX(Math.PI / 2);
     const trailMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.65 });
 
     const bullets = [];
@@ -416,14 +415,12 @@ window.addEventListener('DOMContentLoaded', () => {
     function spawnBullet(x, z) {
         const bulletGroup = new THREE.Group();
 
-        // כדור ראשי
         const mainBullet = new THREE.Mesh(bulletGeo, bulletMat);
         mainBullet.scale.set(1, 1, 1.8);
         bulletGroup.add(mainBullet);
 
-        // שובל נמתח מאחורי הכדור
         const trail = new THREE.Mesh(trailGeo, trailMat);
-        trail.position.z = 1.4; // מיקום הזנב מאחורי הכדור
+        trail.position.z = 1.4;
         bulletGroup.add(trail);
 
         bulletGroup.position.set(x, 1.1, z);
@@ -683,7 +680,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('resume-btn')?.addEventListener('click', () => { 
         isPaused = false; 
-        document.getElementById('pause-menu')?.classList.hidden = true;
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
 
@@ -709,7 +705,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
 
-        // אנימציית הבהוב להבות מנועי הצידים
         const flameScale = 0.85 + Math.sin(elapsedTime * 35) * 0.25;
         thrustFlameL.scale.set(flameScale, flameScale, flameScale);
         thrustFlameR.scale.set(flameScale, flameScale, flameScale);
