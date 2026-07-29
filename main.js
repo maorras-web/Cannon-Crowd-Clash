@@ -102,10 +102,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 3. Scene, Renderer & Modern High-Res Graphics Setup ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x020208);
-    scene.fog = new THREE.FogExp2(0x020208, 0.0035);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
@@ -136,6 +134,54 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
+    // --- 3.1. REALISTIC NEBULA & GALAXY SKYBOX (רקע גלקסיה וערפיליות) ---
+    function createGalaxyTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024; canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+
+        // בסיס חלל כהה
+        ctx.fillStyle = '#02020a';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // ציור ערפיליות גלקסיה בצבעי סגול, כחול ורוד
+        const nebulae = [
+            { x: 300, y: 400, r: 350, color: 'rgba(147, 51, 234, 0.35)' },
+            { x: 750, y: 300, r: 400, color: 'rgba(59, 130, 246, 0.30)' },
+            { x: 500, y: 700, r: 300, color: 'rgba(236, 72, 153, 0.25)' },
+            { x: 200, y: 800, r: 250, color: 'rgba(99, 102, 241, 0.30)' }
+        ];
+
+        nebulae.forEach(n => {
+            const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+            grad.addColorStop(0, n.color);
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 1024, 1024);
+        });
+
+        for (let i = 0; i < 500; i++) {
+            const x = Math.random() * 1024;
+            const y = Math.random() * 1024;
+            const radius = Math.random() * 1.5;
+            const opacity = Math.random() * 0.8;
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    const galaxySkyGeo = new THREE.SphereGeometry(800, 32, 32);
+    const galaxySkyMat = new THREE.MeshBasicMaterial({
+        map: createGalaxyTexture(),
+        side: THREE.BackSide
+    });
+    const galaxySky = new THREE.Mesh(galaxySkyGeo, galaxySkyMat);
+    scene.add(galaxySky);
+
     // --- 4. Modern Neon Track & Environment ---
     const trackWidth = 18; 
     const maxBoundX = trackWidth / 2 - 1.2; 
@@ -154,14 +200,14 @@ window.addEventListener('DOMContentLoaded', () => {
     track.receiveShadow = true;
     scene.add(track);
 
-    // Stars
-    const starCount = 4000;
+    // Stars Particles
+    const starCount = 3000;
     const starPositions = new Float32Array(starCount * 3);
 
     for (let i = 0; i < starCount; i++) {
         const side = Math.random() < 0.5 ? -1 : 1;
-        const x = side * (12 + Math.random() * 80);
-        const y = (Math.random() - 0.5) * 80;
+        const x = side * (12 + Math.random() * 100);
+        const y = (Math.random() - 0.5) * 100;
         const z = (Math.random() - 0.5) * trackLength;
 
         starPositions[i * 3]     = x;
@@ -174,9 +220,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const starMat = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.28,
+        size: 0.35,
         transparent: true,
-        opacity: 0.9
+        opacity: 0.95
     });
 
     const starField = new THREE.Points(starGeo, starMat);
@@ -313,7 +359,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. High-Detail Cannon with Realistic Long Fire Thrusters ---
+    // --- 7. High-Detail Cannon with Side Thrusters ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -340,7 +386,7 @@ window.addEventListener('DOMContentLoaded', () => {
     barrelR.position.set(0.45, 0.35, -1.0);
     cannonMeshGroup.add(barrelR);
 
-    // מנועי דחף צדיים
+    // מנועי דחף צדיים (אגזוזים)
     const thrusterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
     
     const thrusterL = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.7, 16), thrusterMat);
@@ -353,9 +399,8 @@ window.addEventListener('DOMContentLoaded', () => {
     thrusterR.position.set(1.3, 0.2, 0);
     cannonMeshGroup.add(thrusterR);
 
-    // --- 7.1. REALISTIC FIRE PARTICLES SYSTEM (מדחפי אש ריאליסטיים וארוכים) ---
+    // --- 7.1. REALISTIC SIDE-ENGINE FIRE PARTICLES ---
     const fireParticles = [];
-    const fireParticleGeo = new THREE.SphereGeometry(0.35, 8, 8);
 
     function createFireTextureCanvas() {
         const canvas = document.createElement('canvas');
@@ -399,11 +444,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateEngineFire(delta) {
-        // פליטת חלקיקי אש רציפה מהמנועים הימני והשמאלי
         if (gameStarted && !isPaused) {
             for (let i = 0; i < 3; i++) {
-                spawnEngineFireParticle(-1.6, 0.2, 0.3);
-                spawnEngineFireParticle(1.6, 0.2, 0.3);
+                // ממוקם בדיוק בצידי התותח בפתח האגזוזים (-1.3 ו-1.3)
+                spawnEngineFireParticle(-1.3, 0.2, 0.2); 
+                spawnEngineFireParticle(1.3, 0.2, 0.2);
             }
         }
 
@@ -422,7 +467,7 @@ window.addEventListener('DOMContentLoaded', () => {
             p.sprite.position.x += p.spreadX * delta;
             p.sprite.position.y += p.spreadY * delta;
 
-            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.5;
+            const currentScale = (1.0 - p.life) * p.scaleSpeed + 0.4;
             p.sprite.scale.set(currentScale, currentScale, 1.0);
             p.sprite.material.opacity = p.life * p.life; 
         }
@@ -774,6 +819,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const delta = Math.min(clock.getDelta(), 0.1);
         const elapsedTime = clock.getElapsedTime();
+
+        // סיבוב איטי של גלקסיית הרקע
+        galaxySky.rotation.y += delta * 0.01;
 
         updateEngineFire(delta);
         updateLizards(delta);
