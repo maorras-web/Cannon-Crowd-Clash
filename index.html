@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Spike Wheel Runner 3D</title>
     <style>
         * {
@@ -123,8 +123,8 @@
 
     <div id="mobile-wrapper">
         <div id="start-screen">
-            <h1>SPIKE WHEEL RUNNER</h1>
-            <p>Drag left & right to steer your wheel</p>
+            <h1>SPIKE WHEEL RUNNER 3D</h1>
+            <p>Drag left/right to steer • Double Tap to JUMP!</p>
             <button class="btn-start" id="start-btn">START RUN</button>
         </div>
 
@@ -168,18 +168,14 @@
 
         // --- 3. TRACK & STARS ---
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
+        canvas.width = 256; canvas.height = 256;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#050515';
-        ctx.fillRect(0, 0, 256, 256);
-        ctx.strokeStyle = '#00ffff';
-        ctx.lineWidth = 4;
+        ctx.fillStyle = '#050515'; ctx.fillRect(0, 0, 256, 256);
+        ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 4;
         ctx.strokeRect(0, 0, 256, 256);
 
         const gridTexture = new THREE.CanvasTexture(canvas);
-        gridTexture.wrapS = THREE.RepeatWrapping;
-        gridTexture.wrapT = THREE.RepeatWrapping;
+        gridTexture.wrapS = THREE.RepeatWrapping; gridTexture.wrapT = THREE.RepeatWrapping;
         gridTexture.repeat.set(4, 40);
 
         const trackGeo = new THREE.PlaneGeometry(14, 300);
@@ -197,11 +193,9 @@
         rightEdge.position.set(7, 0.15, -140);
         scene.add(leftEdge, rightEdge);
 
-        // Round Stars
         function createRoundStarTexture() {
             const starCanvas = document.createElement('canvas');
-            starCanvas.width = 32;
-            starCanvas.height = 32;
+            starCanvas.width = 32; starCanvas.height = 32;
             const starCtx = starCanvas.getContext('2d');
             const gradient = starCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
             gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
@@ -209,9 +203,7 @@
             gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.1)');
             gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             starCtx.fillStyle = gradient;
-            starCtx.beginPath();
-            starCtx.arc(16, 16, 16, 0, Math.PI * 2);
-            starCtx.fill();
+            starCtx.beginPath(); starCtx.arc(16, 16, 16, 0, Math.PI * 2); starCtx.fill();
             return new THREE.CanvasTexture(starCanvas);
         }
 
@@ -227,54 +219,54 @@
         });
         scene.add(new THREE.Points(starsGeo, starsMat));
 
-        // --- 4. BUILD SPIKE WHEEL PLAYER ---
+        // --- 4. BUILD SPIKE WHEEL PLAYER (SPIKES ON EDGES ONLY) ---
         const playerGroup = new THREE.Group();
-        const wheelGroup = new THREE.Group(); // Inner group for rolling spin
+        const wheelGroup = new THREE.Group();
 
-        // Wheel Base Cylinder
-        const wheelCenterGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 24);
+        const wheelCenterGeo = new THREE.CylinderGeometry(1.2, 1.2, 1.2, 24);
         const wheelCenterMat = new THREE.MeshStandardMaterial({ color: 0x111122, metalness: 0.9, roughness: 0.1 });
         const wheelCenter = new THREE.Mesh(wheelCenterGeo, wheelCenterMat);
-        wheelCenter.rotation.z = Math.PI / 2; // Orient wheel upright
+        wheelCenter.rotation.z = Math.PI / 2;
         wheelGroup.add(wheelCenter);
 
-        // Glowing Outer Rim
-        const rimGeo = new THREE.TorusGeometry(1.22, 0.08, 16, 32);
-        const rimMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        const rim = new THREE.Mesh(rimGeo, rimMat);
-        rim.rotation.y = Math.PI / 2;
-        wheelGroup.add(rim);
+        const spikeContainer = new THREE.Group();
+        wheelGroup.add(spikeContainer);
 
-        // Spikes on Both Sides & Outer Rim
-        const spikeCount = 8;
-        const spikeGeo = new THREE.ConeGeometry(0.2, 0.7, 12);
-        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xaa0033, metalness: 0.8 });
+        function rebuildSpikes(count) {
+            // ניקוי קוצים קיימים
+            while(spikeContainer.children.length > 0) {
+                spikeContainer.remove(spikeContainer.children[0]);
+            }
 
-        for (let i = 0; i < spikeCount; i++) {
-            const angle = (i / spikeCount) * Math.PI * 2;
+            const spikeGeo = new THREE.ConeGeometry(0.18, 0.65, 12);
+            const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xaa0033, metalness: 0.8 });
 
-            // Outer Spikes
-            const outerSpike = new THREE.Mesh(spikeGeo, spikeMat);
-            outerSpike.position.set(0, Math.cos(angle) * 1.35, Math.sin(angle) * 1.35);
-            outerSpike.rotation.x = -angle;
-            wheelGroup.add(outerSpike);
+            const halfCount = Math.floor(count / 2);
+            
+            // סידור קוצים בקצוות בלבד (Left Edge & Right Edge) - מרכז נקי!
+            for (let side of [-0.55, 0.55]) {
+                for (let i = 0; i < halfCount; i++) {
+                    const angle = (i / halfCount) * Math.PI * 2;
+                    const spike = new THREE.Mesh(spikeGeo, spikeMat);
+                    
+                    spike.position.set(
+                        side,
+                        Math.cos(angle) * 1.25,
+                        Math.sin(angle) * 1.25
+                    );
+                    spike.rotation.x = -angle;
+                    if (side < 0) spike.rotation.z = Math.PI / 12;
+                    else spike.rotation.z = -Math.PI / 12;
 
-            // Left Side Spikes
-            const leftSpike = new THREE.Mesh(spikeGeo, spikeMat);
-            leftSpike.position.set(-0.35, Math.cos(angle) * 1.0, Math.sin(angle) * 1.0);
-            leftSpike.rotation.z = Math.PI / 2;
-            wheelGroup.add(leftSpike);
-
-            // Right Side Spikes
-            const rightSpike = new THREE.Mesh(spikeGeo, spikeMat);
-            rightSpike.position.set(0.35, Math.cos(angle) * 1.0, Math.sin(angle) * 1.0);
-            rightSpike.rotation.z = -Math.PI / 2;
-            wheelGroup.add(rightSpike);
+                    spikeContainer.add(spike);
+                }
+            }
         }
+
+        rebuildSpikes(12); // יצירת קוצים התחלתית בקצוות
 
         playerGroup.add(wheelGroup);
 
-        // Ground Glow under Wheel
         const glowCanvas = document.createElement('canvas');
         glowCanvas.width = 64; glowCanvas.height = 64;
         const gCtx = glowCanvas.getContext('2d');
@@ -294,10 +286,31 @@
         playerGroup.position.set(0, 1.4, 2);
         scene.add(playerGroup);
 
-        // --- 5. DEMO PORTAL ON THE TRACK ---
+        // --- 5. AUDIO ENGINE (ENGINE HUM) ---
+        let audioCtx, engineOsc, engineGain;
+
+        function initEngineSound() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                engineOsc = audioCtx.createOscillator();
+                engineGain = audioCtx.createGain();
+
+                engineOsc.type = 'sawtooth';
+                engineOsc.frequency.setValueAtTime(45, audioCtx.currentTime); // המהום נמוך ועמוק
+
+                engineGain.gain.setValueAtTime(0.04, audioCtx.currentTime); // ווליום שקט
+
+                engineOsc.connect(engineGain);
+                engineGain.connect(audioCtx.destination);
+                engineOsc.start();
+            } catch(e) {
+                console.log("Audio Context Error: ", e);
+            }
+        }
+
+        // --- 6. DEMO PORTAL ---
         function createPortal() {
             const portalGroup = new THREE.Group();
-            
             const ringGeo = new THREE.TorusGeometry(2.5, 0.15, 16, 32);
             const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
             const ringMesh = new THREE.Mesh(ringGeo, ringMat);
@@ -306,8 +319,7 @@
 
             const innerGeo = new THREE.CircleGeometry(2.4, 32);
             const innerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
-            const innerMesh = new THREE.Mesh(innerGeo, innerMat);
-            portalGroup.add(innerMesh);
+            portalGroup.add(new THREE.Mesh(innerGeo, innerMat));
 
             const pLight = new THREE.PointLight(0x00ffff, 3, 15);
             portalGroup.add(pLight);
@@ -319,10 +331,25 @@
         const activePortal = createPortal();
         scene.add(activePortal);
 
-        // --- 6. CONTROLS & GAME LOOP ---
+        // --- 7. CONTROLS, JUMP PHYSICS & DOUBLE TAP ---
         let targetX = 0;
         let distanceCovered = 0;
         const clock = new THREE.Clock();
+
+        // קפיצה ופיזיקה
+        let isJumping = false;
+        let jumpVelocity = 0;
+        const gravity = -0.018;
+        const groundY = 1.4;
+
+        let lastTapTime = 0;
+
+        function triggerJump() {
+            if (!isJumping) {
+                isJumping = true;
+                jumpVelocity = 0.38; // כוח הקפיצה
+            }
+        }
 
         function handlePointerMove(e) {
             if (!gameStarted) return;
@@ -333,14 +360,42 @@
             targetX = Math.max(-4.2, Math.min(4.2, normalizedX * 5.0));
         }
 
+        function handleTapStart(e) {
+            if (!gameStarted) return;
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+
+            // זיהוי לחיצה כפולה (Double Tap / Click מתחת ל-300ms)
+            if (tapLength < 300 && tapLength > 0) {
+                triggerJump();
+            }
+            lastTapTime = currentTime;
+        }
+
         wrapper.addEventListener('pointermove', handlePointerMove);
         wrapper.addEventListener('touchmove', handlePointerMove, { passive: true });
+        wrapper.addEventListener('pointerdown', handleTapStart);
 
+        // FULLSCREEN API + START GAME
         document.getElementById('start-btn').addEventListener('click', () => {
             gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
+
+            // מנוע סאונד
+            initEngineSound();
+
+            // מעבר למסך מלא
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.log(err));
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
         });
 
+        // --- 8. MAIN GAME LOOP ---
         function animate() {
             requestAnimationFrame(animate);
 
@@ -349,9 +404,7 @@
                 return;
             }
 
-            const elapsedTime = clock.getElapsedTime();
-
-            // Smooth Movement & Steering Tilt
+            // תנועה וצידוד
             const prevX = playerGroup.position.x;
             playerGroup.position.x += (targetX - playerGroup.position.x) * 0.18;
             const velocityX = playerGroup.position.x - prevX;
@@ -359,23 +412,34 @@
             playerGroup.rotation.z = -velocityX * 1.2;
             playerGroup.rotation.y = -velocityX * 0.4;
 
-            // Rolling Wheel Spin Animation
+            // פיזיקת קפיצה
+            if (isJumping) {
+                playerGroup.position.y += jumpVelocity;
+                jumpVelocity += gravity;
+
+                if (playerGroup.position.y <= groundY) {
+                    playerGroup.position.y = groundY;
+                    isJumping = false;
+                    jumpVelocity = 0;
+                }
+            }
+
+            // סיבוב הגלגל
             wheelGroup.rotation.x -= 0.18;
 
-            // Update Light position to follow wheel
+            // תאורה שעוקבת
             wheelSpotLight.position.x = playerGroup.position.x;
 
-            // Animate Track Movement & Distance Score
+            // התקדמות מסלול וסקור
             gridTexture.offset.y -= 0.02;
             distanceCovered += 0.4;
             document.getElementById('score').innerText = `DISTANCE: ${Math.floor(distanceCovered)}m`;
 
-            // Animate Portal
+            // התנהגות פורטל
             activePortal.position.z += 0.4;
             const ring = activePortal.getObjectByName("portalRing");
             if (ring) ring.rotation.z += 0.03;
 
-            // Loop Portal back when passed
             if (activePortal.position.z > 10) {
                 activePortal.position.z = -120;
                 activePortal.position.x = (Math.random() - 0.5) * 8.0;
