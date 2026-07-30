@@ -219,10 +219,11 @@
         });
         scene.add(new THREE.Points(starsGeo, starsMat));
 
-        // --- 4. BUILD SPIKE WHEEL PLAYER (SPIKES ON EDGES ONLY) ---
+        // --- 4. BUILD SPIKE WHEEL PLAYER ---
         const playerGroup = new THREE.Group();
         const wheelGroup = new THREE.Group();
 
+        // גליל הבסיס של הגלגל
         const wheelCenterGeo = new THREE.CylinderGeometry(1.2, 1.2, 1.2, 24);
         const wheelCenterMat = new THREE.MeshStandardMaterial({ color: 0x111122, metalness: 0.9, roughness: 0.1 });
         const wheelCenter = new THREE.Mesh(wheelCenterGeo, wheelCenterMat);
@@ -232,7 +233,7 @@
         const spikeContainer = new THREE.Group();
         wheelGroup.add(spikeContainer);
 
-        function rebuildSpikes(count) {
+        function rebuildSpikes(countPerSide = 6) {
             // ניקוי קוצים קיימים
             while(spikeContainer.children.length > 0) {
                 spikeContainer.remove(spikeContainer.children[0]);
@@ -241,29 +242,34 @@
             const spikeGeo = new THREE.ConeGeometry(0.18, 0.65, 12);
             const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xaa0033, metalness: 0.8 });
 
-            const halfCount = Math.floor(count / 2);
-            
-            // סידור קוצים בקצוות בלבד (Left Edge & Right Edge) - מרכז נקי!
-            for (let side of [-0.55, 0.55]) {
-                for (let i = 0; i < halfCount; i++) {
-                    const angle = (i / halfCount) * Math.PI * 2;
+            // קוצים בצדדים (שמאל וימין בלבד, בולטים החוצה)
+            const sides = [
+                { offset: -0.65, rotZ: Math.PI / 2 },  // צד שמאל - פונה שמאלה
+                { offset: 0.65, rotZ: -Math.PI / 2 }   // צד ימין - פונה ימינה
+            ];
+
+            sides.forEach(side => {
+                for (let i = 0; i < countPerSide; i++) {
+                    const angle = (i / countPerSide) * Math.PI * 2;
                     const spike = new THREE.Mesh(spikeGeo, spikeMat);
                     
+                    // מיקוד על צלחת הצד בלבד
                     spike.position.set(
-                        side,
-                        Math.cos(angle) * 1.25,
-                        Math.sin(angle) * 1.25
+                        side.offset,
+                        Math.cos(angle) * 0.9,
+                        Math.sin(angle) * 0.9
                     );
+                    
+                    // זווית הפנייה החוצה מהצלחת
+                    spike.rotation.z = side.rotZ;
                     spike.rotation.x = -angle;
-                    if (side < 0) spike.rotation.z = Math.PI / 12;
-                    else spike.rotation.z = -Math.PI / 12;
 
                     spikeContainer.add(spike);
                 }
-            }
+            });
         }
 
-        rebuildSpikes(12); // יצירת קוצים התחלתית בקצוות
+        rebuildSpikes(6); // 6 קוצים בכל צד (סה"כ 12 בצדדים, אפס במסלול)
 
         playerGroup.add(wheelGroup);
 
@@ -286,29 +292,7 @@
         playerGroup.position.set(0, 1.4, 2);
         scene.add(playerGroup);
 
-        // --- 5. AUDIO ENGINE (ENGINE HUM) ---
-        let audioCtx, engineOsc, engineGain;
-
-        function initEngineSound() {
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                engineOsc = audioCtx.createOscillator();
-                engineGain = audioCtx.createGain();
-
-                engineOsc.type = 'sawtooth';
-                engineOsc.frequency.setValueAtTime(45, audioCtx.currentTime); // המהום נמוך ועמוק
-
-                engineGain.gain.setValueAtTime(0.04, audioCtx.currentTime); // ווליום שקט
-
-                engineOsc.connect(engineGain);
-                engineGain.connect(audioCtx.destination);
-                engineOsc.start();
-            } catch(e) {
-                console.log("Audio Context Error: ", e);
-            }
-        }
-
-        // --- 6. DEMO PORTAL ---
+        // --- 5. DEMO PORTAL ---
         function createPortal() {
             const portalGroup = new THREE.Group();
             const ringGeo = new THREE.TorusGeometry(2.5, 0.15, 16, 32);
@@ -331,12 +315,11 @@
         const activePortal = createPortal();
         scene.add(activePortal);
 
-        // --- 7. CONTROLS, JUMP PHYSICS & DOUBLE TAP ---
+        // --- 6. CONTROLS & JUMP PHYSICS ---
         let targetX = 0;
         let distanceCovered = 0;
         const clock = new THREE.Clock();
 
-        // קפיצה ופיזיקה
         let isJumping = false;
         let jumpVelocity = 0;
         const gravity = -0.018;
@@ -347,7 +330,7 @@
         function triggerJump() {
             if (!isJumping) {
                 isJumping = true;
-                jumpVelocity = 0.38; // כוח הקפיצה
+                jumpVelocity = 0.38;
             }
         }
 
@@ -365,7 +348,6 @@
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTapTime;
 
-            // זיהוי לחיצה כפולה (Double Tap / Click מתחת ל-300ms)
             if (tapLength < 300 && tapLength > 0) {
                 triggerJump();
             }
@@ -381,21 +363,17 @@
             gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
 
-            // מנוע סאונד
-            initEngineSound();
-
-            // מעבר למסך מלא
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
                 elem.requestFullscreen().catch(err => console.log(err));
-            } else if (elem.webkitRequestFullscreen) { /* Safari */
+            } else if (elem.webkitRequestFullscreen) {
                 elem.webkitRequestFullscreen();
-            } else if (elem.msRequestFullscreen) { /* IE11 */
+            } else if (elem.msRequestFullscreen) {
                 elem.msRequestFullscreen();
             }
         });
 
-        // --- 8. MAIN GAME LOOP ---
+        // --- 7. MAIN GAME LOOP ---
         function animate() {
             requestAnimationFrame(animate);
 
@@ -404,7 +382,6 @@
                 return;
             }
 
-            // תנועה וצידוד
             const prevX = playerGroup.position.x;
             playerGroup.position.x += (targetX - playerGroup.position.x) * 0.18;
             const velocityX = playerGroup.position.x - prevX;
@@ -412,7 +389,6 @@
             playerGroup.rotation.z = -velocityX * 1.2;
             playerGroup.rotation.y = -velocityX * 0.4;
 
-            // פיזיקת קפיצה
             if (isJumping) {
                 playerGroup.position.y += jumpVelocity;
                 jumpVelocity += gravity;
@@ -424,18 +400,14 @@
                 }
             }
 
-            // סיבוב הגלגל
             wheelGroup.rotation.x -= 0.18;
 
-            // תאורה שעוקבת
             wheelSpotLight.position.x = playerGroup.position.x;
 
-            // התקדמות מסלול וסקור
             gridTexture.offset.y -= 0.02;
             distanceCovered += 0.4;
             document.getElementById('score').innerText = `DISTANCE: ${Math.floor(distanceCovered)}m`;
 
-            // התנהגות פורטל
             activePortal.position.z += 0.4;
             const ring = activePortal.getObjectByName("portalRing");
             if (ring) ring.rotation.z += 0.03;
