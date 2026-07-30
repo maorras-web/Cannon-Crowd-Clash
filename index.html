@@ -3,321 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Forest Skyway 3D</title>
+    <title>Cyber Skyway 3D</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background-color: #70c5ce;
-            user-select: none;
-        }
-
-        #ui-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            padding: 20px;
-        }
-
-        .hud {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .hud-box {
-            background: rgba(255, 255, 255, 0.7);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 16px;
-            color: #333;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        #start-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto;
-        }
-
-        h1 {
-            color: #4CAF50;
-            font-size: 36px;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        p.instructions {
-            color: white;
-            font-size: 16px;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-
-        #start-btn {
-            background: #76ff03;
-            border: 2px solid #52b202;
-            padding: 15px 40px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #1b5e20;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 6px 10px rgba(0,0,0,0.2);
-            transition: transform 0.1s;
-        }
-
-        #start-btn:active {
-            transform: scale(0.95);
-        }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; user-select: none; }
+        #ui { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; }
+        .hud-box { background: rgba(0, 20, 40, 0.7); border: 1px solid #00f3ff; color: #00f3ff; padding: 10px 20px; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 0 15px rgba(0,243,255,0.3); text-shadow: 0 0 5px #00f3ff; }
+        #overlay { position: absolute; inset: 0; background: rgba(5, 5, 12, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; backdrop-filter: blur(5px); }
+        h1 { color: #00f3ff; font-size: 42px; margin: 0 0 10px 0; text-shadow: 0 0 20px #00f3ff; letter-spacing: 2px; }
+        button { background: linear-gradient(45deg, #ff0055, #ff5500); border: none; color: white; padding: 16px 45px; font-size: 22px; border-radius: 30px; cursor: pointer; margin-top: 20px; font-weight: bold; box-shadow: 0 0 20px rgba(255, 0, 85, 0.6); transition: transform 0.2s; }
+        button:hover { transform: scale(1.05); }
     </style>
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="ui-container">
-        <div class="hud">
-            <div class="hud-box" id="distance-txt">DISTANCE: 0m</div>
-            <div class="hud-box">STAGE 1</div>
-        </div>
+    <div id="ui">
+        <div class="hud-box" id="dist">DISTANCE: 0m</div>
+        <div class="hud-box">STAGE 1: DEEP SPACE</div>
     </div>
 
-    <div id="start-overlay">
-        <h1>FOREST SKYWAY 3D</h1>
-        <p class="instructions">גרור ימינה/שמאלה כדי להסתובב • לחיצה כפולה לקפיצה</p>
-        <button id="start-btn">START RUN</button>
+    <div id="overlay">
+        <h1>CYBER SKYWAY 3D</h1>
+        <p style="color: #aaa;">גרור שמאלה/ימינה כדי לשלוט בדיסק</p>
+        <button id="start">START RACE</button>
     </div>
 
     <script>
-        // --- 1. הגדרות סצנה בסיסיות ---
+        // --- 1. סצנה ותאורת חלל ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb); // שמיים כחולים
-        scene.fog = new THREE.FogExp2(0x87ceeb, 0.005);
+        scene.fog = new THREE.FogExp2(0x050510, 0.003);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
         document.body.appendChild(renderer.domElement);
 
-        // תאורה
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        // תאורה דרמטית (Sci-Fi)
+        const ambientLight = new THREE.AmbientLight(0x111122, 1.5);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(50, 100, 50);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        const sunLight = new THREE.DirectionalLight(0xffaa44, 2.5);
+        sunLight.position.set(100, 100, -50);
+        scene.add(sunLight);
 
-        // --- 2. יצירת מסלול עדין וחלק (ללא קוצים) ---
+        const cyanLight = new THREE.PointLight(0x00f3ff, 3, 50);
+        scene.add(cyanLight);
+
+        // --- 2. רקע חלל (כוכבים ופלנטה) ---
+        // כוכבים
+        const starsGeo = new THREE.BufferGeometry();
+        const starCount = 2000;
+        const starPositions = new Float32Array(starCount * 3);
+        for(let i=0; i<starCount*3; i++) {
+            starPositions[i] = (Math.random() - 0.5) * 600;
+        }
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8 });
+        const starField = new THREE.Points(starsGeo, starsMat);
+        scene.add(starField);
+
+        // פלנטה ברקע
+        const planetGeo = new THREE.SphereGeometry(40, 32, 32);
+        const planetMat = new THREE.MeshStandardMaterial({
+            color: 0x0044ff,
+            roughness: 0.8,
+            emissive: 0x001133
+        });
+        const planet = new THREE.Mesh(planetGeo, planetMat);
+        planet.position.set(-80, -20, 150);
+        scene.add(planet);
+
+        // --- 3. מסלול עתידני עם פסי ניאון ---
         const points = [];
-        const trackLengthSegments = 300;
-        const segmentLength = 10;
-
-        for (let i = 0; i < trackLengthSegments; i++) {
-            const z = i * segmentLength;
-            
-            // עיקולים אופקיים עדינים בלבד (מקסימום 15 יחידות לכל צד)
-            const x = Math.sin(i * 0.08) * 15 + Math.cos(i * 0.03) * 8;
-            
-            // עליות ומורדות קלות בלבד (מקסימום 4 יחידות גובה)
-            const y = Math.sin(i * 0.05) * 4;
-
+        const numPoints = 250;
+        for (let i = 0; i < numPoints; i++) {
+            const z = i * 12;
+            const x = Math.sin(i * 0.08) * 12 + Math.cos(i * 0.04) * 6;
+            const y = Math.sin(i * 0.05) * 3;
             points.push(new THREE.Vector3(x, y, z));
         }
-
         const path = new THREE.CatmullRomCurve3(points);
 
-        // פרופיל המסלול: משטח שטוח ורחב (סרגל)
-        const trackWidth = 10;
-        const trackThickness = 1.2;
+        // גאומטריה של גוף המסלול
+        const trackWidth = 8;
         const shape = new THREE.Shape();
-        shape.moveTo(-trackWidth / 2, -trackThickness / 2);
-        shape.lineTo(trackWidth / 2, -trackThickness / 2);
-        shape.lineTo(trackWidth / 2, trackThickness / 2);
-        shape.lineTo(-trackWidth / 2, trackThickness / 2);
+        shape.moveTo(-trackWidth/2, -0.4);
+        shape.lineTo(trackWidth/2, -0.4);
+        shape.lineTo(trackWidth/2, 0.4);
+        shape.lineTo(-trackWidth/2, 0.4);
 
-        const extrudeSettings = {
-            steps: 600,
-            extrudePath: path,
-            bevelEnabled: false // מונע קצוות חדים ומשוננים
-        };
-
-        const trackGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-        const trackMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x34495e, 
-            roughness: 0.6 
+        const trackGeo = new THREE.ExtrudeGeometry(shape, { steps: 500, extrudePath: path, bevelEnabled: false });
+        const trackMat = new THREE.MeshStandardMaterial({ 
+            color: 0x111525, 
+            roughness: 0.2, 
+            metalness: 0.8 
         });
-        const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
-        trackMesh.receiveShadow = true;
+        const trackMesh = new THREE.Mesh(trackGeo, trackMat);
         scene.add(trackMesh);
 
-        // --- 3. יצירת סביבה (עצים ברקע) ---
-        function createTree(x, y, z) {
-            const treeGroup = new THREE.Group();
-            
-            // גזע
-            const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 4);
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.y = 2;
-            treeGroup.add(trunk);
+        // פסי ניאון זוהרים בצדדי המסלול
+        const createGlowEdge = (offset) => {
+            const edgePoints = points.map(p => p.clone().add(new THREE.Vector3(offset, 0.2, 0)));
+            const edgePath = new THREE.CatmullRomCurve3(edgePoints);
+            const edgeGeo = new THREE.TubeGeometry(edgePath, 400, 0.15, 8, false);
+            const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+            return new THREE.Mesh(edgeGeo, edgeMat);
+        };
+        scene.add(createGlowEdge(-trackWidth/2));
+        scene.add(createGlowEdge(trackWidth/2));
 
-            // עלווה (חרוט)
-            const leavesGeo = new THREE.ConeGeometry(3, 8, 5);
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 });
-            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-            leaves.position.y = 7;
-            treeGroup.add(leaves);
-
-            treeGroup.position.set(x, y, z);
-            scene.add(treeGroup);
-        }
-
-        // פיזור עצים לאורך המסלול
-        for (let i = 10; i < trackLengthSegments - 10; i += 3) {
-            const point = path.getPointAt(i / trackLengthSegments);
-            createTree(point.x - 20 - Math.random() * 15, point.y - 2, point.z);
-            createTree(point.x + 20 + Math.random() * 15, point.y - 2, point.z);
-        }
-
-        // --- 4. הגלגל/השחקן ---
+        // --- 4. השחקן (Drone / Sci-Fi Wheel) ---
         const playerGroup = new THREE.Group();
-        const wheelGeo = new THREE.CylinderGeometry(2, 2, 1.5, 24);
+        
+        // גלגל מרכזי
+        const wheelGeo = new THREE.CylinderGeometry(1.6, 1.6, 1.2, 32);
         wheelGeo.rotateZ(Math.PI / 2);
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9, roughness: 0.1 });
         const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-        wheel.castShadow = true;
         playerGroup.add(wheel);
 
-        // קוצים קטנים דקורטיביים על הגלגל בלבד
-        const spikeGeo = new THREE.ConeGeometry(0.3, 0.8, 4);
-        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c });
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const spike = new THREE.Mesh(spikeGeo, spikeMat);
-            spike.position.set(0, Math.sin(angle) * 2, Math.cos(angle) * 2);
-            spike.rotation.x = angle + Math.PI / 2;
-            playerGroup.add(spike);
-        }
+        // ליבת ניאון זוהרת במרכז
+        const coreGeo = new THREE.CylinderGeometry(1.2, 1.2, 1.25, 16);
+        coreGeo.rotateZ(Math.PI / 2);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        playerGroup.add(core);
 
         scene.add(playerGroup);
 
-        // --- 5. לוגיקת תנועה ובקרות ---
+        // --- 5. שליטה ומכניקה ---
         let isRunning = false;
         let progress = 0;
-        const speed = 0.0004;
-        let playerOffsetX = 0; // תזוזה ימינה/שמאלה על המסלול
-
+        let playerOffsetX = 0;
         let targetOffsetX = 0;
-        let isDragging = false;
-        let previousMouseX = 0;
 
-        // בקרת גרירה (עכבר / מגע)
-        window.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            previousMouseX = e.clientX;
+        let startX = 0;
+        window.addEventListener('pointerdown', e => startX = e.clientX);
+        window.addEventListener('pointermove', e => {
+            if (e.buttons === 1 || e.pointerType === 'touch') {
+                const delta = (e.clientX - startX) * 0.02;
+                targetOffsetX = Math.max(-trackWidth/2 + 1.2, Math.min(trackWidth/2 - 1.2, targetOffsetX + delta));
+                startX = e.clientX;
+            }
         });
 
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging || !isRunning) return;
-            const deltaX = e.clientX - previousMouseX;
-            targetOffsetX += deltaX * 0.03;
-            targetOffsetX = Math.max(-trackWidth / 2 + 1, Math.min(trackWidth / 2 - 1, targetOffsetX));
-            previousMouseX = e.clientX;
-        });
-
-        window.addEventListener('mouseup', () => isDragging = false);
-
-        // בקרת מגע לטלפונים
-        window.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            previousMouseX = e.touches[0].clientX;
-        });
-
-        window.addEventListener('touchmove', (e) => {
-            if (!isDragging || !isRunning) return;
-            const deltaX = e.touches[0].clientX - previousMouseX;
-            targetOffsetX += deltaX * 0.03;
-            targetOffsetX = Math.max(-trackWidth / 2 + 1, Math.min(trackWidth / 2 - 1, targetOffsetX));
-            previousMouseX = e.touches[0].clientX;
-        });
-
-        window.addEventListener('touchend', () => isDragging = false);
-
-        // כפתור התחלה
-        const startBtn = document.getElementById('start-btn');
-        const startOverlay = document.getElementById('start-overlay');
-        const distanceTxt = document.getElementById('distance-txt');
-
-        startBtn.addEventListener('click', () => {
-            startOverlay.style.display = 'none';
+        document.getElementById('start').onclick = () => {
+            document.getElementById('overlay').style.display = 'none';
             isRunning = true;
-        });
+        };
 
-        // --- 6. לולאת הרנדור (Animation Loop) ---
+        // --- 6. לולאת אקשן ורנדור ---
         function animate() {
             requestAnimationFrame(animate);
 
             if (isRunning) {
-                progress += speed;
-                if (progress > 1) progress = 0; // לולאה אינסופית
+                progress += 0.0007; // מהירות
+                if (progress > 0.98) progress = 0;
 
-                // חישוב מיקום על הנתיב
-                const currentPoint = path.getPointAt(progress);
+                const pos = path.getPointAt(progress);
                 const tangent = path.getTangentAt(progress).normalize();
 
-                // החלקה של תזוזת השחקן לצדדים
                 playerOffsetX += (targetOffsetX - playerOffsetX) * 0.1;
-
-                // חישוב נורמל וצד (Side Vector)
-                const up = new THREE.Vector3(0, 1, 0);
-                const side = new THREE.Vector3().crossVectors(tangent, up).normalize();
+                const side = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
 
                 // מיקום השחקן
-                playerGroup.position.copy(currentPoint).addScaledVector(side, playerOffsetX);
-                playerGroup.position.y += 2; // גובה הגלגל מעל המסלול
+                playerGroup.position.copy(pos).addScaledVector(side, playerOffsetX);
+                playerGroup.position.y += 1.6;
 
-                // סיבוב הגלגל קדימה
-                wheel.rotation.x += 0.1;
+                // סיבוב השחקן
+                wheel.rotation.x += 0.2;
+                cyanLight.position.copy(playerGroup.position);
 
-                // מצלמה עוקבת בצורה רכה
-                const cameraOffset = new THREE.Vector3(0, 7, -18);
-                const rotatedOffset = cameraOffset.applyQuaternion(playerGroup.quaternion);
-                
-                camera.position.x = playerGroup.position.x + Math.sin(progress * 10) * 0.5;
-                camera.position.y = playerGroup.position.y + 6;
-                camera.position.z = playerGroup.position.z - 15;
-                camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1, 10)));
+                // המצלמה עוקבת בצורה דינמית עם הטיה בסיבובים
+                const camPos = pos.clone().sub(tangent.clone().multiplyScalar(10));
+                camPos.y += 4.5;
+                camera.position.copy(camPos);
+                camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 0.8, 6)));
 
-                // עדכון מד מרחק
-                distanceTxt.innerText = `DISTANCE: ${Math.floor(progress * 3000)}m`;
+                document.getElementById('dist').innerText = `DISTANCE: ${Math.floor(progress * 3500)}m`;
             }
+
+            // סיבוב עדין של רקע החלל
+            starField.rotation.y += 0.0002;
 
             renderer.render(scene, camera);
         }
 
-        // התאמת גודל חלון
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
