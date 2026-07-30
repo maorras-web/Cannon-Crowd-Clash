@@ -48,51 +48,32 @@ window.addEventListener('DOMContentLoaded', () => {
             osc.connect(gain);
             gain.connect(masterGainNode);
 
-            if (type === 'shoot') {
+            if (type === 'gate') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'damage') {
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(700, now);
-                osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now);
-                osc.stop(now + 0.08);
-            } else if (type === 'hit') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(160, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
                 gain.gain.setValueAtTime(0.4, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
                 osc.start(now);
-                osc.stop(now + 0.1);
+                osc.stop(now + 0.15);
             }
         } catch(e) {}
     }
 
-    // --- 2. Level State & HighScore ---
-    let currentLevel = 1;
-    let levelProgress = 0;
-    const maxLevelProgress = 100;
-    let isBossActive = false;
-    let activeBoss = null;
-    let highScore = localStorage.getItem('cannon_high_score') || 0;
-
+    // --- 2. HighScore & Distance ---
+    let highScore = localStorage.getItem('wheel_high_score') || 0;
     const startBestScoreEl = document.getElementById('start-best-score');
     if (startBestScoreEl) startBestScoreEl.innerText = highScore;
 
-    function updateLevelUI() {
-        const progressFill = document.getElementById('level-progress-fill');
-        const levelText = document.getElementById('level-text');
-        
-        if (progressFill) {
-            const percentage = isBossActive ? 100 : Math.min(100, (levelProgress / maxLevelProgress) * 100);
-            progressFill.style.width = `${percentage}%`;
-        }
-        if (levelText) {
-            levelText.innerText = isBossActive ? `LEVEL ${currentLevel} - BOSS FIGHT!` : `LEVEL ${currentLevel}`;
-        }
-    }
-
-    // --- 3. Scene & Advanced Visuals Setup ---
+    // --- 3. Scene Setup ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x030712, 0.008);
 
@@ -101,7 +82,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.4; // חשיפה עוצמתית לברק נאוון
+    renderer.toneMappingExposure = 1.4;
 
     renderer.domElement.style.touchAction = 'none';
     document.body.appendChild(renderer.domElement);
@@ -112,7 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // מערך תאורה עשיר ויוקרתי
+    // תאורה
     const ambientLight = new THREE.AmbientLight(0x1e1b4b, 1.2);
     scene.add(ambientLight);
 
@@ -120,13 +101,11 @@ window.addEventListener('DOMContentLoaded', () => {
     mainLight.position.set(15, 40, 20);
     scene.add(mainLight);
 
-    const rimLight = new THREE.DirectionalLight(0xc084fc, 2.8); // Rim Light חזק להדגשת קצוות הלטאות והתותח
+    const rimLight = new THREE.DirectionalLight(0xc084fc, 2.8);
     rimLight.position.set(-15, 20, -30);
     scene.add(rimLight);
 
     let cameraShakeIntensity = 0;
-    let cannonRecoilZ = 0;
-
     function triggerCameraShake(intensity) {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
@@ -163,9 +142,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const galaxySky = new THREE.Mesh(galaxySkyGeo, galaxySkyMat);
     scene.add(galaxySky);
 
-    // --- 4. Metallic Track & Round Streaming Stars ---
+    // --- 4. Track & Streaming Stars ---
     const trackWidth = 18; 
-    const maxBoundX = trackWidth / 2 - 1.2; 
+    const maxBoundX = trackWidth / 2 - 1.5; 
     const trackLength = 2000;
 
     const trackGeo = new THREE.BoxGeometry(trackWidth, 0.5, trackLength);
@@ -191,7 +170,7 @@ window.addEventListener('DOMContentLoaded', () => {
     railRight.position.set(trackWidth / 2, 0.1, -trackLength / 2 + 10);
     scene.add(railRight);
 
-    // --- טקסטורת כוכב עגולה, זוהרת ורכה ---
+    // כוכבים
     function createRoundStarTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 64; canvas.height = 64;
@@ -248,271 +227,171 @@ window.addEventListener('DOMContentLoaded', () => {
         starField.geometry.attributes.position.needsUpdate = true;
     }
 
-    // --- 5. HP Mechanics ---
-    const maxHp = 500;
-    let currentHp = 500;
+    // --- 5. Spike Wheel Player ---
+    const wheelGroup = new THREE.Group();
+    let spikeCount = 5; // כמות קוצים התחלתית
 
-    function updateHpBar() {
-        const hpBar = document.getElementById('hp-bar');
-        const hpText = document.getElementById('hp-text');
-        if (!hpBar || !hpText) return;
+    // גליל מרכזי
+    const cylinderGeo = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 32);
+    cylinderGeo.rotateZ(Math.PI / 2);
+    const cylinderMat = new THREE.MeshStandardMaterial({ 
+        color: 0x0f172a, 
+        roughness: 0.2, 
+        metalness: 0.9 
+    });
+    const wheelCore = new THREE.Mesh(cylinderGeo, cylinderMat);
+    wheelGroup.add(wheelCore);
 
-        const percentage = Math.max(0, (currentHp / maxHp) * 100);
-        hpBar.style.width = `${percentage}%`;
-        hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
+    // קוצים
+    const spikeMeshGroup = new THREE.Group();
+    wheelGroup.add(spikeMeshGroup);
 
-        let colorHex = '#22c55e';
-        if (percentage < 30) colorHex = '#ef4444';
-        else if (percentage < 60) colorHex = '#eab308';
+    const spikeGeo = new THREE.ConeGeometry(0.25, 1.2, 16);
+    spikeGeo.rotateX(Math.PI / 2);
+    const spikeMat = new THREE.MeshStandardMaterial({ 
+        color: 0x38bdf8, 
+        emissive: 0x0284c7, 
+        emissiveIntensity: 0.6,
+        metalness: 0.8,
+        roughness: 0.2
+    });
 
-        hpBar.style.backgroundColor = colorHex;
-    }
-
-    // --- 6. Lizards & Enemies ---
-    const lizards = [];
-    let lizardSpawnTimer = 0;
-
-    const ENEMY_TYPES = {
-        STANDARD: { skinColor: 0x16a34a, eyeColor: 0xef4444, scale: 1.1, speed: 16.0, hp: 1, scoreVal: 30 },
-        FAST:     { skinColor: 0xca8a04, eyeColor: 0x38bdf8, scale: 0.85, speed: 24.0, hp: 1, scoreVal: 50 },
-        ARMORED:  { skinColor: 0x7e22ce, eyeColor: 0xfacc15, scale: 1.5, speed: 10.0, hp: 4, scoreVal: 100 }
-    };
-
-    function createLizardMesh(typeConfig) {
-        const lizardGroup = new THREE.Group();
-
-        const skinMat = new THREE.MeshStandardMaterial({ 
-            color: typeConfig.skinColor, 
-            roughness: 0.25, 
-            metalness: 0.4 
-        });
-        const eyeMat = new THREE.MeshBasicMaterial({ color: typeConfig.eyeColor });
-
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 2.6), skinMat);
-        body.position.set(0, 0.8, 0);
-        lizardGroup.add(body);
-
-        const headGeo = new THREE.ConeGeometry(1.1, 1.8, 4);
-        headGeo.rotateX(-Math.PI / 2);
-        headGeo.rotateY(Math.PI / 4);
-        const head = new THREE.Mesh(headGeo, skinMat);
-        head.position.set(0, 1.0, 1.8);
-        lizardGroup.add(head);
-
-        const eyeGeo = new THREE.SphereGeometry(0.3, 12, 12);
-        const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeL.position.set(-0.75, 1.2, 1.8);
-        lizardGroup.add(eyeL);
-
-        const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-        eyeR.position.set(0.75, 1.2, 1.8);
-        lizardGroup.add(eyeR);
-
-        lizardGroup.rotation.y = Math.PI;
-        lizardGroup.scale.setScalar(typeConfig.scale * 1.35);
-        lizardGroup.userData = { hp: typeConfig.hp, speed: typeConfig.speed, scoreVal: typeConfig.scoreVal };
-
-        return lizardGroup;
-    }
-
-    function spawnLizard() {
-        if (isBossActive) return;
-        const rand = Math.random();
-        let config = ENEMY_TYPES.STANDARD;
-        if (rand > 0.75) config = ENEMY_TYPES.ARMORED;
-        else if (rand > 0.5) config = ENEMY_TYPES.FAST;
-
-        const lizard = createLizardMesh(config);
-        const spawnX = (Math.random() - 0.5) * (trackWidth - 3);
-        const spawnZ = cannonGroup.position.z - 120 - Math.random() * 30;
-
-        lizard.position.set(spawnX, 0, spawnZ);
-        scene.add(lizard);
-        lizards.push(lizard);
-    }
-
-    function spawnBoss() {
-        isBossActive = true;
-        updateLevelUI();
-
-        const bossConfig = { skinColor: 0xd97706, eyeColor: 0xef4444, scale: 3.5, speed: 4.5, hp: 40 + (currentLevel * 20), scoreVal: 1000 };
-        activeBoss = createLizardMesh(bossConfig);
-        activeBoss.position.set(0, 0, cannonGroup.position.z - 110);
-        activeBoss.userData.maxHp = bossConfig.hp;
-        scene.add(activeBoss);
-    }
-
-    function updateLizards(delta) {
-        if (!isBossActive) {
-            lizardSpawnTimer += delta;
-            if (lizardSpawnTimer >= 2.0) {
-                lizardSpawnTimer = 0;
-                spawnLizard();
-            }
+    function rebuildSpikes() {
+        while(spikeMeshGroup.children.length > 0) {
+            spikeMeshGroup.remove(spikeMeshGroup.children[0]);
         }
 
-        for (let i = lizards.length - 1; i >= 0; i--) {
-            const liz = lizards[i];
-            liz.position.z += liz.userData.speed * delta;
+        const radius = 1.2;
+        const width = 2.0;
 
-            if (liz.position.distanceTo(cannonGroup.position) < 2.5) {
-                currentHp -= 100;
-                updateHpBar();
-                playSound('hit');
-                triggerCameraShake(0.3);
-                scene.remove(liz);
-                lizards.splice(i, 1);
-                if (currentHp <= 0) { gameOver(); return; }
-                continue;
-            }
+        for (let i = 0; i < spikeCount; i++) {
+            const spike = new THREE.Mesh(spikeGeo, spikeMat);
+            const angle = (i / spikeCount) * Math.PI * 2;
+            const xOffset = ((i % 5) / 4 - 0.5) * width;
 
-            if (liz.position.z > cannonGroup.position.z + 10) {
-                scene.remove(liz);
-                lizards.splice(i, 1);
-            }
+            spike.position.set(xOffset, Math.sin(angle) * radius, Math.cos(angle) * radius);
+            spike.rotation.x = angle;
+            spikeMeshGroup.add(spike);
         }
 
-        if (isBossActive && activeBoss) {
-            if (activeBoss.position.z < cannonGroup.position.z - 18) {
-                activeBoss.position.z += activeBoss.userData.speed * delta;
-            }
-
-            if (activeBoss.position.distanceTo(cannonGroup.position) < 5.0) {
-                currentHp -= 200;
-                updateHpBar();
-                playSound('hit');
-                triggerCameraShake(0.5);
-                if (currentHp <= 0) gameOver();
-            }
-        }
+        // עדכון UI
+        const scoreVal = document.getElementById('score-val');
+        if (scoreVal) scoreVal.innerText = spikeCount;
     }
 
-    // --- 7. Metallic Cannon & Real-Time Color Picker ---
-    const cannonGroup = new THREE.Group();
-    const cannonMeshGroup = new THREE.Group();
+    wheelGroup.position.set(0, 1.2, 0);
+    scene.add(wheelGroup);
 
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.15, metalness: 0.85 });
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9 });
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.95 });
+    // --- 6. Portals System ---
+    const portals = [];
+    let portalSpawnTimer = 0;
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat);
-    base.rotation.x = Math.PI / 12;
-    cannonMeshGroup.add(base);
+    function createPortalCanvasTexture(text, isPositive) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
 
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
-    dome.position.y = 0.3;
-    cannonMeshGroup.add(dome);
+        ctx.fillStyle = isPositive ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
+        ctx.fillRect(0, 0, 256, 256);
 
-    const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-    barrelL.rotation.x = Math.PI / 2;
-    barrelL.position.set(-0.45, 0.35, -1.0);
-    cannonMeshGroup.add(barrelL);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 12;
+        ctx.strokeRect(0, 0, 256, 256);
 
-    const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-    barrelR.rotation.x = Math.PI / 2;
-    barrelR.position.set(0.45, 0.35, -1.0);
-    cannonMeshGroup.add(barrelR);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 90px Rubik, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 128, 128);
 
-    cannonGroup.add(cannonMeshGroup);
-    cannonGroup.position.set(0, 1.2, 0);
-    scene.add(cannonGroup);
-
-    // חיבור בחירת הצבעים ב-UI
-    window.changeCannonColor = function(hexColor) {
-        baseMat.color.set(hexColor);
-    };
-
-    // --- 8. Glowing Bullets & Dynamic Glow ---
-    const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
-    const bulletMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const bullets = [];
-
-    // מקור אור יחיד ויעיל שמלווה את מטח הירי בלי להאיט את המשחק!
-    const bulletLight = new THREE.PointLight(0x38bdf8, 3.5, 20);
-    bulletLight.visible = false;
-    scene.add(bulletLight);
-
-    function spawnBullet(x, z) {
-        const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.scale.set(1, 1, 2.2);
-        bullet.position.set(x, 1.1, z);
-        scene.add(bullet);
-        bullets.push(bullet);
+        return new THREE.CanvasTexture(canvas);
     }
 
-    function updateBullets(delta) {
-        if (bullets.length > 0) {
-            bulletLight.visible = true;
-            const leadBullet = bullets[bullets.length - 1];
-            bulletLight.position.set(leadBullet.position.x, 1.5, leadBullet.position.z);
+    function spawnPortalPair() {
+        const isMathPortal = Math.random() > 0.4;
+        let leftVal, rightVal, leftText, rightText;
+
+        if (isMathPortal) {
+            leftVal = Math.floor(Math.random() * 8) + 2;
+            leftText = `+${leftVal}`;
+            rightVal = Math.floor(Math.random() * 5) + 1;
+            rightText = `-${rightVal}`;
         } else {
-            bulletLight.visible = false;
+            leftVal = 2;
+            leftText = `x${leftVal}`;
+            rightVal = 0.5;
+            rightText = `÷2`;
         }
 
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            const b = bullets[i];
-            b.position.z -= 95.0 * delta;
+        const pairZ = wheelGroup.position.z - 120;
 
-            let hitEnemy = false;
-            for (let j = lizards.length - 1; j >= 0; j--) {
-                const liz = lizards[j];
-                if (b.position.distanceTo(liz.position) < 1.6) {
-                    liz.userData.hp--;
-                    if (liz.userData.hp <= 0) {
-                        score += liz.userData.scoreVal;
-                        levelProgress += 5;
-                        updateLevelUI();
-                        scene.remove(liz);
-                        lizards.splice(j, 1);
-                        if (levelProgress >= maxLevelProgress && !isBossActive) {
-                            spawnBoss();
-                        }
+        // פורטל שמאל
+        const portalGeo = new THREE.PlaneGeometry(6.5, 5);
+        const matLeft = new THREE.MeshBasicMaterial({ map: createPortalCanvasTexture(leftText, true), side: THREE.DoubleSide });
+        const pLeft = new THREE.Mesh(portalGeo, matLeft);
+        pLeft.position.set(-4.2, 2.5, pairZ);
+        pLeft.userData = { val: leftVal, isMult: !isMathPortal, text: leftText, active: true };
+
+        // פורטל ימין
+        const matRight = new THREE.MeshBasicMaterial({ map: createPortalCanvasTexture(rightText, false), side: THREE.DoubleSide });
+        const pRight = new THREE.Mesh(portalGeo, matRight);
+        pRight.position.set(4.2, 2.5, pairZ);
+        pRight.userData = { val: rightVal, isMult: !isMathPortal, text: rightText, active: true };
+
+        scene.add(pLeft);
+        scene.add(pRight);
+        portals.push(pLeft, pRight);
+    }
+
+    function updatePortals(delta) {
+        portalSpawnTimer += delta;
+        if (portalSpawnTimer >= 2.5) {
+            portalSpawnTimer = 0;
+            spawnPortalPair();
+        }
+
+        for (let i = portals.length - 1; i >= 0; i--) {
+            const p = portals[i];
+            p.position.z += 25.0 * delta; // מהירות התקדמות המסלול
+
+            // בדיקת פגיעה בפורטל
+            if (p.userData.active && Math.abs(p.position.z - wheelGroup.position.z) < 1.5) {
+                if (Math.abs(p.position.x - wheelGroup.position.x) < 3.5) {
+                    p.userData.active = false;
+
+                    if (p.userData.isMult) {
+                        spikeCount = Math.floor(spikeCount * p.userData.val);
+                    } else {
+                        spikeCount += p.userData.val;
                     }
-                    hitEnemy = true;
-                    playSound('hit');
-                    break;
+
+                    if (spikeCount <= 0) {
+                        spikeCount = 0;
+                        rebuildSpikes();
+                        gameOver();
+                        return;
+                    }
+
+                    playSound(p.userData.val > 0 ? 'gate' : 'damage');
+                    rebuildSpikes();
+                    triggerCameraShake(0.2);
                 }
             }
 
-            if (hitEnemy) {
-                scene.remove(b);
-                bullets.splice(i, 1);
-                continue;
-            }
-
-            if (isBossActive && activeBoss && b.position.distanceTo(activeBoss.position) < 3.5) {
-                activeBoss.userData.hp--;
-                playSound('hit');
-                triggerCameraShake(0.1);
-                scene.remove(b);
-                bullets.splice(i, 1);
-
-                if (activeBoss.userData.hp <= 0) {
-                    scene.remove(activeBoss);
-                    activeBoss = null;
-                    isBossActive = false;
-                    score += 1000;
-                    currentLevel++;
-                    levelProgress = 0;
-                    updateLevelUI();
-                }
-                continue;
-            }
-
-            if (b.position.z < cannonGroup.position.z - 160) {
-                scene.remove(b);
-                bullets.splice(i, 1);
+            if (p.position.z > wheelGroup.position.z + 10) {
+                scene.remove(p);
+                portals.splice(i, 1);
             }
         }
     }
 
-    // --- 9. Controls ---
-    let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
+    // --- 7. Controls ---
+    let targetX = 0, isDragging = false, previousTouchX = 0;
 
-    function stopInput() { isDragging = false; isFiring = false; }
+    function stopInput() { isDragging = false; }
 
     renderer.domElement.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; 
+        e.preventDefault(); isDragging = true; previousTouchX = e.touches[0].clientX; 
     }, { passive: false });
     
     renderer.domElement.addEventListener('touchend', (e) => { e.preventDefault(); stopInput(); }, { passive: false });
@@ -525,7 +404,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
+    renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; previousTouchX = e.clientX; });
     renderer.domElement.addEventListener('mouseup', stopInput);
     renderer.domElement.addEventListener('mousemove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
@@ -534,42 +413,39 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. Game State ---
-    let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
+    // --- 8. Game State & Loop ---
+    let gameStarted = false, isPaused = false, distanceMetres = 0;
 
     function resetGame() {
-        score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        isBossActive = false; cameraShakeIntensity = 0; cannonRecoilZ = 0;
-        
-        if (activeBoss) { scene.remove(activeBoss); activeBoss = null; }
-        for (let liz of lizards) scene.remove(liz);
-        lizards.length = 0;
-        for (let b of bullets) scene.remove(b);
-        bullets.length = 0;
+        spikeCount = 5;
+        distanceMetres = 0;
+        cameraShakeIntensity = 0;
 
-        cannonGroup.position.set(0, 1.2, 0);
+        for (let p of portals) scene.remove(p);
+        portals.length = 0;
+
+        wheelGroup.position.set(0, 1.2, 0);
         targetX = 0;
 
-        const scoreVal = document.getElementById('score-val');
-        if (scoreVal) scoreVal.innerText = '0';
-
-        updateHpBar();
-        updateLevelUI();
+        rebuildSpikes();
     }
 
     function gameOver() {
         gameStarted = false; stopInput();
+        playSound('damage');
+
+        const score = Math.floor(distanceMetres);
         if (score > highScore) {
             highScore = score;
-            localStorage.setItem('cannon_high_score', highScore);
+            localStorage.setItem('wheel_high_score', highScore);
         }
 
         const gameOverModal = document.getElementById('game-over-modal');
         const finalScoreVal = document.getElementById('final-score-val');
         const bestScoreVal = document.getElementById('best-score-val');
 
-        if (finalScoreVal) finalScoreVal.innerText = score;
-        if (bestScoreVal) bestScoreVal.innerText = highScore;
+        if (finalScoreVal) finalScoreVal.innerText = `${score}m`;
+        if (bestScoreVal) bestScoreVal.innerText = `${highScore}m`;
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
@@ -604,55 +480,43 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
 
-    // --- 11. Main Render Loop ---
+    // --- 9. Main Render Loop ---
     let clock = new THREE.Clock();
 
     function animate() {
         requestAnimationFrame(animate);
 
         const delta = Math.min(clock.getDelta(), 0.1);
-        const elapsedTime = clock.getElapsedTime();
 
-        // עדכון כוכבים עגולים וזורמים
         updateStars(delta);
 
         if (gameStarted && !isPaused) {
+            // תנועה אופקית
             targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
-            const prevX = cannonGroup.position.x;
-            cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, delta * 12);
+            wheelGroup.position.x = THREE.MathUtils.lerp(wheelGroup.position.x, targetX, delta * 12);
             
-            const moveDelta = cannonGroup.position.x - prevX;
-            cannonMeshGroup.rotation.z = -moveDelta * 0.8;
-            cannonMeshGroup.rotation.x = Math.sin(elapsedTime * 8) * 0.03;
+            // סיבוב גלגל הקוצים
+            wheelGroup.rotation.x += delta * 8;
 
-            // ירי
-            shootTimer += delta;
-            if (isFiring && shootTimer >= 0.11) {
-                shootTimer = 0;
-                spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.z - 1.2);
-                spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.z - 1.2);
-                playSound('shoot');
-                cannonRecoilZ = 0.2;
-            }
+            // עדכון פורטלים ומרחק
+            updatePortals(delta);
+            distanceMetres += delta * 15;
+            
+            const distanceVal = document.getElementById('distance-val');
+            if (distanceVal) distanceVal.innerText = `${Math.floor(distanceMetres)}m`;
 
-            cannonRecoilZ = THREE.MathUtils.lerp(cannonRecoilZ, 0, delta * 10);
-            cannonMeshGroup.position.z = cannonRecoilZ;
-
-            updateBullets(delta);
-            updateLizards(delta);
-
-            // מצלמה
+            // מצלמה עוקבת
             if (cameraShakeIntensity > 0) {
                 cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8);
-                camera.position.x = cannonGroup.position.x + (Math.random() - 0.5) * cameraShakeIntensity;
+                camera.position.x = wheelGroup.position.x + (Math.random() - 0.5) * cameraShakeIntensity;
                 camera.position.y = 8 + (Math.random() - 0.5) * cameraShakeIntensity;
-                camera.position.z = cannonGroup.position.z + 12 + (Math.random() - 0.5) * cameraShakeIntensity;
+                camera.position.z = wheelGroup.position.z + 12 + (Math.random() - 0.5) * cameraShakeIntensity;
             } else {
-                camera.position.x = THREE.MathUtils.lerp(camera.position.x, cannonGroup.position.x, delta * 6);
+                camera.position.x = THREE.MathUtils.lerp(camera.position.x, wheelGroup.position.x, delta * 6);
                 camera.position.y = 8;
-                camera.position.z = cannonGroup.position.z + 12;
+                camera.position.z = wheelGroup.position.z + 12;
             }
-            camera.lookAt(cannonGroup.position.x, 1.0, cannonGroup.position.z - 20);
+            camera.lookAt(wheelGroup.position.x, 1.0, wheelGroup.position.z - 20);
         }
 
         renderer.render(scene, camera);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D - Enhanced Cannon Edition</title>
+    <title>Spike Wheel Runner 3D</title>
     <style>
         * {
             box-sizing: border-box;
@@ -84,7 +84,7 @@
         }
 
         #start-screen h1 {
-            font-size: 32px;
+            font-size: 30px;
             margin-bottom: 10px;
             color: #00ffff;
             text-shadow: 0 0 15px #00ffff;
@@ -123,14 +123,14 @@
 
     <div id="mobile-wrapper">
         <div id="start-screen">
-            <h1>TRACK SHOOTER 3D</h1>
-            <p>Drag left & right to steer your cannon</p>
-            <button class="btn-start" id="start-btn">START GAME</button>
+            <h1>SPIKE WHEEL RUNNER</h1>
+            <p>Drag left & right to steer your wheel</p>
+            <button class="btn-start" id="start-btn">START RUN</button>
         </div>
 
         <div id="ui">
-            <div class="hud-card" id="score">SCORE: 0</div>
-            <div class="hud-card" id="level">LEVEL 1</div>
+            <div class="hud-card" id="score">DISTANCE: 0m</div>
+            <div class="hud-card" id="level">STAGE 1</div>
         </div>
 
         <div id="canvas-container"></div>
@@ -138,28 +138,6 @@
 
     <script>
         let gameStarted = false;
-        let audioCtx = null;
-
-        function playLaserSound() {
-            if (!audioCtx) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(90, audioCtx.currentTime + 0.08);
-
-                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.08);
-            } catch (e) {}
-        }
 
         // --- 1. SETUP SCENE & RENDERER ---
         const wrapper = document.getElementById('mobile-wrapper');
@@ -184,12 +162,11 @@
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        // Dedicated Cannon Spotlight so it stays bright & visible
-        const cannonSpotLight = new THREE.PointLight(0x00ffff, 2.5, 10);
-        cannonSpotLight.position.set(0, 4, 3);
-        scene.add(cannonSpotLight);
+        const wheelSpotLight = new THREE.PointLight(0x00ffff, 2.5, 12);
+        wheelSpotLight.position.set(0, 4, 3);
+        scene.add(wheelSpotLight);
 
-        // --- 3. ENVIRONMENT & ROUND STARS ---
+        // --- 3. TRACK & STARS ---
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
@@ -206,11 +183,7 @@
         gridTexture.repeat.set(4, 40);
 
         const trackGeo = new THREE.PlaneGeometry(14, 300);
-        const trackMat = new THREE.MeshStandardMaterial({ 
-            map: gridTexture,
-            roughness: 0.2, 
-            metalness: 0.8 
-        });
+        const trackMat = new THREE.MeshStandardMaterial({ map: gridTexture, roughness: 0.2, metalness: 0.8 });
         const track = new THREE.Mesh(trackGeo, trackMat);
         track.rotation.x = -Math.PI / 2;
         track.position.z = -140;
@@ -224,27 +197,23 @@
         rightEdge.position.set(7, 0.15, -140);
         scene.add(leftEdge, rightEdge);
 
+        // Round Stars
         function createRoundStarTexture() {
             const starCanvas = document.createElement('canvas');
             starCanvas.width = 32;
             starCanvas.height = 32;
             const starCtx = starCanvas.getContext('2d');
-
             const gradient = starCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
             gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
             gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
             gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.1)');
             gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
             starCtx.fillStyle = gradient;
             starCtx.beginPath();
             starCtx.arc(16, 16, 16, 0, Math.PI * 2);
             starCtx.fill();
-
             return new THREE.CanvasTexture(starCanvas);
         }
-
-        const roundStarTexture = createRoundStarTexture();
 
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 4500;
@@ -254,187 +223,106 @@
         }
         starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
         const starsMat = new THREE.PointsMaterial({ 
-            color: 0xffffff, 
-            size: 1.2,
-            map: roundStarTexture,
-            transparent: true,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
+            color: 0xffffff, size: 1.2, map: createRoundStarTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false 
         });
-        const starField = new THREE.Points(starsGeo, starsMat);
-        scene.add(starField);
+        scene.add(new THREE.Points(starsGeo, starsMat));
 
-        // --- 4. ENHANCED CANNON WITH RECOIL & NEON HIGHLIGHTS ---
+        // --- 4. BUILD SPIKE WHEEL PLAYER ---
         const playerGroup = new THREE.Group();
+        const wheelGroup = new THREE.Group(); // Inner group for rolling spin
 
-        // Base Dome
-        const cannonBaseGeo = new THREE.SphereGeometry(1.3, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-        const cannonBaseMat = new THREE.MeshStandardMaterial({ color: 0xaa00ff, metalness: 0.6, roughness: 0.2, emissive: 0x220044 });
-        const cannonBase = new THREE.Mesh(cannonBaseGeo, cannonBaseMat);
-        playerGroup.add(cannonBase);
+        // Wheel Base Cylinder
+        const wheelCenterGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.6, 24);
+        const wheelCenterMat = new THREE.MeshStandardMaterial({ color: 0x111122, metalness: 0.9, roughness: 0.1 });
+        const wheelCenter = new THREE.Mesh(wheelCenterGeo, wheelCenterMat);
+        wheelCenter.rotation.z = Math.PI / 2; // Orient wheel upright
+        wheelGroup.add(wheelCenter);
 
-        // Glowing Neon Ring around cannon base
-        const baseRingGeo = new THREE.TorusGeometry(1.35, 0.08, 16, 32);
-        const baseRingMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        const baseRing = new THREE.Mesh(baseRingGeo, baseRingMat);
-        baseRing.rotation.x = Math.PI / 2;
-        playerGroup.add(baseRing);
-
-        // Moving Pipes Container for Recoil Animation
-        const pipesGroup = new THREE.Group();
-
-        const pipeGeo = new THREE.CylinderGeometry(0.24, 0.24, 1.5, 16);
-        const pipeMat = new THREE.MeshStandardMaterial({ color: 0x111122, metalness: 0.9, roughness: 0.1 });
-        
-        const pipe1 = new THREE.Mesh(pipeGeo, pipeMat);
-        pipe1.rotation.x = Math.PI / 2;
-        pipe1.position.set(-0.48, 0.65, -0.6);
-
-        const pipe2 = pipe1.clone();
-        pipe2.position.set(0.48, 0.65, -0.6);
-
-        // Glowing Neon Rims on Pipe Tips
-        const rimGeo = new THREE.TorusGeometry(0.25, 0.04, 12, 24);
+        // Glowing Outer Rim
+        const rimGeo = new THREE.TorusGeometry(1.22, 0.08, 16, 32);
         const rimMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-        const rim1 = new THREE.Mesh(rimGeo, rimMat);
-        rim1.position.set(0, 0.75, 0);
-        rim1.rotation.x = Math.PI / 2;
-        pipe1.add(rim1);
+        const rim = new THREE.Mesh(rimGeo, rimMat);
+        rim.rotation.y = Math.PI / 2;
+        wheelGroup.add(rim);
 
-        const rim2 = rim1.clone();
-        pipe2.add(rim2);
+        // Spikes on Both Sides & Outer Rim
+        const spikeCount = 8;
+        const spikeGeo = new THREE.ConeGeometry(0.2, 0.7, 12);
+        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xaa0033, metalness: 0.8 });
 
-        pipesGroup.add(pipe1, pipe2);
-        playerGroup.add(pipesGroup);
+        for (let i = 0; i < spikeCount; i++) {
+            const angle = (i / spikeCount) * Math.PI * 2;
 
-        // Muzzle Flashes
-        const flashGeo = new THREE.SphereGeometry(0.4, 16, 16);
-        const flashMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0 });
-        const flash1 = new THREE.Mesh(flashGeo, flashMat);
-        flash1.position.set(-0.48, 0.65, -1.45);
-        const flash2 = flash1.clone();
-        flash2.position.set(0.48, 0.65, -1.45);
-        playerGroup.add(flash1, flash2);
+            // Outer Spikes
+            const outerSpike = new THREE.Mesh(spikeGeo, spikeMat);
+            outerSpike.position.set(0, Math.cos(angle) * 1.35, Math.sin(angle) * 1.35);
+            outerSpike.rotation.x = -angle;
+            wheelGroup.add(outerSpike);
 
-        // Under-cannon Ground Glow
+            // Left Side Spikes
+            const leftSpike = new THREE.Mesh(spikeGeo, spikeMat);
+            leftSpike.position.set(-0.35, Math.cos(angle) * 1.0, Math.sin(angle) * 1.0);
+            leftSpike.rotation.z = Math.PI / 2;
+            wheelGroup.add(leftSpike);
+
+            // Right Side Spikes
+            const rightSpike = new THREE.Mesh(spikeGeo, spikeMat);
+            rightSpike.position.set(0.35, Math.cos(angle) * 1.0, Math.sin(angle) * 1.0);
+            rightSpike.rotation.z = -Math.PI / 2;
+            wheelGroup.add(rightSpike);
+        }
+
+        playerGroup.add(wheelGroup);
+
+        // Ground Glow under Wheel
         const glowCanvas = document.createElement('canvas');
-        glowCanvas.width = 64;
-        glowCanvas.height = 64;
+        glowCanvas.width = 64; glowCanvas.height = 64;
         const gCtx = glowCanvas.getContext('2d');
         const gGrad = gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gGrad.addColorStop(0, 'rgba(0, 255, 255, 0.6)');
-        gGrad.addColorStop(1, 'rgba(0, 255, 255, 0)');
-        gCtx.fillStyle = gGrad;
-        gCtx.fillRect(0, 0, 64, 64);
+        gGrad.addColorStop(0, 'rgba(255, 0, 85, 0.6)');
+        gGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        gCtx.fillStyle = gGrad; gCtx.fillRect(0, 0, 64, 64);
 
-        const groundGlowGeo = new THREE.PlaneGeometry(3.5, 3.5);
-        const groundGlowMat = new THREE.MeshBasicMaterial({ 
-            map: new THREE.CanvasTexture(glowCanvas), 
-            transparent: true, 
-            depthWrite: false, 
-            blending: THREE.AdditiveBlending 
-        });
-        const groundGlow = new THREE.Mesh(groundGlowGeo, groundGlowMat);
+        const groundGlow = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.0, 3.0),
+            new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(glowCanvas), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+        );
         groundGlow.rotation.x = -Math.PI / 2;
         groundGlow.position.y = 0.05;
         playerGroup.add(groundGlow);
 
-        playerGroup.position.set(0, 0, 2);
+        playerGroup.position.set(0, 1.4, 2);
         scene.add(playerGroup);
 
-        // --- 5. ENEMIES ---
-        function createCyberRobot(color = 0xff0055) {
-            const robotGroup = new THREE.Group();
-
-            const bodyGeo = new THREE.IcosahedronGeometry(1.6, 0);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x151525, metalness: 0.9, roughness: 0.1, flatShading: true });
-            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-            robotGroup.add(bodyMesh);
-
-            const coreGeo = new THREE.SphereGeometry(0.8, 16, 16);
-            const coreMat = new THREE.MeshBasicMaterial({ color: color });
-            const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-            robotGroup.add(coreMesh);
-
-            const ringGeo = new THREE.TorusGeometry(2.2, 0.1, 12, 30);
-            const ringMat = new THREE.MeshBasicMaterial({ color: color });
+        // --- 5. DEMO PORTAL ON THE TRACK ---
+        function createPortal() {
+            const portalGroup = new THREE.Group();
+            
+            const ringGeo = new THREE.TorusGeometry(2.5, 0.15, 16, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
             const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-            ringMesh.name = "glowingRing";
-            robotGroup.add(ringMesh);
+            ringMesh.name = "portalRing";
+            portalGroup.add(ringMesh);
 
-            const light = new THREE.PointLight(color, 2, 12);
-            robotGroup.add(light);
-
-            robotGroup.userData = { type: 'robot', hp: 4, maxHp: 4, color: color };
-            return robotGroup;
-        }
-
-        function createCrystalMonster(color = 0x00ffff) {
-            const crystalGroup = new THREE.Group();
-
-            const outerGeo = new THREE.OctahedronGeometry(2.0, 0);
-            const outerMat = new THREE.MeshPhysicalMaterial({ color: color, metalness: 0.1, roughness: 0.05, transmission: 0.8, transparent: true, opacity: 0.95, flatShading: true });
-            const outerMesh = new THREE.Mesh(outerGeo, outerMat);
-            outerMesh.name = "outerCrystal";
-            crystalGroup.add(outerMesh);
-
-            const innerGeo = new THREE.IcosahedronGeometry(1.0, 1);
-            const innerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+            const innerGeo = new THREE.CircleGeometry(2.4, 32);
+            const innerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
             const innerMesh = new THREE.Mesh(innerGeo, innerMat);
-            innerMesh.name = "innerCore";
-            crystalGroup.add(innerMesh);
+            portalGroup.add(innerMesh);
 
-            const light = new THREE.PointLight(color, 2, 15);
-            crystalGroup.add(light);
+            const pLight = new THREE.PointLight(0x00ffff, 3, 15);
+            portalGroup.add(pLight);
 
-            crystalGroup.userData = { type: 'crystal', hp: 5, maxHp: 5, color: color };
-            return crystalGroup;
+            portalGroup.position.set(0, 2.5, -80);
+            return portalGroup;
         }
 
-        const bullets = [];
-        const enemies = [];
-        let score = 0;
-        const clock = new THREE.Clock();
+        const activePortal = createPortal();
+        scene.add(activePortal);
 
-        function spawnEnemyCluster() {
-            const zPos = -90 - Math.random() * 60;
-            const xPos = (Math.random() - 0.5) * 8.5;
-            const isCrystal = Math.random() > 0.5;
-            const enemy = isCrystal ? createCrystalMonster(0x00ffff) : createCyberRobot(0xff0055);
-            enemy.position.set(xPos, 2.0, zPos);
-            scene.add(enemy);
-            enemies.push(enemy);
-        }
-
-        for (let i = 0; i < 6; i++) {
-            spawnEnemyCluster();
-        }
-
-        let recoilAmount = 0;
-        let flashOpacity = 0;
-
-        function shootBullet() {
-            const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
-            const bulletMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-            
-            const b1 = new THREE.Mesh(bulletGeo, bulletMat);
-            b1.position.set(playerGroup.position.x - 0.48, 0.65, playerGroup.position.z - 1);
-            
-            const b2 = new THREE.Mesh(bulletGeo, bulletMat);
-            b2.position.set(playerGroup.position.x + 0.48, 0.65, playerGroup.position.z - 1);
-
-            scene.add(b1, b2);
-            bullets.push(b1, b2);
-
-            // Trigger Visual FX
-            recoilAmount = 0.25;
-            flashOpacity = 1.0;
-
-            playLaserSound();
-        }
-
-        let lastShoot = 0;
+        // --- 6. CONTROLS & GAME LOOP ---
         let targetX = 0;
+        let distanceCovered = 0;
+        const clock = new THREE.Clock();
 
         function handlePointerMove(e) {
             if (!gameStarted) return;
@@ -442,34 +330,17 @@
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const relativeX = clientX - rect.left;
             const normalizedX = (relativeX / rect.width) * 2 - 1;
-            
             targetX = Math.max(-4.2, Math.min(4.2, normalizedX * 5.0));
         }
 
         wrapper.addEventListener('pointermove', handlePointerMove);
         wrapper.addEventListener('touchmove', handlePointerMove, { passive: true });
 
-        // --- 6. START GAME ---
-        const startBtn = document.getElementById('start-btn');
-        const startScreen = document.getElementById('start-screen');
-
-        startBtn.addEventListener('click', () => {
+        document.getElementById('start-btn').addEventListener('click', () => {
             gameStarted = true;
-            startScreen.style.display = 'none';
-
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                audioCtx = new AudioContext();
-            }
-
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                document.documentElement.webkitRequestFullscreen();
-            }
+            document.getElementById('start-screen').style.display = 'none';
         });
 
-        // --- 7. ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
 
@@ -480,93 +351,34 @@
 
             const elapsedTime = clock.getElapsedTime();
 
-            // Calculate movement velocity for banking/tilt
+            // Smooth Movement & Steering Tilt
             const prevX = playerGroup.position.x;
             playerGroup.position.x += (targetX - playerGroup.position.x) * 0.18;
             const velocityX = playerGroup.position.x - prevX;
 
-            // Bank / Tilt Cannon based on steering velocity
             playerGroup.rotation.z = -velocityX * 1.2;
             playerGroup.rotation.y = -velocityX * 0.4;
 
-            // Update Cannon Spotlight Position
-            cannonSpotLight.position.x = playerGroup.position.x;
+            // Rolling Wheel Spin Animation
+            wheelGroup.rotation.x -= 0.18;
 
-            // Recoil Animation Decay
-            if (recoilAmount > 0) {
-                pipesGroup.position.z = recoilAmount;
-                recoilAmount = Math.max(0, recoilAmount - 0.04);
-            }
+            // Update Light position to follow wheel
+            wheelSpotLight.position.x = playerGroup.position.x;
 
-            // Muzzle Flash Decay
-            if (flashOpacity > 0) {
-                flashOpacity = Math.max(0, flashOpacity - 0.2);
-                flash1.material.opacity = flashOpacity;
-                flash2.material.opacity = flashOpacity;
-            }
+            // Animate Track Movement & Distance Score
+            gridTexture.offset.y -= 0.02;
+            distanceCovered += 0.4;
+            document.getElementById('score').innerText = `DISTANCE: ${Math.floor(distanceCovered)}m`;
 
-            // Track texture animation
-            gridTexture.offset.y -= 0.015;
+            // Animate Portal
+            activePortal.position.z += 0.4;
+            const ring = activePortal.getObjectByName("portalRing");
+            if (ring) ring.rotation.z += 0.03;
 
-            // Shooting
-            if (elapsedTime - lastShoot > 0.16) {
-                shootBullet();
-                lastShoot = elapsedTime;
-            }
-
-            // Update Bullets
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                const b = bullets[i];
-                b.position.z -= 1.1;
-
-                if (b.position.z < -160) {
-                    scene.remove(b);
-                    bullets.splice(i, 1);
-                }
-            }
-
-            // Update Enemies & Collisions
-            for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
-                const enemy = enemies[eIdx];
-                enemy.position.z += 0.14;
-
-                if (enemy.userData.type === 'crystal') {
-                    enemy.position.y = 2.0 + Math.sin(elapsedTime * 3 + enemy.position.z) * 0.3;
-                    const outer = enemy.getObjectByName("outerCrystal");
-                    if (outer) outer.rotation.y += 0.02;
-                } else if (enemy.userData.type === 'robot') {
-                    const ring = enemy.getObjectByName("glowingRing");
-                    if (ring) {
-                        ring.rotation.x += 0.04;
-                        ring.rotation.y += 0.05;
-                    }
-                }
-
-                if (enemy.position.z > 5) {
-                    enemy.position.z = -110 - Math.random() * 40;
-                    enemy.position.x = (Math.random() - 0.5) * 8.5;
-                }
-
-                for (let bIdx = bullets.length - 1; bIdx >= 0; bIdx--) {
-                    const b = bullets[bIdx];
-                    const dist = b.position.distanceTo(enemy.position);
-
-                    if (dist < 1.8) {
-                        scene.remove(b);
-                        bullets.splice(bIdx, 1);
-
-                        enemy.userData.hp--;
-
-                        if (enemy.userData.hp <= 0) {
-                            scene.remove(enemy);
-                            enemies.splice(eIdx, 1);
-                            score += 150;
-                            document.getElementById('score').innerText = `SCORE: ${score}`;
-                            spawnEnemyCluster();
-                            break;
-                        }
-                    }
-                }
+            // Loop Portal back when passed
+            if (activePortal.position.z > 10) {
+                activePortal.position.z = -120;
+                activePortal.position.x = (Math.random() - 0.5) * 8.0;
             }
 
             renderer.render(scene, camera);
