@@ -3,190 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Cyber Skyway 3D</title>
+    <title>Cyber Skyway 3D - NextGen</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #050515; user-select: none; }
-        #ui { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; }
-        .hud-box { background: rgba(0, 20, 40, 0.8); border: 1px solid #00f3ff; color: #00f3ff; padding: 10px 20px; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 0 15px rgba(0,243,255,0.4); text-shadow: 0 0 5px #00f3ff; }
-        #overlay { position: absolute; inset: 0; background: rgba(5, 5, 18, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
-        h1 { color: #00f3ff; font-size: 42px; margin: 0 0 10px 0; text-shadow: 0 0 20px #00f3ff; }
-        button { background: linear-gradient(45deg, #ff0055, #ff5500); border: none; color: white; padding: 16px 45px; font-size: 22px; border-radius: 30px; cursor: pointer; margin-top: 20px; font-weight: bold; box-shadow: 0 0 20px rgba(255, 0, 85, 0.6); }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        #ui { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
+        .hud-card { background: rgba(0, 15, 30, 0.75); border: 2px solid #00f3ff; border-radius: 10px; padding: 10px 25px; color: #00f3ff; font-weight: 900; font-size: 20px; text-shadow: 0 0 10px #00f3ff; box-shadow: 0 0 20px rgba(0,243,255,0.4); }
+        #overlay { position: absolute; inset: 0; background: rgba(2, 2, 8, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; color: white; backdrop-filter: blur(8px); }
+        h1 { font-size: 50px; color: #00f3ff; text-shadow: 0 0 30px #00f3ff, 0 0 60px #00f3ff; margin: 0 0 10px 0; letter-spacing: 3px; }
+        p { color: #8a99ad; font-size: 18px; margin-bottom: 30px; }
+        button { background: linear-gradient(135deg, #ff0055, #ff5500); border: none; color: white; padding: 18px 50px; font-size: 24px; font-weight: bold; border-radius: 40px; cursor: pointer; box-shadow: 0 0 30px rgba(255, 0, 85, 0.8); transition: all 0.2s ease; }
+        button:hover { transform: scale(1.08); box-shadow: 0 0 40px rgba(255, 0, 85, 1); }
     </style>
+
+    <!-- Three.js & Post Processing Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 </head>
 <body>
 
     <div id="ui">
-        <div class="hud-box" id="dist">DISTANCE: 0m</div>
-        <div class="hud-box">STAGE 1: DEEP SPACE</div>
+        <div class="hud-card" id="dist-val">DISTANCE: 0m</div>
+        <div class="hud-card">STAGE 1: NEON CORE</div>
     </div>
 
     <div id="overlay">
         <h1>CYBER SKYWAY 3D</h1>
-        <p style="color: #aaa;">גרור שמאלה/ימינה כדי לשלוט בדיסק</p>
-        <button id="start">START RACE</button>
+        <p>הזז את העכבר / האצבע לצדדים כדי לשלוט</p>
+        <button id="start-btn">LAUNCH RACE</button>
     </div>
 
-    <script>
-        // --- 1. סצנה ותאורה מוגברת ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x08081a); // שמיים כהים אך לא שחורים מוחלטים
-        scene.fog = new THREE.FogExp2(0x08081a, 0.002);
+    <div id="canvas-container"></div>
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+    <script>
+        // --- 1. הגדרות סצנה ורנדרר ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020208);
+        scene.fog = new THREE.FogExp2(0x020208, 0.0015);
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.body.appendChild(renderer.domElement);
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.toneMappingExposure = 2.2;
+        container.appendChild(renderer.domElement);
 
-        // תאורה חזקה כדי לראות את המסלול
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // אור סביבתי חזק
+        // --- 2. Post-Processing (Bloom / זריחת ניאון) ---
+        const renderScene = new THREE.RenderPass(scene, camera);
+        const bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.8,  // עוצמת הזריחה (Strength)
+            0.4,  // רדיוס (Radius)
+            0.2   // סף חשיפה (Threshold)
+        );
+
+        const composer = new THREE.EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // --- 3. תאורה עתידנית ---
+        const ambientLight = new THREE.AmbientLight(0x0a1526, 2.5);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0x00d2ff, 1.5);
-        dirLight.position.set(20, 40, 20);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        dirLight.position.set(50, 100, -50);
         scene.add(dirLight);
 
-        const playerLight = new THREE.PointLight(0xff0055, 2, 30);
-        scene.add(playerLight);
+        const playerGlow = new THREE.PointLight(0xff0055, 5, 25);
+        scene.add(playerGlow);
 
-        // --- 2. כוכבים ופלנטה ברורה ---
-        const starsGeo = new THREE.BufferGeometry();
-        const starCount = 1500;
-        const starPositions = new Float32Array(starCount * 3);
-        for(let i = 0; i < starCount * 3; i++) {
-            starPositions[i] = (Math.random() - 0.5) * 500;
+        // --- 4. רקע חללי (כוכבים וגלגלות ניאון) ---
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 3000;
+        const starPos = new Float32Array(starCount * 3);
+        for(let i=0; i<starCount*3; i++) {
+            starPos[i] = (Math.random() - 0.5) * 800;
         }
-        starsGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2 });
-        const starField = new THREE.Points(starsGeo, starsMat);
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        const starMat = new THREE.PointsMaterial({ color: 0x00f3ff, size: 0.8, transparent: true, opacity: 0.8 });
+        const starField = new THREE.Points(starGeo, starMat);
         scene.add(starField);
 
-        // פלנטה זוהרת
-        const planetGeo = new THREE.SphereGeometry(30, 32, 32);
-        const planetMat = new THREE.MeshStandardMaterial({
-            color: 0x1d3557,
-            emissive: 0x0d1b2a,
-            roughness: 0.5
-        });
-        const planet = new THREE.Mesh(planetGeo, planetMat);
-        planet.position.set(-60, 20, 120);
-        scene.add(planet);
-
-        // --- 3. מסלול מואר וברור ---
+        // --- 5. יצירת המסלול ---
         const points = [];
-        const numPoints = 250;
-        for (let i = 0; i < numPoints; i++) {
-            const z = i * 12;
-            const x = Math.sin(i * 0.08) * 12 + Math.cos(i * 0.04) * 6;
-            const y = Math.sin(i * 0.05) * 3;
+        const trackLength = 300;
+        for (let i = 0; i < trackLength; i++) {
+            const z = i * 15;
+            const x = Math.sin(i * 0.06) * 18 + Math.cos(i * 0.03) * 8;
+            const y = Math.sin(i * 0.04) * 4;
             points.push(new THREE.Vector3(x, y, z));
         }
         const path = new THREE.CatmullRomCurve3(points);
 
-        // גאומטריה של המסלול (צבע אפור-כחול מואר עם ברק)
-        const trackWidth = 8;
+        // גוף המסלול (סגנון סייבר)
+        const trackWidth = 10;
         const shape = new THREE.Shape();
-        shape.moveTo(-trackWidth/2, -0.4);
-        shape.lineTo(trackWidth/2, -0.4);
-        shape.lineTo(trackWidth/2, 0.4);
-        shape.lineTo(-trackWidth/2, 0.4);
+        shape.moveTo(-trackWidth/2, -0.6);
+        shape.lineTo(trackWidth/2, -0.6);
+        shape.lineTo(trackWidth/2, 0.6);
+        shape.lineTo(-trackWidth/2, 0.6);
 
-        const trackGeo = new THREE.ExtrudeGeometry(shape, { steps: 500, extrudePath: path, bevelEnabled: false });
+        const trackGeo = new THREE.ExtrudeGeometry(shape, { steps: 600, extrudePath: path, bevelEnabled: false });
         const trackMat = new THREE.MeshStandardMaterial({ 
-            color: 0x2a324b, // אפור-כחול שרואים בבירור
-            roughness: 0.3,
-            metalness: 0.5
+            color: 0x0a0f1d, 
+            roughness: 0.1, 
+            metalness: 0.9 
         });
         const trackMesh = new THREE.Mesh(trackGeo, trackMat);
         scene.add(trackMesh);
 
-        // פסי ניאון זוהרים בצדדי המסלול
-        const createGlowEdge = (offset) => {
-            const edgePoints = points.map(p => p.clone().add(new THREE.Vector3(offset, 0.25, 0)));
-            const edgePath = new THREE.CatmullRomCurve3(edgePoints);
-            const edgeGeo = new THREE.TubeGeometry(edgePath, 400, 0.18, 8, false);
-            const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
-            return new THREE.Mesh(edgeGeo, edgeMat);
+        // פסי ניאון זוהרים במקביל למסלול
+        const buildGlowLine = (offsetColor, sideOffset) => {
+            const linePoints = points.map(p => p.clone().add(new THREE.Vector3(sideOffset, 0.3, 0)));
+            const linePath = new THREE.CatmullRomCurve3(linePoints);
+            const lineGeo = new THREE.TubeGeometry(linePath, 600, 0.25, 8, false);
+            const lineMat = new THREE.MeshBasicMaterial({ color: offsetColor });
+            return new THREE.Mesh(lineGeo, lineMat);
         };
-        scene.add(createGlowEdge(-trackWidth/2));
-        scene.add(createGlowEdge(trackWidth/2));
 
-        // --- 4. השחקן ---
+        scene.add(buildGlowLine(0x00f3ff, -trackWidth/2));
+        scene.add(buildGlowLine(0x00f3ff, trackWidth/2));
+        scene.add(buildGlowLine(0xff0055, 0)); // פס מרכזי אדום
+
+        // --- 6. השחקן (Cyber Drone / Roller) ---
         const playerGroup = new THREE.Group();
-        
-        const wheelGeo = new THREE.CylinderGeometry(1.5, 1.5, 1, 32);
-        wheelGeo.rotateZ(Math.PI / 2);
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8, roughness: 0.2 });
-        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-        playerGroup.add(wheel);
 
-        const coreGeo = new THREE.CylinderGeometry(1.1, 1.1, 1.05, 16);
-        coreGeo.rotateZ(Math.PI / 2);
-        const coreMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-        const core = new THREE.Mesh(coreGeo, coreMat);
-        playerGroup.add(core);
+        // גלגל חיצוני מטאלי
+        const outerWheelGeo = new THREE.CylinderGeometry(1.8, 1.8, 1.2, 32);
+        outerWheelGeo.rotateZ(Math.PI / 2);
+        const outerWheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.95, roughness: 0.1 });
+        const outerWheel = new THREE.Mesh(outerWheelGeo, outerWheelMat);
+        playerGroup.add(outerWheel);
+
+        // ליבת ניאון פנימית
+        const innerCoreGeo = new THREE.CylinderGeometry(1.3, 1.3, 1.25, 16);
+        innerCoreGeo.rotateZ(Math.PI / 2);
+        const innerCoreMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+        const innerCore = new THREE.Mesh(innerCoreGeo, innerCoreMat);
+        playerGroup.add(innerCore);
+
+        // טבעות זוהרות
+        const ringGeo = new THREE.TorusGeometry(1.82, 0.08, 16, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+        const ring1 = new THREE.Mesh(ringGeo, ringMat);
+        ring1.rotation.y = Math.PI / 2;
+        playerGroup.add(ring1);
 
         scene.add(playerGroup);
 
-        // --- 5. שליטה ---
+        // --- 7. שליטה ותנועה ---
         let isRunning = false;
         let progress = 0;
         let playerOffsetX = 0;
         let targetOffsetX = 0;
+        let currentSpeed = 0.0006;
 
-        let startX = 0;
-        window.addEventListener('pointerdown', e => startX = e.clientX);
-        window.addEventListener('pointermove', e => {
-            if (e.buttons === 1 || e.pointerType === 'touch') {
-                const delta = (e.clientX - startX) * 0.02;
-                targetOffsetX = Math.max(-trackWidth/2 + 1.2, Math.min(trackWidth/2 - 1.2, targetOffsetX + delta));
-                startX = e.clientX;
-            }
+        let mouseX = 0;
+        window.addEventListener('pointermove', (e) => {
+            if (!isRunning) return;
+            const normX = (e.clientX / window.innerWidth) * 2 - 1;
+            targetOffsetX = normX * (trackWidth / 2 - 1.2);
         });
 
-        document.getElementById('start').onclick = () => {
+        document.getElementById('start-btn').addEventListener('click', () => {
             document.getElementById('overlay').style.display = 'none';
             isRunning = true;
-        };
+        });
 
-        // --- 6. לולאת אקשן ---
+        // --- 8. לולאת המשחק (Game Loop) ---
         function animate() {
             requestAnimationFrame(animate);
 
             if (isRunning) {
-                progress += 0.0007;
+                progress += currentSpeed;
                 if (progress > 0.98) progress = 0;
 
-                const pos = path.getPointAt(progress);
+                // חישוב מיקום ווקטורים מונחים על העקומה
+                const currentPos = path.getPointAt(progress);
                 const tangent = path.getTangentAt(progress).normalize();
 
-                playerOffsetX += (targetOffsetX - playerOffsetX) * 0.1;
-                const side = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+                // החלקה של תזוזה אופקית (Lerp)
+                playerOffsetX += (targetOffsetX - playerOffsetX) * 0.12;
 
-                playerGroup.position.copy(pos).addScaledVector(side, playerOffsetX);
-                playerGroup.position.y += 1.5;
+                const sideVector = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
 
-                wheel.rotation.x += 0.2;
-                playerLight.position.copy(playerGroup.position);
+                // מיקום השחקן
+                playerGroup.position.copy(currentPos).addScaledVector(sideVector, playerOffsetX);
+                playerGroup.position.y += 1.8; // גובה מדויק מעל המסלול
 
-                // המצלמה עוקבת מאחור ומעט מלמעלה
-                const camPos = pos.clone().sub(tangent.clone().multiplyScalar(10));
-                camPos.y += 4.5;
-                camera.position.copy(camPos);
-                camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 0.5, 5)));
+                // סיבוב הגלגל והטיה דינמית בפניות
+                outerWheel.rotation.x += 0.25;
+                playerGroup.rotation.z = -(targetOffsetX - playerOffsetX) * 0.2; // הטיה בפנייה
 
-                document.getElementById('dist').innerText = `DISTANCE: ${Math.floor(progress * 3500)}m`;
+                playerGlow.position.copy(playerGroup.position);
+
+                // מצלמה עוקבת בצורה דינמית
+                const camOffset = currentPos.clone().sub(tangent.clone().multiplyScalar(14));
+                camOffset.y += 5.5;
+
+                // החלקת תנועת המצלמה
+                camera.position.lerp(camOffset, 0.1);
+                camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 0.5, 6)));
+
+                document.getElementById('dist-val').innerText = `DISTANCE: ${Math.floor(progress * 4000)}m`;
             }
 
-            starField.rotation.y += 0.0003;
-            renderer.render(scene, camera);
+            starField.rotation.y += 0.0002;
+
+            // רנדור דרך ה-Composer בשביל האפקטים
+            composer.render();
         }
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
         });
 
         animate();
