@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Spike Wheel Runner 3D - Forest Skyway</title>
+    <title>Spike Wheel Runner 3D - Curved Skyway</title>
     <style>
         * {
             box-sizing: border-box;
@@ -18,7 +18,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #70c5ff;
+            background-color: #64b5f6;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             justify-content: center;
@@ -30,7 +30,7 @@
             width: 100vw;
             height: 100vh;
             max-width: 480px;
-            background-color: #70c5ff;
+            background-color: #64b5f6;
             overflow: hidden;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
         }
@@ -123,7 +123,7 @@
 
     <div id="mobile-wrapper">
         <div id="start-screen">
-            <h1>FOREST SKYWAY RUNNER</h1>
+            <h1>FOREST SKYWAY 3D</h1>
             <p>Drag left/right to steer • Double Tap to JUMP!</p>
             <button class="btn-start" id="start-btn">START RUN</button>
         </div>
@@ -139,33 +139,47 @@
     <script>
         let gameStarted = false;
 
-        // --- 1. SETUP SCENE & SKY BACKGROUND ---
+        // --- 1. SETUP SCENE & CAMERA (CAMERA RETRACTED / WIDER FOV) ---
         const wrapper = document.getElementById('mobile-wrapper');
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        
-        const skyColor = new THREE.Color(0x64b5f6); // שמיים כחולים נעימים
-        scene.background = skyColor;
-        scene.fog = new THREE.FogExp2(0x90caf9, 0.008); // ערפילאי אופק רך
 
-        const camera = new THREE.PerspectiveCamera(65, wrapper.clientWidth / wrapper.clientHeight, 0.1, 1000);
-        camera.position.set(0, 7.5, 13);
-        camera.lookAt(0, 1, -20);
+        scene.background = new THREE.Color(0x64b5f6);
+        scene.fog = new THREE.FogExp2(0x90caf9, 0.005);
+
+        // מצלמה מורחקת יותר (FOV: 70, Height: 10, Distance: 17)
+        const camera = new THREE.PerspectiveCamera(70, wrapper.clientWidth / wrapper.clientHeight, 0.1, 1000);
+        camera.position.set(0, 10, 17);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // --- 2. LIGHTING (SUNLIGHT) ---
+        // --- 2. LIGHTING ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.2); // אור שמש חם
-        sunLight.position.set(20, 40, 10);
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+        sunLight.position.set(30, 50, 20);
         scene.add(sunLight);
 
-        // --- 3. TRACK & ENVIRONMENT (FOREST & CLOUDS) ---
+        // --- 3. DYNAMIC CURVED TRACK CREATION ---
+        const trackWidth = 14;
+        const trackLength = 400;
+        const numPoints = 100;
+        const curvePoints = [];
+
+        // יצירת מסלול עם עיקולים ועליות/מורדות
+        for (let i = 0; i <= numPoints; i++) {
+            const z = - (i / numPoints) * trackLength;
+            const x = Math.sin(i * 0.15) * 12; // עיקולים ימינה ושמאלה
+            const y = Math.sin(i * 0.1) * 8;   // עליות ומורדות
+            curvePoints.push(new THREE.Vector3(x, y, z));
+        }
+
+        const pathCurve = new THREE.CatmullRomCurve3(curvePoints);
+
         // טקסטורת מסלול
         const canvas = document.createElement('canvas');
         canvas.width = 256; canvas.height = 256;
@@ -176,81 +190,73 @@
 
         const gridTexture = new THREE.CanvasTexture(canvas);
         gridTexture.wrapS = THREE.RepeatWrapping; gridTexture.wrapT = THREE.RepeatWrapping;
-        gridTexture.repeat.set(4, 40);
+        gridTexture.repeat.set(4, 80);
 
-        // מסלול הגשר
-        const trackGeo = new THREE.PlaneGeometry(14, 300);
-        const trackMat = new THREE.MeshStandardMaterial({ map: gridTexture, roughness: 0.4, metalness: 0.2 });
+        // יצירת הגאומטריה המפותלת
+        const trackGeo = new THREE.TubeGeometry(pathCurve, 200, trackWidth / 2, 2, false);
+        
+        // השטחת הצינור לצורת משטח רחב
+        const posAttr = trackGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            if (i % 2 === 0) {
+                posAttr.setY(i, posAttr.getY(i) * 0.05); // פרופיל שטוח
+            }
+        }
+        trackGeo.computeVertexNormals();
+
+        const trackMat = new THREE.MeshStandardMaterial({ map: gridTexture, roughness: 0.4, side: THREE.DoubleSide });
         const track = new THREE.Mesh(trackGeo, trackMat);
-        track.rotation.x = -Math.PI / 2;
-        track.position.z = -140;
         scene.add(track);
 
-        const edgeGeo = new THREE.BoxGeometry(0.4, 0.4, 300);
-        const edgeMat = new THREE.MeshStandardMaterial({ color: 0x00e676 });
-        const leftEdge = new THREE.Mesh(edgeGeo, edgeMat);
-        leftEdge.position.set(-7, 0.2, -140);
-        const rightEdge = new THREE.Mesh(edgeGeo, edgeMat);
-        rightEdge.position.set(7, 0.2, -140);
-        scene.add(leftEdge, rightEdge);
-
-        // קרקע היער למטה
-        const forestGroundGeo = new THREE.PlaneGeometry(400, 400);
+        // קרקע יער למטה
+        const forestGroundGeo = new THREE.PlaneGeometry(600, 600);
         const forestGroundMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.9 });
         const forestGround = new THREE.Mesh(forestGroundGeo, forestGroundMat);
         forestGround.rotation.x = -Math.PI / 2;
-        forestGround.position.set(0, -12, -100);
+        forestGround.position.set(0, -25, -150);
         scene.add(forestGround);
+
+        // עצים ביער
+        const treesGroup = new THREE.Group();
+        const trunkGeo = new THREE.CylinderGeometry(0.5, 0.8, 4, 8);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4e342e });
+        const leavesGeo = new THREE.ConeGeometry(3, 8, 8);
+        const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.8 });
+
+        for (let i = 0; i < 80; i++) {
+            const tree = new THREE.Group();
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 2;
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.y = 6;
+            tree.add(trunk, leaves);
+
+            const side = Math.random() > 0.5 ? 1 : -1;
+            tree.position.set(side * (25 + Math.random() * 60), -25, -Math.random() * 380);
+            const scale = 0.8 + Math.random() * 0.8;
+            tree.scale.set(scale, scale, scale);
+            treesGroup.add(tree);
+        }
+        scene.add(treesGroup);
 
         // עננים ברקע
         const cloudsGroup = new THREE.Group();
         const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
-        const cloudGeo = new THREE.DodecahedronGeometry(4, 1);
+        const cloudGeo = new THREE.DodecahedronGeometry(5, 1);
 
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 30; i++) {
             const cloud = new THREE.Mesh(cloudGeo, cloudMat);
             cloud.position.set(
-                (Math.random() - 0.5) * 250,
-                15 + Math.random() * 25,
-                -Math.random() * 250
+                (Math.random() - 0.5) * 300,
+                15 + Math.random() * 30,
+                -Math.random() * 350
             );
             cloud.scale.set(1 + Math.random() * 2, 0.6 + Math.random() * 0.4, 1 + Math.random() * 1.5);
             cloudsGroup.add(cloud);
         }
         scene.add(cloudsGroup);
 
-        // עצים ביער
-        const treesGroup = new THREE.Group();
-        const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 3, 8);
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4e342e });
-        const leavesGeo = new THREE.ConeGeometry(2.5, 6, 8);
-        const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.8 });
-
-        function createTree() {
-            const tree = new THREE.Group();
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.y = 1.5;
-            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-            leaves.position.y = 5.0;
-            tree.add(trunk, leaves);
-            return tree;
-        }
-
-        const trees = [];
-        for (let i = 0; i < 60; i++) {
-            const tree = createTree();
-            const side = Math.random() > 0.5 ? 1 : -1;
-            const x = side * (12 + Math.random() * 45);
-            const z = -Math.random() * 280;
-            tree.position.set(x, -12, z);
-            const scale = 0.8 + Math.random() * 0.8;
-            tree.scale.set(scale, scale, scale);
-            treesGroup.add(tree);
-            trees.push(tree);
-        }
-        scene.add(treesGroup);
-
-        // --- 4. BUILD SPIKE WHEEL PLAYER ---
+        // --- 4. SPIKE WHEEL PLAYER ---
         const playerGroup = new THREE.Group();
         const wheelGroup = new THREE.Group();
 
@@ -298,37 +304,17 @@
         rebuildSpikes(6);
 
         playerGroup.add(wheelGroup);
-        playerGroup.position.set(0, 1.4, 2);
         scene.add(playerGroup);
 
-        // --- 5. DEMO PORTAL ---
-        function createPortal() {
-            const portalGroup = new THREE.Group();
-            const ringGeo = new THREE.TorusGeometry(2.5, 0.15, 16, 32);
-            const ringMat = new THREE.MeshStandardMaterial({ color: 0x00e676, emissive: 0x00a352 });
-            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-            ringMesh.name = "portalRing";
-            portalGroup.add(ringMesh);
-
-            const innerGeo = new THREE.CircleGeometry(2.4, 32);
-            const innerMat = new THREE.MeshBasicMaterial({ color: 0x69f0ae, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-            portalGroup.add(new THREE.Mesh(innerGeo, innerMat));
-
-            portalGroup.position.set(0, 2.5, -80);
-            return portalGroup;
-        }
-
-        const activePortal = createPortal();
-        scene.add(activePortal);
-
-        // --- 6. CONTROLS & JUMP PHYSICS ---
+        // --- 5. CONTROLS & MOVEMENT ALONG CURVE ---
         let targetX = 0;
+        let progress = 0; // התקדמות לאורך העקומה (0 עד 1)
         let distanceCovered = 0;
 
         let isJumping = false;
         let jumpVelocity = 0;
         const gravity = -0.018;
-        const groundY = 1.4;
+        let jumpOffsetY = 0;
 
         let lastTapTime = 0;
 
@@ -345,7 +331,8 @@
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const relativeX = clientX - rect.left;
             const normalizedX = (relativeX / rect.width) * 2 - 1;
-            targetX = Math.max(-4.2, Math.min(4.2, normalizedX * 5.0));
+            // הגבלה רחבה של ההיגוי שנראית מצוין גם במצלמה המורחקת
+            targetX = Math.max(-5.5, Math.min(5.5, normalizedX * 6.5));
         }
 
         function handleTapStart(e) {
@@ -363,7 +350,6 @@
         wrapper.addEventListener('touchmove', handlePointerMove, { passive: true });
         wrapper.addEventListener('pointerdown', handleTapStart);
 
-        // FULLSCREEN API + START GAME
         document.getElementById('start-btn').addEventListener('click', () => {
             gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
@@ -378,7 +364,9 @@
             }
         });
 
-        // --- 7. MAIN GAME LOOP ---
+        // --- 6. MAIN GAME LOOP ---
+        let currentX = 0;
+
         function animate() {
             requestAnimationFrame(animate);
 
@@ -387,56 +375,56 @@
                 return;
             }
 
-            const prevX = playerGroup.position.x;
-            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.18;
-            const velocityX = playerGroup.position.x - prevX;
+            // התקדמות לאורך המסלול הדינמי
+            progress += 0.0008;
+            if (progress >= 0.85) progress = 0.05; // חזרה בלולאה חלקה
 
-            playerGroup.rotation.z = -velocityX * 1.2;
-            playerGroup.rotation.y = -velocityX * 0.4;
+            distanceCovered += 0.5;
+            document.getElementById('score').innerText = `DISTANCE: ${Math.floor(distanceCovered)}m`;
 
+            // חישוב מיקום וזווית על העקומה
+            const centerPos = pathCurve.getPointAt(progress);
+            const tangent = pathCurve.getTangentAt(progress);
+
+            // יצירת וקטורי כיוון (רוחב וגובה המסלול)
+            const normal = new THREE.Vector3(0, 1, 0);
+            const sideVector = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+            const upVector = new THREE.Vector3().crossVectors(sideVector, tangent).normalize();
+
+            // החלקה של היגוי השחקן
+            currentX += (targetX - currentX) * 0.15;
+
+            // פיזיקת קפיצה
             if (isJumping) {
-                playerGroup.position.y += jumpVelocity;
+                jumpOffsetY += jumpVelocity;
                 jumpVelocity += gravity;
 
-                if (playerGroup.position.y <= groundY) {
-                    playerGroup.position.y = groundY;
+                if (jumpOffsetY <= 0) {
+                    jumpOffsetY = 0;
                     isJumping = false;
                     jumpVelocity = 0;
                 }
             }
 
-            wheelGroup.rotation.x -= 0.18;
+            // מיקום הגלגל לפי המסלול + צידוד רוחבי + גובה קפיצה
+            const wheelPos = centerPos.clone()
+                .add(sideVector.clone().multiplyScalar(currentX))
+                .add(upVector.clone().multiplyScalar(1.3 + jumpOffsetY));
 
-            // תנועת מסלול, עצים ועננים (אפקט נסיעה)
-            gridTexture.offset.y -= 0.02;
-            distanceCovered += 0.4;
-            document.getElementById('score').innerText = `DISTANCE: ${Math.floor(distanceCovered)}m`;
+            playerGroup.position.copy(wheelPos);
 
-            // תנועת העצים לאחור
-            trees.forEach(tree => {
-                tree.position.z += 0.5;
-                if (tree.position.z > 20) {
-                    tree.position.z = -260;
-                }
-            });
+            // התאמת סיבוב הגלגל לשיפוע העיקול והעלייה
+            playerGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), tangent);
 
-            // תנועת עננים איטית
-            cloudsGroup.children.forEach(cloud => {
-                cloud.position.z += 0.08;
-                if (cloud.position.z > 30) {
-                    cloud.position.z = -220;
-                }
-            });
+            // סיבוב הגלגל סביב עצמו
+            wheelGroup.rotation.x -= 0.2;
 
-            // התנהגות פורטל
-            activePortal.position.z += 0.4;
-            const ring = activePortal.getObjectByName("portalRing");
-            if (ring) ring.rotation.z += 0.03;
+            // התאמת המצלמה (עוקבת במרחק בטוח מאחורי הגלגל)
+            const camOffset = tangent.clone().multiplyScalar(-16).add(upVector.clone().multiplyScalar(8));
+            camera.position.copy(centerPos).add(camOffset);
+            camera.lookAt(centerPos.clone().add(tangent.clone().multiplyScalar(10)));
 
-            if (activePortal.position.z > 10) {
-                activePortal.position.z = -120;
-                activePortal.position.x = (Math.random() - 0.5) * 8.0;
-            }
+            gridTexture.offset.y -= 0.015;
 
             renderer.render(scene, camera);
         }
