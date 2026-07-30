@@ -11,12 +11,12 @@ window.addEventListener('DOMContentLoaded', () => {
         if (pauseBtn) pauseBtn.style.pointerEvents = 'auto';
     }
 
-    function requestFullScreen() {
+    // 1. אילוץ מסך מלא
+    function forceFullScreen() {
         const docEl = document.documentElement;
-        if (docEl.requestFullscreen) {
-            docEl.requestFullscreen().catch(() => {});
-        } else if (docEl.webkitRequestFullscreen) {
-            docEl.webkitRequestFullscreen();
+        const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+        if (requestFS) {
+            requestFS.call(docEl).catch(() => {});
         }
     }
 
@@ -24,6 +24,8 @@ window.addEventListener('DOMContentLoaded', () => {
     let audioCtx = null;
     let masterGainNode = null;
     let masterVolume = 0.25;
+    let rollOsc = null;
+    let rollGain = null;
 
     function initAudio() {
         try {
@@ -32,10 +34,32 @@ window.addEventListener('DOMContentLoaded', () => {
                 masterGainNode = audioCtx.createGain();
                 masterGainNode.gain.value = masterVolume;
                 masterGainNode.connect(audioCtx.destination);
+
+                // 3. צליל עדין לנסיעת הגלגל
+                rollOsc = audioCtx.createOscillator();
+                rollGain = audioCtx.createGain();
+                
+                rollOsc.type = 'triangle';
+                rollOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // תדר נמוך ועדין
+                rollGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+                rollOsc.connect(rollGain);
+                rollGain.connect(masterGainNode);
+                rollOsc.start();
             } else if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
         } catch (e) {}
+    }
+
+    function updateRollingSound(isRolling) {
+        if (!rollGain || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        if (isRolling && gameStarted && !isPaused) {
+            rollGain.gain.setTargetAtTime(0.08, now, 0.1); // ווליום עדין מאוד
+        } else {
+            rollGain.gain.setTargetAtTime(0.0, now, 0.1);
+        }
     }
 
     function playSound(type) {
@@ -56,6 +80,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
                 osc.start(now);
                 osc.stop(now + 0.12);
+            } else if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(320, now + 0.18);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                osc.start(now);
+                osc.stop(now + 0.18);
             } else if (type === 'damage') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(120, now);
@@ -110,7 +142,7 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. DARK PURPLE NEBULA SKYBOX ---
+    // --- SKYBOX ---
     function createGalaxyTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 2048; canvas.height = 2048;
@@ -229,9 +261,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- 5. Spike Wheel Player ---
     const wheelGroup = new THREE.Group();
-    let spikeCount = 5; // כמות קוצים התחלתית
+    let spikeCount = 6; 
 
-    // גליל מרכזי
+    // משתני פיזיקת קפיצה
+    let velocityY = 0;
+    let isJumping = false;
+    const gravity = -30;
+    const jumpForce = 11;
+    const groundY = 1.2;
+
     const cylinderGeo = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 32);
     cylinderGeo.rotateZ(Math.PI / 2);
     const cylinderMat = new THREE.MeshStandardMaterial({ 
@@ -242,7 +280,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const wheelCore = new THREE.Mesh(cylinderGeo, cylinderMat);
     wheelGroup.add(wheelCore);
 
-    // קוצים
     const spikeMeshGroup = new THREE.Group();
     wheelGroup.add(spikeMeshGroup);
 
@@ -256,30 +293,33 @@ window.addEventListener('DOMContentLoaded', () => {
         roughness: 0.2
     });
 
+    // 4. סידור הקוצים בקצוות בלבד (מרכז נקי)
     function rebuildSpikes() {
         while(spikeMeshGroup.children.length > 0) {
             spikeMeshGroup.remove(spikeMeshGroup.children[0]);
         }
 
         const radius = 1.2;
-        const width = 2.0;
+        const leftEdgeX = -1.1;  // קצה שמאל
+        const rightEdgeX = 1.1;  // קצה ימין
 
         for (let i = 0; i < spikeCount; i++) {
             const spike = new THREE.Mesh(spikeGeo, spikeMat);
             const angle = (i / spikeCount) * Math.PI * 2;
-            const xOffset = ((i % 5) / 4 - 0.5) * width;
+            
+            // מחלקים שווה בשווה בין צד ימין לצד שמאל
+            const xOffset = (i % 2 === 0) ? leftEdgeX : rightEdgeX;
 
             spike.position.set(xOffset, Math.sin(angle) * radius, Math.cos(angle) * radius);
             spike.rotation.x = angle;
             spikeMeshGroup.add(spike);
         }
 
-        // עדכון UI
         const scoreVal = document.getElementById('score-val');
         if (scoreVal) scoreVal.innerText = spikeCount;
     }
 
-    wheelGroup.position.set(0, 1.2, 0);
+    wheelGroup.position.set(0, groundY, 0);
     scene.add(wheelGroup);
 
     // --- 6. Portals System ---
@@ -325,14 +365,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const pairZ = wheelGroup.position.z - 120;
 
-        // פורטל שמאל
         const portalGeo = new THREE.PlaneGeometry(6.5, 5);
         const matLeft = new THREE.MeshBasicMaterial({ map: createPortalCanvasTexture(leftText, true), side: THREE.DoubleSide });
         const pLeft = new THREE.Mesh(portalGeo, matLeft);
         pLeft.position.set(-4.2, 2.5, pairZ);
         pLeft.userData = { val: leftVal, isMult: !isMathPortal, text: leftText, active: true };
 
-        // פורטל ימין
         const matRight = new THREE.MeshBasicMaterial({ map: createPortalCanvasTexture(rightText, false), side: THREE.DoubleSide });
         const pRight = new THREE.Mesh(portalGeo, matRight);
         pRight.position.set(4.2, 2.5, pairZ);
@@ -352,11 +390,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
         for (let i = portals.length - 1; i >= 0; i--) {
             const p = portals[i];
-            p.position.z += 25.0 * delta; // מהירות התקדמות המסלול
+            p.position.z += 25.0 * delta;
 
-            // בדיקת פגיעה בפורטל
             if (p.userData.active && Math.abs(p.position.z - wheelGroup.position.z) < 1.5) {
-                if (Math.abs(p.position.x - wheelGroup.position.x) < 3.5) {
+                if (Math.abs(p.position.x - wheelGroup.position.x) < 3.5 && wheelGroup.position.y < 3.5) {
                     p.userData.active = false;
 
                     if (p.userData.isMult) {
@@ -385,13 +422,34 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. Controls ---
+    // --- 7. Controls & Double Tap Jump ---
     let targetX = 0, isDragging = false, previousTouchX = 0;
+    let lastTapTime = 0;
+
+    function triggerJump() {
+        if (!isJumping && gameStarted && !isPaused) {
+            velocityY = jumpForce;
+            isJumping = true;
+            playSound('jump');
+        }
+    }
+
+    function handleTapDetection() {
+        const now = Date.now();
+        if (now - lastTapTime < 300) { // זיהוי דאבל טאפ (300 מילי-שניות)
+            triggerJump();
+        }
+        lastTapTime = now;
+    }
 
     function stopInput() { isDragging = false; }
 
     renderer.domElement.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); isDragging = true; previousTouchX = e.touches[0].clientX; 
+        e.preventDefault(); 
+        forceFullScreen();
+        handleTapDetection();
+        isDragging = true; 
+        previousTouchX = e.touches[0].clientX; 
     }, { passive: false });
     
     renderer.domElement.addEventListener('touchend', (e) => { e.preventDefault(); stopInput(); }, { passive: false });
@@ -404,7 +462,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; previousTouchX = e.clientX; });
+    renderer.domElement.addEventListener('mousedown', (e) => { 
+        forceFullScreen();
+        handleTapDetection();
+        isDragging = true; 
+        previousTouchX = e.clientX; 
+    });
     renderer.domElement.addEventListener('mouseup', stopInput);
     renderer.domElement.addEventListener('mousemove', (e) => {
         if (isDragging && gameStarted && !isPaused) {
@@ -417,14 +480,16 @@ window.addEventListener('DOMContentLoaded', () => {
     let gameStarted = false, isPaused = false, distanceMetres = 0;
 
     function resetGame() {
-        spikeCount = 5;
+        spikeCount = 6;
         distanceMetres = 0;
         cameraShakeIntensity = 0;
+        velocityY = 0;
+        isJumping = false;
 
         for (let p of portals) scene.remove(p);
         portals.length = 0;
 
-        wheelGroup.position.set(0, 1.2, 0);
+        wheelGroup.position.set(0, groundY, 0);
         targetX = 0;
 
         rebuildSpikes();
@@ -433,6 +498,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function gameOver() {
         gameStarted = false; stopInput();
         playSound('damage');
+        updateRollingSound(false);
 
         const score = Math.floor(distanceMetres);
         if (score > highScore) {
@@ -450,14 +516,14 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
-        requestFullScreen();
+        forceFullScreen();
         document.getElementById('game-over-modal')?.classList.add('hidden');
         resetGame();
         gameStarted = true;
     });
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
-        requestFullScreen();
+        forceFullScreen();
         initAudio();
         resetGame();
         gameStarted = true;
@@ -471,11 +537,12 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
         isPaused = true;
+        updateRollingSound(false);
         document.getElementById('pause-menu')?.classList.remove('hidden');
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => { 
-        requestFullScreen();
+        forceFullScreen();
         isPaused = false; 
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
@@ -491,11 +558,25 @@ window.addEventListener('DOMContentLoaded', () => {
         updateStars(delta);
 
         if (gameStarted && !isPaused) {
+            // פיזיקת קפיצה
+            if (isJumping) {
+                wheelGroup.position.y += velocityY * delta;
+                velocityY += gravity * delta;
+
+                if (wheelGroup.position.y <= groundY) {
+                    wheelGroup.position.y = groundY;
+                    isJumping = false;
+                    velocityY = 0;
+                }
+            }
+
+            updateRollingSound(!isJumping);
+
             // תנועה אופקית
             targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
             wheelGroup.position.x = THREE.MathUtils.lerp(wheelGroup.position.x, targetX, delta * 12);
             
-            // סיבוב גלגל הקוצים
+            // סיבוב הגלגל
             wheelGroup.rotation.x += delta * 8;
 
             // עדכון פורטלים ומרחק
@@ -513,10 +594,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 camera.position.z = wheelGroup.position.z + 12 + (Math.random() - 0.5) * cameraShakeIntensity;
             } else {
                 camera.position.x = THREE.MathUtils.lerp(camera.position.x, wheelGroup.position.x, delta * 6);
-                camera.position.y = 8;
+                camera.position.y = 8 + (wheelGroup.position.y - groundY) * 0.4;
                 camera.position.z = wheelGroup.position.z + 12;
             }
             camera.lookAt(wheelGroup.position.x, 1.0, wheelGroup.position.z - 20);
+        } else {
+            updateRollingSound(false);
         }
 
         renderer.render(scene, camera);
