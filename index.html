@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Track Shooter 3D - Deluxe Enemies Edition</title>
+    <title>Track Shooter 3D - Cyber Neon Upgrade</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
+            background-color: #020208;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
         }
@@ -18,10 +18,9 @@
             height: 100vh;
         }
 
-        /* UI overlay */
         #ui {
             position: absolute;
-            top: 10px;
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -29,17 +28,18 @@
             display: flex;
             justify-content: space-between;
             color: #fff;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 800;
             pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,255,255,0.7);
+            text-shadow: 0 0 12px rgba(0,255,255,0.8);
         }
 
         .hud-card {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(0, 255, 255, 0.3);
+            background: rgba(5, 10, 25, 0.75);
+            padding: 10px 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
         }
     </style>
     <!-- Three.js CDN -->
@@ -58,11 +58,12 @@
         // --- 1. SETUP SCENE & RENDERER ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050510, 0.015);
+        scene.fog = new THREE.FogExp2(0x02020a, 0.012);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 4, 10);
-        camera.lookAt(0, 0, -20);
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // מצלמה קרובה וקצת נמוכה יותר בשביל עומק דרמטי
+        camera.position.set(0, 3.2, 7);
+        camera.lookAt(0, 1, -25);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -70,18 +71,38 @@
         container.appendChild(renderer.domElement);
 
         // --- 2. LIGHTS ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 20, 10);
+        const dirLight = new THREE.DirectionalLight(0x00ffff, 1.2);
+        dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        // --- 3. TRACK & ENVIRONMENT ---
-        const trackGeo = new THREE.PlaneGeometry(12, 300);
+        const backLight = new THREE.DirectionalLight(0xff00ff, 0.8);
+        backLight.position.set(-10, -10, -30);
+        scene.add(backLight);
+
+        // --- 3. DYNAMIC NEON GRID TRACK ---
+        // יצירת טקסטורת רשת ניאון שזזה
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#050515';
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(0, 0, 256, 256);
+
+        const gridTexture = new THREE.CanvasTexture(canvas);
+        gridTexture.wrapS = THREE.RepeatWrapping;
+        gridTexture.wrapT = THREE.RepeatWrapping;
+        gridTexture.repeat.set(4, 40);
+
+        const trackGeo = new THREE.PlaneGeometry(14, 300);
         const trackMat = new THREE.MeshStandardMaterial({ 
-            color: 0x0a0a1a, 
-            roughness: 0.1, 
+            map: gridTexture,
+            roughness: 0.2, 
             metalness: 0.8 
         });
         const track = new THREE.Mesh(trackGeo, trackMat);
@@ -89,91 +110,95 @@
         track.position.z = -140;
         scene.add(track);
 
-        // Neon Edges
-        const edgeGeo = new THREE.BoxGeometry(0.2, 0.2, 300);
+        // Neon Edges (פסים זוהרים אופייניים)
+        const edgeGeo = new THREE.BoxGeometry(0.3, 0.3, 300);
         const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
         const leftEdge = new THREE.Mesh(edgeGeo, edgeMat);
-        leftEdge.position.set(-6, 0.1, -140);
+        leftEdge.position.set(-7, 0.15, -140);
         const rightEdge = new THREE.Mesh(edgeGeo, edgeMat);
-        rightEdge.position.set(6, 0.1, -140);
+        rightEdge.position.set(7, 0.15, -140);
         scene.add(leftEdge, rightEdge);
 
         // Stars Background
         const starsGeo = new THREE.BufferGeometry();
-        const starsCount = 800;
+        const starsCount = 1000;
         const starPos = new Float32Array(starsCount * 3);
         for(let i=0; i<starsCount*3; i++) {
-            starPos[i] = (Math.random() - 0.5) * 200;
+            starPos[i] = (Math.random() - 0.5) * 250;
         }
         starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 });
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6 });
         const starField = new THREE.Points(starsGeo, starsMat);
         scene.add(starField);
 
         // --- 4. CANNON (PLAYER) ---
         const playerGroup = new THREE.Group();
-        const cannonBaseGeo = new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-        const cannonBaseMat = new THREE.MeshStandardMaterial({ color: 0x8a2be2, metalness: 0.7, roughness: 0.2 });
+        const cannonBaseGeo = new THREE.SphereGeometry(1.3, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        const cannonBaseMat = new THREE.MeshStandardMaterial({ color: 0x9900ff, metalness: 0.8, roughness: 0.1 });
         const cannonBase = new THREE.Mesh(cannonBaseGeo, cannonBaseMat);
         playerGroup.add(cannonBase);
 
         // Pipes
-        const pipeGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2);
-        const pipeMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.1 });
+        const pipeGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.4);
+        const pipeMat = new THREE.MeshStandardMaterial({ color: 0x111122, metalness: 0.9, roughness: 0.1 });
         const pipe1 = new THREE.Mesh(pipeGeo, pipeMat);
         pipe1.rotation.x = Math.PI / 2;
-        pipe1.position.set(-0.4, 0.6, -0.6);
+        pipe1.position.set(-0.45, 0.65, -0.6);
         const pipe2 = pipe1.clone();
-        pipe2.position.set(0.4, 0.6, -0.6);
+        pipe2.position.set(0.45, 0.65, -0.6);
         playerGroup.add(pipe1, pipe2);
 
         playerGroup.position.set(0, 0, 2);
         scene.add(playerGroup);
 
-        // --- 5. ENEMY CREATION FUNCTIONS ---
+        // --- 5. ENEMY CREATION (BIGGER & DETAILED) ---
 
-        // 5A. Neon Cyber Robot
+        // 5A. Cyber Robot (גדלים מוגדלים באופן משמעותי)
         function createCyberRobot(color = 0xff0055) {
             const robotGroup = new THREE.Group();
 
-            // Body
-            const bodyGeo = new THREE.IcosahedronGeometry(0.8, 0);
+            // Main Body
+            const bodyGeo = new THREE.IcosahedronGeometry(1.8, 0); // גודל 1.8 במקום 0.8
             const bodyMat = new THREE.MeshStandardMaterial({
-                color: 0x111122,
-                metalness: 0.8,
-                roughness: 0.2,
+                color: 0x151525,
+                metalness: 0.9,
+                roughness: 0.1,
                 flatShading: true
             });
             const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-            bodyMesh.name = "body";
             robotGroup.add(bodyMesh);
 
-            // Glowing Core
-            const coreGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            // Glowing Core (מקור אור)
+            const coreGeo = new THREE.SphereGeometry(0.9, 16, 16);
             const coreMat = new THREE.MeshBasicMaterial({ color: color });
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
             robotGroup.add(coreMesh);
 
-            // Glowing Ring
-            const ringGeo = new THREE.TorusGeometry(1.1, 0.05, 8, 24);
+            // Glowing Outer Ring
+            const ringGeo = new THREE.TorusGeometry(2.4, 0.12, 12, 30);
             const ringMat = new THREE.MeshBasicMaterial({ color: color });
             const ringMesh = new THREE.Mesh(ringGeo, ringMat);
             ringMesh.name = "glowingRing";
             robotGroup.add(ringMesh);
 
-            // Mechanical Legs
-            const legGeo = new THREE.CylinderGeometry(0.04, 0.08, 0.8);
-            const legMat = new THREE.MeshStandardMaterial({ color: 0x333344, metalness: 0.9, roughness: 0.1 });
-            for (let i = 0; i < 4; i++) {
+            // Legs / Spikes
+            const legGeo = new THREE.ConeGeometry(0.25, 1.8, 4);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x333355, metalness: 0.9, roughness: 0.2 });
+            for (let i = 0; i < 6; i++) {
                 const leg = new THREE.Mesh(legGeo, legMat);
-                const angle = (i / 4) * Math.PI * 2;
-                leg.position.set(Math.cos(angle) * 0.8, -0.2, Math.sin(angle) * 0.8);
-                leg.rotation.z = Math.PI / 4;
+                const angle = (i / 6) * Math.PI * 2;
+                leg.position.set(Math.cos(angle) * 1.8, -0.4, Math.sin(angle) * 1.8);
+                leg.rotation.z = Math.PI / 3;
                 leg.rotation.y = angle;
                 robotGroup.add(leg);
             }
 
-            robotGroup.userData = { type: 'robot', hp: 3, maxHp: 3, originalColor: color };
+            // Light Emitted from Robot
+            const light = new THREE.PointLight(color, 2, 12);
+            light.position.set(0, 0, 0);
+            robotGroup.add(light);
+
+            robotGroup.userData = { type: 'robot', hp: 4, maxHp: 4, color: color };
             return robotGroup;
         }
 
@@ -182,14 +207,14 @@
             const crystalGroup = new THREE.Group();
 
             // Outer Crystal
-            const outerGeo = new THREE.OctahedronGeometry(1.0, 0);
+            const outerGeo = new THREE.OctahedronGeometry(2.2, 0); // גודל 2.2
             const outerMat = new THREE.MeshPhysicalMaterial({
                 color: color,
                 metalness: 0.1,
-                roughness: 0.1,
-                transmission: 0.6,
+                roughness: 0.05,
+                transmission: 0.8,
                 transparent: true,
-                opacity: 0.9,
+                opacity: 0.95,
                 flatShading: true
             });
             const outerMesh = new THREE.Mesh(outerGeo, outerMat);
@@ -197,50 +222,78 @@
             crystalGroup.add(outerMesh);
 
             // Inner Energy Wireframe
-            const innerGeo = new THREE.IcosahedronGeometry(0.45, 1);
+            const innerGeo = new THREE.IcosahedronGeometry(1.1, 1);
             const innerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
             const innerMesh = new THREE.Mesh(innerGeo, innerMat);
             innerMesh.name = "innerCore";
             crystalGroup.add(innerMesh);
 
-            crystalGroup.userData = { type: 'crystal', hp: 5, maxHp: 5, originalColor: color };
+            // Light
+            const light = new THREE.PointLight(color, 2, 15);
+            crystalGroup.add(light);
+
+            crystalGroup.userData = { type: 'crystal', hp: 6, maxHp: 6, color: color };
             return crystalGroup;
         }
 
-        // --- 6. GAME LOGIC & ARRAYS ---
+        // --- 6. PARTICLES & BULLETS ---
         const bullets = [];
         const enemies = [];
+        const particles = [];
         let score = 0;
         const clock = new THREE.Clock();
 
-        // Spawn Enemies Routine
+        function createExplosion(pos, color) {
+            const count = 25;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+
+            for (let i = 0; i < count; i++) {
+                positions[i * 3] = pos.x;
+                positions[i * 3 + 1] = pos.y;
+                positions[i * 3 + 2] = pos.z;
+
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.6,
+                    y: (Math.random() - 0.5) * 0.6,
+                    z: (Math.random() - 0.5) * 0.6
+                });
+            }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({ color: color, size: 0.4, transparent: true, opacity: 1 });
+            const pSystem = new THREE.Points(geo, mat);
+            
+            scene.add(pSystem);
+            particles.push({ system: pSystem, velocities: velocities, life: 1.0 });
+        }
+
         function spawnEnemyCluster() {
-            const zPos = -80 - Math.random() * 50;
-            const xPos = (Math.random() - 0.5) * 8;
+            const zPos = -90 - Math.random() * 60;
+            const xPos = (Math.random() - 0.5) * 9;
             
-            // Randomly choose enemy type
             const isCrystal = Math.random() > 0.5;
-            const enemy = isCrystal ? createCrystalMonster(0x00ffcc) : createCyberRobot(0xff0055);
+            const enemy = isCrystal ? createCrystalMonster(0x00ffff) : createCyberRobot(0xff0055);
             
-            enemy.position.set(xPos, 1.2, zPos);
+            enemy.position.set(xPos, 2.2, zPos);
             scene.add(enemy);
             enemies.push(enemy);
         }
 
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             spawnEnemyCluster();
         }
 
-        // Shooting Logic
         function shootBullet() {
-            const bulletGeo = new THREE.SphereGeometry(0.25, 8, 8);
+            const bulletGeo = new THREE.SphereGeometry(0.35, 12, 12);
             const bulletMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
             
             const b1 = new THREE.Mesh(bulletGeo, bulletMat);
-            b1.position.set(playerGroup.position.x - 0.4, 0.6, playerGroup.position.z - 1);
+            b1.position.set(playerGroup.position.x - 0.45, 0.65, playerGroup.position.z - 1);
             
             const b2 = new THREE.Mesh(bulletGeo, bulletMat);
-            b2.position.set(playerGroup.position.x + 0.4, 0.6, playerGroup.position.z - 1);
+            b2.position.set(playerGroup.position.x + 0.45, 0.65, playerGroup.position.z - 1);
 
             scene.add(b1, b2);
             bullets.push(b1, b2);
@@ -260,21 +313,24 @@
         window.addEventListener('pointermove', (e) => {
             if (!isDragging) return;
             const deltaX = e.clientX - previousMouseX;
-            playerGroup.position.x += deltaX * 0.015;
-            playerGroup.position.x = Math.max(-4.8, Math.min(4.8, playerGroup.position.x));
+            playerGroup.position.x += deltaX * 0.018;
+            playerGroup.position.x = Math.max(-5.2, Math.min(5.2, playerGroup.position.x));
             previousMouseX = e.clientX;
         });
 
         window.addEventListener('pointerup', () => isDragging = false);
 
-        // --- 8. ANIMATION & GAME LOOP ---
+        // --- 8. GAME LOOP ---
         function animate() {
             requestAnimationFrame(animate);
 
             const elapsedTime = clock.getElapsedTime();
 
+            // Animate grid track movement for speed feeling
+            gridTexture.offset.y -= 0.015;
+
             // Automatic Shooting
-            if (elapsedTime - lastShoot > 0.18) {
+            if (elapsedTime - lastShoot > 0.16) {
                 shootBullet();
                 lastShoot = elapsedTime;
             }
@@ -282,71 +338,90 @@
             // Bullet Movement
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
-                b.position.z -= 0.8;
+                b.position.z -= 1.1;
 
-                if (b.position.z < -150) {
+                if (b.position.z < -160) {
                     scene.remove(b);
                     bullets.splice(i, 1);
                 }
             }
 
-            // Enemy Animations & Collision Check
+            // Particle Effects Update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= 0.03;
+                const pos = p.system.geometry.attributes.position.array;
+
+                for (let j = 0; j < p.velocities.length; j++) {
+                    pos[j * 3] += p.velocities[j].x;
+                    pos[j * 3 + 1] += p.velocities[j].y;
+                    pos[j * 3 + 2] += p.velocities[j].z;
+                }
+                p.system.geometry.attributes.position.needsUpdate = true;
+                p.system.material.opacity = p.life;
+
+                if (p.life <= 0) {
+                    scene.remove(p.system);
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Enemy Animations & Collisions
             for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
                 const enemy = enemies[eIdx];
 
-                // 1. Move Enemy forward
-                enemy.position.z += 0.08;
+                // Speed
+                enemy.position.z += 0.14;
 
-                // 2. Custom Type Animations
+                // Unique Rotations & Animations
                 if (enemy.userData.type === 'crystal') {
-                    enemy.position.y = 1.2 + Math.sin(elapsedTime * 3 + enemy.position.z) * 0.2;
+                    enemy.position.y = 2.2 + Math.sin(elapsedTime * 3 + enemy.position.z) * 0.3;
                     const outer = enemy.getObjectByName("outerCrystal");
                     const inner = enemy.getObjectByName("innerCore");
-                    if (outer) outer.rotation.y += 0.015;
+                    if (outer) outer.rotation.y += 0.02;
                     if (inner) {
-                        inner.rotation.y -= 0.03;
-                        const scale = 1 + Math.sin(elapsedTime * 6) * 0.12;
+                        inner.rotation.y -= 0.04;
+                        const scale = 1 + Math.sin(elapsedTime * 6) * 0.15;
                         inner.scale.set(scale, scale, scale);
                     }
                 } 
                 else if (enemy.userData.type === 'robot') {
                     const ring = enemy.getObjectByName("glowingRing");
                     if (ring) {
-                        ring.rotation.x += 0.03;
-                        ring.rotation.y += 0.04;
+                        ring.rotation.x += 0.04;
+                        ring.rotation.y += 0.05;
                     }
                 }
 
                 // Reset position if passed player
                 if (enemy.position.z > 5) {
-                    enemy.position.z = -100 - Math.random() * 30;
-                    enemy.position.x = (Math.random() - 0.5) * 8;
+                    enemy.position.z = -110 - Math.random() * 40;
+                    enemy.position.x = (Math.random() - 0.5) * 9;
                 }
 
-                // Bullet Collision Check
+                // Bullet Hit Check
                 for (let bIdx = bullets.length - 1; bIdx >= 0; bIdx--) {
                     const b = bullets[bIdx];
                     const dist = b.position.distanceTo(enemy.position);
 
-                    if (dist < 1.0) {
-                        // Remove Bullet
+                    if (dist < 1.8) {
                         scene.remove(b);
                         bullets.splice(bIdx, 1);
 
-                        // Damage Enemy
                         enemy.userData.hp--;
 
-                        // Hit Flash Effect (Scale briefly)
-                        enemy.scale.set(1.2, 1.2, 1.2);
-                        setTimeout(() => enemy.scale.set(1, 1, 1), 50);
+                        // Scale Flash
+                        enemy.scale.set(1.25, 1.25, 1.25);
+                        setTimeout(() => enemy.scale.set(1, 1, 1), 60);
 
-                        // Enemy Destroyed
+                        // Enemy Explosion
                         if (enemy.userData.hp <= 0) {
+                            createExplosion(enemy.position, enemy.userData.color);
                             scene.remove(enemy);
                             enemies.splice(eIdx, 1);
-                            score += 100;
+                            score += 150;
                             document.getElementById('score').innerText = `SCORE: ${score}`;
-                            spawnEnemyCluster(); // Respawn
+                            spawnEnemyCluster();
                             break;
                         }
                     }
@@ -356,7 +431,6 @@
             renderer.render(scene, camera);
         }
 
-        // Resize Listener
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
