@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -19,7 +19,7 @@
             height: 100%;
             overflow: hidden;
             background-color: #020208;
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         #canvas-container {
@@ -63,7 +63,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(2, 2, 10, 0.9);
+            background: rgba(2, 2, 10, 0.92);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -73,11 +73,12 @@
         }
 
         #start-screen h1 {
-            font-size: 36px;
+            font-size: 38px;
             margin-bottom: 10px;
             color: #00ffff;
             text-shadow: 0 0 15px #00ffff;
             text-align: center;
+            letter-spacing: 2px;
         }
 
         #start-screen p {
@@ -85,6 +86,7 @@
             color: #aaa;
             margin-bottom: 30px;
             text-align: center;
+            max-width: 80%;
         }
 
         .btn-start {
@@ -113,8 +115,8 @@
     <!-- Start Screen Overlay -->
     <div id="start-screen">
         <h1>TRACK SHOOTER 3D</h1>
-        <p>גרור את האצבע שמאלה וימינה כדי להזיז את התותח</p>
-        <button class="btn-start" id="start-btn">התחל משחק</button>
+        <p>Drag left and right to steer your cannon</p>
+        <button class="btn-start" id="start-btn">START GAME</button>
     </div>
 
     <!-- HUD -->
@@ -127,6 +129,29 @@
 
     <script>
         let gameStarted = false;
+        let audioCtx = null;
+
+        // --- WEB AUDIO API SOUND GENERATOR ---
+        function playLaserSound() {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch (e) {}
+        }
 
         // --- 1. SETUP SCENE & RENDERER ---
         const container = document.getElementById('canvas-container');
@@ -134,7 +159,8 @@
         scene.fog = new THREE.FogExp2(0x02020a, 0.012);
 
         const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3.5, 7);
+        // Positioned higher and further back to keep cannon completely visible
+        camera.position.set(0, 4.5, 9.5);
         camera.lookAt(0, 1, -25);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -143,14 +169,14 @@
         container.appendChild(renderer.domElement);
 
         // --- 2. LIGHTS ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0x00ffff, 1.2);
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        // --- 3. TRACK & ENVIRONMENT ---
+        // --- 3. TRACK & 4500 STARS ENVIRONMENT ---
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
@@ -186,15 +212,15 @@
         rightEdge.position.set(7, 0.15, -140);
         scene.add(leftEdge, rightEdge);
 
-        // Stars Background
+        // 4500 Small White Stars Background
         const starsGeo = new THREE.BufferGeometry();
-        const starsCount = 800;
+        const starsCount = 4500;
         const starPos = new Float32Array(starsCount * 3);
-        for(let i=0; i<starsCount*3; i++) {
-            starPos[i] = (Math.random() - 0.5) * 250;
+        for(let i = 0; i < starsCount * 3; i++) {
+            starPos[i] = (Math.random() - 0.5) * 350;
         }
         starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6 });
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.45 });
         const starField = new THREE.Points(starsGeo, starsMat);
         scene.add(starField);
 
@@ -268,13 +294,12 @@
 
         const bullets = [];
         const enemies = [];
-        const particles = [];
         let score = 0;
         const clock = new THREE.Clock();
 
         function spawnEnemyCluster() {
             const zPos = -90 - Math.random() * 60;
-            const xPos = (Math.random() - 0.5) * 9;
+            const xPos = (Math.random() - 0.5) * 8.5;
             const isCrystal = Math.random() > 0.5;
             const enemy = isCrystal ? createCrystalMonster(0x00ffff) : createCyberRobot(0xff0055);
             enemy.position.set(xPos, 2.0, zPos);
@@ -298,25 +323,28 @@
 
             scene.add(b1, b2);
             bullets.push(b1, b2);
+
+            playLaserSound();
         }
 
         let lastShoot = 0;
 
-        // --- 6. SMOOTH TOUCH & DRAG CONTROLS ---
+        // --- 6. BOUNDED SMOOTH CONTROLS ---
         let targetX = 0;
 
         function handlePointerMove(e) {
             if (!gameStarted) return;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            // המרה ישירה של מיקום האצבע במסך למיקום התותח בעולם התלת-ממדי
             const normalizedX = (clientX / window.innerWidth) * 2 - 1;
-            targetX = normalizedX * 5.2; // גבולות המסלול
+            
+            // Constrain player bounds so cannon never disappears off-screen
+            targetX = Math.max(-4.2, Math.min(4.2, normalizedX * 4.8));
         }
 
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('touchmove', handlePointerMove, { passive: true });
 
-        // --- 7. START GAME & FULLSCREEN ---
+        // --- 7. START GAME, FULLSCREEN & AUDIO INIT ---
         const startBtn = document.getElementById('start-btn');
         const startScreen = document.getElementById('start-screen');
 
@@ -324,7 +352,13 @@
             gameStarted = true;
             startScreen.style.display = 'none';
 
-            // בקשת מסך מלא
+            // Init Audio Context on user interaction
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                audioCtx = new AudioContext();
+            }
+
+            // Fullscreen Request
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(() => {});
             } else if (document.documentElement.webkitRequestFullscreen) {
@@ -343,19 +377,19 @@
 
             const elapsedTime = clock.getElapsedTime();
 
-            // תנועת חלקה של התותח לקראת היעד (Smooth Lerp)
-            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.15;
+            // Smooth Cannon Interpolation
+            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.18;
 
-            // תנועת מסלול
+            // Track texture animation
             gridTexture.offset.y -= 0.015;
 
-            // ירי אוטומטי
+            // Shooting
             if (elapsedTime - lastShoot > 0.16) {
                 shootBullet();
                 lastShoot = elapsedTime;
             }
 
-            // עדכון כדורים
+            // Update Bullets
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
                 b.position.z -= 1.1;
@@ -366,7 +400,7 @@
                 }
             }
 
-            // עדכון אויבים והתנגשויות
+            // Update Enemies & Collisions
             for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
                 const enemy = enemies[eIdx];
                 enemy.position.z += 0.14;
@@ -385,10 +419,10 @@
 
                 if (enemy.position.z > 5) {
                     enemy.position.z = -110 - Math.random() * 40;
-                    enemy.position.x = (Math.random() - 0.5) * 9;
+                    enemy.position.x = (Math.random() - 0.5) * 8.5;
                 }
 
-                // פגיעת כדור
+                // Bullet Collision Check
                 for (let bIdx = bullets.length - 1; bIdx >= 0; bIdx--) {
                     const b = bullets[bIdx];
                     const dist = b.position.distanceTo(enemy.position);
