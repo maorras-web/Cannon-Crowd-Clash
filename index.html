@@ -2,8 +2,8 @@
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Track Shooter 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Track Shooter 3D - Mobile Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -18,13 +18,27 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #020208;
+            background-color: #000;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Mobile Container Limit for strict mobile-first design */
+        #mobile-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 480px; /* Mobile width cap */
+            background-color: #020208;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
         }
 
         #canvas-container {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             position: absolute;
             top: 0;
             left: 0;
@@ -37,19 +51,18 @@
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 450px;
             display: flex;
             justify-content: space-between;
             color: #fff;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             pointer-events: none;
             z-index: 10;
         }
 
         .hud-card {
-            background: rgba(5, 10, 25, 0.8);
-            padding: 8px 16px;
+            background: rgba(5, 10, 25, 0.85);
+            padding: 8px 14px;
             border-radius: 12px;
             border: 2px solid rgba(0, 255, 255, 0.6);
             box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
@@ -61,8 +74,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background: rgba(2, 2, 10, 0.92);
             display: flex;
             flex-direction: column;
@@ -70,10 +83,11 @@
             align-items: center;
             z-index: 100;
             color: #fff;
+            padding: 20px;
         }
 
         #start-screen h1 {
-            font-size: 38px;
+            font-size: 32px;
             margin-bottom: 10px;
             color: #00ffff;
             text-shadow: 0 0 15px #00ffff;
@@ -82,16 +96,15 @@
         }
 
         #start-screen p {
-            font-size: 16px;
+            font-size: 15px;
             color: #aaa;
             margin-bottom: 30px;
             text-align: center;
-            max-width: 80%;
         }
 
         .btn-start {
-            padding: 16px 48px;
-            font-size: 22px;
+            padding: 16px 42px;
+            font-size: 20px;
             font-weight: bold;
             color: #020208;
             background: #00ffff;
@@ -112,20 +125,22 @@
 </head>
 <body>
 
-    <!-- Start Screen Overlay -->
-    <div id="start-screen">
-        <h1>TRACK SHOOTER 3D</h1>
-        <p>Drag left and right to steer your cannon</p>
-        <button class="btn-start" id="start-btn">START GAME</button>
-    </div>
+    <div id="mobile-wrapper">
+        <!-- Start Screen Overlay -->
+        <div id="start-screen">
+            <h1>TRACK SHOOTER 3D</h1>
+            <p>Drag left & right to steer your cannon</p>
+            <button class="btn-start" id="start-btn">START GAME</button>
+        </div>
 
-    <!-- HUD -->
-    <div id="ui">
-        <div class="hud-card" id="score">SCORE: 0</div>
-        <div class="hud-card" id="level">LEVEL 1</div>
-    </div>
+        <!-- HUD -->
+        <div id="ui">
+            <div class="hud-card" id="score">SCORE: 0</div>
+            <div class="hud-card" id="level">LEVEL 1</div>
+        </div>
 
-    <div id="canvas-container"></div>
+        <div id="canvas-container"></div>
+    </div>
 
     <script>
         let gameStarted = false;
@@ -142,7 +157,7 @@
                 osc.frequency.setValueAtTime(450, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.08);
 
-                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
 
                 osc.connect(gain);
@@ -154,17 +169,19 @@
         }
 
         // --- 1. SETUP SCENE & RENDERER ---
+        const wrapper = document.getElementById('mobile-wrapper');
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x02020a, 0.012);
 
-        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // Positioned higher and further back to keep cannon completely visible
-        camera.position.set(0, 4.5, 9.5);
-        camera.lookAt(0, 1, -25);
+        const camera = new THREE.PerspectiveCamera(65, wrapper.clientWidth / wrapper.clientHeight, 0.1, 1000);
+        
+        // --- 1. FARTHER CAMERA POSITION TO VIEW ENTIRE CANNON & RADIUS ---
+        camera.position.set(0, 7.5, 13);
+        camera.lookAt(0, 1, -20);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
@@ -176,7 +193,7 @@
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        // --- 3. TRACK & 4500 STARS ENVIRONMENT ---
+        // --- 3. TRACK & ROUND GLOWING STARS ---
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
@@ -212,7 +229,30 @@
         rightEdge.position.set(7, 0.15, -140);
         scene.add(leftEdge, rightEdge);
 
-        // 4500 Small White Stars Background
+        // --- 3. ROUND SOFT STAR TEXTURE GENERATOR ---
+        function createRoundStarTexture() {
+            const starCanvas = document.createElement('canvas');
+            starCanvas.width = 32;
+            starCanvas.height = 32;
+            const starCtx = starCanvas.getContext('2d');
+
+            const gradient = starCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.1)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            starCtx.fillStyle = gradient;
+            starCtx.beginPath();
+            starCtx.arc(16, 16, 16, 0, Math.PI * 2);
+            starCtx.fill();
+
+            return new THREE.CanvasTexture(starCanvas);
+        }
+
+        const roundStarTexture = createRoundStarTexture();
+
+        // 4500 Round White Stars
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 4500;
         const starPos = new Float32Array(starsCount * 3);
@@ -220,7 +260,14 @@
             starPos[i] = (Math.random() - 0.5) * 350;
         }
         starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.45 });
+        const starsMat = new THREE.PointsMaterial({ 
+            color: 0xffffff, 
+            size: 1.2,
+            map: roundStarTexture,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
         const starField = new THREE.Points(starsGeo, starsMat);
         scene.add(starField);
 
@@ -243,7 +290,7 @@
         playerGroup.position.set(0, 0, 2);
         scene.add(playerGroup);
 
-        // --- 5. ENEMIES & PARTICLES ---
+        // --- 5. ENEMIES ---
         function createCyberRobot(color = 0xff0055) {
             const robotGroup = new THREE.Group();
 
@@ -329,22 +376,24 @@
 
         let lastShoot = 0;
 
-        // --- 6. BOUNDED SMOOTH CONTROLS ---
+        // --- 6. BOUNDED SMOOTH TOUCH CONTROLS ---
         let targetX = 0;
 
         function handlePointerMove(e) {
             if (!gameStarted) return;
+            const rect = wrapper.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const normalizedX = (clientX / window.innerWidth) * 2 - 1;
+            const relativeX = clientX - rect.left;
+            const normalizedX = (relativeX / rect.width) * 2 - 1;
             
-            // Constrain player bounds so cannon never disappears off-screen
-            targetX = Math.max(-4.2, Math.min(4.2, normalizedX * 4.8));
+            // Constrained cannon target bounds
+            targetX = Math.max(-4.2, Math.min(4.2, normalizedX * 5.0));
         }
 
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('touchmove', handlePointerMove, { passive: true });
+        wrapper.addEventListener('pointermove', handlePointerMove);
+        wrapper.addEventListener('touchmove', handlePointerMove, { passive: true });
 
-        // --- 7. START GAME, FULLSCREEN & AUDIO INIT ---
+        // --- 7. START GAME & AUDIO INIT ---
         const startBtn = document.getElementById('start-btn');
         const startScreen = document.getElementById('start-screen');
 
@@ -352,13 +401,11 @@
             gameStarted = true;
             startScreen.style.display = 'none';
 
-            // Init Audio Context on user interaction
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
                 audioCtx = new AudioContext();
             }
 
-            // Fullscreen Request
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(() => {});
             } else if (document.documentElement.webkitRequestFullscreen) {
@@ -377,7 +424,7 @@
 
             const elapsedTime = clock.getElapsedTime();
 
-            // Smooth Cannon Interpolation
+            // Smooth Cannon Movement
             playerGroup.position.x += (targetX - playerGroup.position.x) * 0.18;
 
             // Track texture animation
@@ -449,9 +496,9 @@
         }
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = wrapper.clientWidth / wrapper.clientHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
         });
 
         animate();
