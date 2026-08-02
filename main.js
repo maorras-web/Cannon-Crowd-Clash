@@ -1,15 +1,8 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 0. Touch Hijacking & UI Setup ---
+    // --- 0. UI & Touch Controls ---
     document.documentElement.style.touchAction = 'none';
     document.body.style.touchAction = 'none';
-    
-    const uiContainer = document.getElementById('ui-container');
-    if (uiContainer) {
-        uiContainer.style.pointerEvents = 'none';
-        const pauseBtn = document.getElementById('pause-btn');
-        if (pauseBtn) pauseBtn.style.pointerEvents = 'auto';
-    }
 
     function requestFullScreen() {
         const docEl = document.documentElement;
@@ -76,12 +69,10 @@ window.addEventListener('DOMContentLoaded', () => {
         } catch(e) {}
     }
 
-    // --- 2. Level State & HighScore ---
+    // --- 2. HighScore & State ---
     let currentLevel = 1;
     let levelProgress = 0;
     const maxLevelProgress = 100;
-    let isBossActive = false;
-    let activeBoss = null;
     let highScore = localStorage.getItem('cannon_high_score') || 0;
 
     const startBestScoreEl = document.getElementById('start-best-score');
@@ -92,15 +83,15 @@ window.addEventListener('DOMContentLoaded', () => {
         const levelText = document.getElementById('level-text');
         
         if (progressFill) {
-            const percentage = isBossActive ? 100 : Math.min(100, (levelProgress / maxLevelProgress) * 100);
+            const percentage = Math.min(100, (levelProgress / maxLevelProgress) * 100);
             progressFill.style.width = `${percentage}%`;
         }
         if (levelText) {
-            levelText.innerText = isBossActive ? `LEVEL ${currentLevel} - BOSS BALL!` : `LEVEL ${currentLevel}`;
+            levelText.innerText = `LEVEL ${currentLevel}`;
         }
     }
 
-    // --- 3. Scene & Camera Setup ---
+    // --- 3. Three.js Scene Setup ---
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x030712, 0.008);
 
@@ -123,7 +114,7 @@ window.addEventListener('DOMContentLoaded', () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // התאורה
+    // Lights
     const ambientLight = new THREE.AmbientLight(0x1e1b4b, 1.5);
     scene.add(ambientLight);
 
@@ -131,69 +122,24 @@ window.addEventListener('DOMContentLoaded', () => {
     mainLight.position.set(15, 40, 20);
     scene.add(mainLight);
 
-    const rimLight = new THREE.DirectionalLight(0xc084fc, 2.0);
-    rimLight.position.set(-15, 20, -10);
-    scene.add(rimLight);
-
     let cameraShakeIntensity = 0;
     function triggerCameraShake(intensity) {
         cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
     }
 
-    // --- 3.1. BACKGROUND SKYBOX ---
-    function createGalaxyTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1024; canvas.height = 1024;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#020208';
-        ctx.fillRect(0, 0, 1024, 1024);
-
-        const nebulae = [
-            { x: 250, y: 300, r: 400, color: 'rgba(99, 102, 241, 0.5)' },
-            { x: 750, y: 250, r: 450, color: 'rgba(168, 85, 247, 0.5)' },
-            { x: 500, y: 700, r: 350, color: 'rgba(236, 72, 153, 0.4)' }
-        ];
-
-        nebulae.forEach(n => {
-            const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
-            grad.addColorStop(0, n.color);
-            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 1024, 1024);
-        });
-
-        return new THREE.CanvasTexture(canvas);
-    }
-
-    const galaxySkyGeo = new THREE.SphereGeometry(400, 32, 32);
-    const galaxySkyMat = new THREE.MeshBasicMaterial({ map: createGalaxyTexture(), side: THREE.BackSide });
-    scene.add(new THREE.Mesh(galaxySkyGeo, galaxySkyMat));
-
-    // --- 4. Game Arena Bounds ---
+    // Arena Bounds
     const arenaWidth = 18;
     const arenaHeight = 22;
     const floorY = 0;
     const maxBoundX = arenaWidth / 2 - 1.2;
 
-    // רצפה מבריקה
     const floorGeo = new THREE.BoxGeometry(arenaWidth, 0.5, 6);
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.1 });
     const floorMesh = new THREE.Mesh(floorGeo, floorMat);
     floorMesh.position.set(0, floorY - 0.25, 0);
     scene.add(floorMesh);
 
-    // קירות זוהרים
-    const wallGeo = new THREE.BoxGeometry(0.3, arenaHeight, 2);
-    const wallMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const wallLeft = new THREE.Mesh(wallGeo, wallMat);
-    wallLeft.position.set(-arenaWidth / 2, arenaHeight / 2, 0);
-    scene.add(wallLeft);
-
-    const wallRight = new THREE.Mesh(wallGeo, wallMat);
-    wallRight.position.set(arenaWidth / 2, arenaHeight / 2, 0);
-    scene.add(wallRight);
-
-    // --- 5. HP Mechanics ---
+    // --- 4. HP Mechanics ---
     const maxHp = 500;
     let currentHp = 500;
 
@@ -213,7 +159,7 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- 6. Ball Blast / Rock Physics System ---
+    // --- 5. Ball Physics System ---
     const rocks = [];
     const rockColors = [0xff3366, 0xff9900, 0x33cc33, 0x00ccff, 0xcc33ff];
 
@@ -242,7 +188,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnRock(x, y, hp, sizeIndex) {
-        const sizes = [1.2, 1.8, 2.6]; // Small, Medium, Large
+        const sizes = [1.2, 1.8, 2.6];
         const radius = sizes[sizeIndex];
         const color = rockColors[Math.floor(Math.random() * rockColors.length)];
 
@@ -280,33 +226,27 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let i = rocks.length - 1; i >= 0; i--) {
             const r = rocks[i];
             
-            // Physics
             r.vy += r.gravity * delta;
             r.mesh.position.x += r.vx * delta;
             r.mesh.position.y += r.vy * delta;
             r.mesh.rotation.x += delta * 2;
             r.mesh.rotation.z += delta * 2;
 
-            // Wall Bounce
             if (r.mesh.position.x - r.radius < -arenaWidth / 2 || r.mesh.position.x + r.radius > arenaWidth / 2) {
                 r.vx *= -1;
                 r.mesh.position.x = THREE.MathUtils.clamp(r.mesh.position.x, -arenaWidth / 2 + r.radius, arenaWidth / 2 - r.radius);
             }
 
-            // Floor Bounce
             if (r.mesh.position.y - r.radius <= floorY) {
                 r.mesh.position.y = floorY + r.radius;
                 r.vy = r.bounceForce;
             }
 
-            // Collision with Cannon
             if (Math.abs(r.mesh.position.x - cannonGroup.position.x) < r.radius + 1.0 && r.mesh.position.y - r.radius < 1.5) {
                 currentHp -= 150;
                 updateHpBar();
                 playSound('hit');
                 triggerCameraShake(0.4);
-                
-                // Push rock back up
                 r.vy = r.bounceForce;
 
                 if (currentHp <= 0) {
@@ -316,14 +256,13 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Auto spawn if empty
         if (rocks.length === 0 && gameStarted && !isPaused) {
             spawnRock(-4, arenaHeight - 2, 20 * currentLevel, 2);
             spawnRock(4, arenaHeight - 2, 15 * currentLevel, 1);
         }
     }
 
-    // --- 7. Metallic Cannon & Real-Time Color Picker ---
+    // --- 6. Cannon ---
     const cannonGroup = new THREE.Group();
     const cannonMeshGroup = new THREE.Group();
 
@@ -354,7 +293,7 @@ window.addEventListener('DOMContentLoaded', () => {
         baseMat.color.set(hexColor);
     };
 
-    // --- 8. Glowing Bullets ---
+    // --- 7. Bullets ---
     const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
     const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
     const bullets = [];
@@ -387,12 +326,10 @@ window.addEventListener('DOMContentLoaded', () => {
                     updateLevelUI();
                     playSound('hit');
 
-                    // Update number texture
                     const colorHexStr = '#' + r.color.toString(16).padStart(6, '0');
                     r.mesh.material.map = createDynamicNumberTexture(r.hp.toString(), colorHexStr);
                     r.mesh.material.map.needsUpdate = true;
 
-                    // Rock Destruction / Split
                     if (r.hp <= 0) {
                         playSound('explode');
                         scene.remove(r.mesh);
@@ -404,7 +341,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
                         rocks.splice(j, 1);
 
-                        if (levelProgress >= maxLevelProgress && !isBossActive) {
+                        if (levelProgress >= maxLevelProgress) {
                             currentLevel++;
                             levelProgress = 0;
                             updateLevelUI();
@@ -423,8 +360,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Controls ---
+    // --- 8. Controls & State Handling ---
     let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
+    let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
 
     function stopInput() { isDragging = false; isFiring = false; }
 
@@ -451,12 +389,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 10. Game State ---
-    let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
-
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        isBossActive = false; cameraShakeIntensity = 0;
+        cameraShakeIntensity = 0;
         
         for (let r of rocks) scene.remove(r.mesh);
         rocks.length = 0;
@@ -489,23 +424,15 @@ window.addEventListener('DOMContentLoaded', () => {
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
-    document.getElementById('restart-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        resetGame();
-        gameStarted = true;
-    });
-
+    // --- Event Listeners לתפריטים ---
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
         resetGame();
         gameStarted = true;
+        isPaused = false;
         const startOverlay = document.getElementById('start-overlay');
-        if (startOverlay) {
-            startOverlay.style.opacity = '0';
-            setTimeout(() => startOverlay.classList.add('hidden'), 300);
-        }
+        if (startOverlay) startOverlay.classList.add('hidden');
     });
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
@@ -520,7 +447,23 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.add('hidden'); 
     });
 
-    // --- 11. Main Render Loop ---
+    document.getElementById('restart-from-pause-btn')?.addEventListener('click', () => {
+        requestFullScreen();
+        document.getElementById('pause-menu')?.classList.add('hidden');
+        resetGame();
+        isPaused = false;
+        gameStarted = true;
+    });
+
+    document.getElementById('restart-btn')?.addEventListener('click', () => {
+        requestFullScreen();
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        resetGame();
+        isPaused = false;
+        gameStarted = true;
+    });
+
+    // --- 9. Render Loop ---
     let clock = new THREE.Clock();
 
     function animate() {
@@ -532,7 +475,6 @@ window.addEventListener('DOMContentLoaded', () => {
             targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
             cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, delta * 15);
 
-            // Fire bullets
             shootTimer += delta;
             if (isFiring && shootTimer >= 0.08) {
                 shootTimer = 0;
@@ -544,7 +486,6 @@ window.addEventListener('DOMContentLoaded', () => {
             updateBullets(delta);
             updateRocks(delta);
 
-            // Camera Shake
             if (cameraShakeIntensity > 0) {
                 cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8);
                 camera.position.x = (Math.random() - 0.5) * cameraShakeIntensity;

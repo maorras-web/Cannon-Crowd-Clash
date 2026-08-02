@@ -1,340 +1,89 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Ball Blast - Arcade Prototype</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body { 
-            background: #111; 
-            overflow: hidden; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; justify-content: center; align-items: center; height: 100vh;
-        }
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            max-width: 480px;
-            max-height: 850px;
-            background: linear-gradient(to bottom, #1a1c29, #0e1017);
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            overflow: hidden;
-        }
-        canvas { display: block; width: 100%; height: 100%; }
-        #ui {
-            position: absolute; top: 15px; left: 0; width: 100%;
-            display: flex; justify-content: space-between; padding: 0 20px;
-            box-sizing: border-box; pointer-events: none;
-        }
-        .score-box {
-            color: #fff; font-size: 1.5rem; font-weight: 900;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
-        .coins-box {
-            color: #ffd700; font-size: 1.5rem; font-weight: 900;
-            text-shadow: 0 0 10px rgba(255,215,0,0.5);
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ball Blast 3D</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="ui">
-        <div class="score-box" id="score">SCORE: 0</div>
-        <div class="coins-box" id="coins">🪙 0</div>
+    <!-- HUD במהלך המשחק -->
+    <div id="ui-container">
+        <!-- מד חיים -->
+        <div id="hp-container">
+            <div id="hp-bar"></div>
+            <span id="hp-text">500 / 500</span>
+        </div>
+
+        <!-- מד שלב -->
+        <div id="level-bar-container">
+            <span id="level-text">LEVEL 1</span>
+            <div class="progress-outer">
+                <div id="level-progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- ניקוד -->
+        <div id="score-card">
+            <span class="score-label">SCORE</span>
+            <span id="score-val">0</span>
+        </div>
+
+        <!-- כפתור Pause -->
+        <button id="pause-btn" class="icon-btn">⏸</button>
     </div>
-    <canvas id="gameCanvas"></canvas>
-</div>
 
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+    <!-- 1. מסך פתיחה (Start Overlay) -->
+    <div id="start-overlay">
+        <div id="start-menu">
+            <div class="header-section">
+                <h1 class="game-title">BALL BLAST</h1>
+                <p class="game-subtitle">Destroy the bouncing spheres and upgrade your firepower!</p>
+            </div>
 
-function resizeCanvas() {
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+            <div class="best-badge">
+                BEST SCORE: <span id="start-best-score">0</span>
+            </div>
 
-// --- GAME STATE ---
-let score = 0;
-let coins = 0;
-let gameOver = false;
+            <div class="action-section">
+                <button id="start-btn" class="btn">START GAME</button>
+            </div>
+        </div>
+    </div>
 
-// --- CANNON (PLAYER) ---
-const cannon = {
-    x: canvas.width / 2,
-    y: canvas.height - 70,
-    width: 60,
-    height: 50,
-    targetX: canvas.width / 2,
-    recoil: 0
-};
+    <!-- 2. תפריט עצירה (Pause Menu) -->
+    <div id="pause-menu" class="hidden">
+        <div class="pause-card">
+            <h2>GAME PAUSED</h2>
 
-// Controls
-window.addEventListener('pointermove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    cannon.targetX = e.clientX - rect.left;
-});
-window.addEventListener('touchmove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    cannon.targetX = e.touches[0].clientX - rect.left;
-});
+            <div class="customization-section">
+                <span class="section-label">CANNON COLOR</span>
+                <div class="color-picker">
+                    <button class="color-btn active" style="background: #2563eb;" onclick="changeCannonColor(0x2563eb)"></button>
+                    <button class="color-btn" style="background: #dc2626;" onclick="changeCannonColor(0xdc2626)"></button>
+                    <button class="color-btn" style="background: #16a34a;" onclick="changeCannonColor(0x16a34a)"></button>
+                    <button class="color-btn" style="background: #9333ea;" onclick="changeCannonColor(0x9333ea)"></button>
+                </div>
+            </div>
 
-// --- BULLETS SYSTEM ---
-const bullets = [];
-let lastShotTime = 0;
-const fireRate = 80; // ms
+            <button id="resume-btn" class="btn">RESUME</button>
+            <button id="restart-from-pause-btn" class="btn btn-restart" style="margin-top: 8px;">RESTART</button>
+        </div>
+    </div>
 
-function shoot() {
-    bullets.push({
-        x: cannon.x,
-        y: cannon.y - 20,
-        radius: 5,
-        speed: 16
-    });
-    cannon.recoil = 8;
-}
+    <!-- 3. מסך סיום (Game Over Modal) -->
+    <div id="game-over-modal" class="hidden">
+        <div class="pause-card">
+            <h2 style="color: #ef4444;">GAME OVER</h2>
+            <p style="font-size: 1.1rem; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
+            <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 15px;">BEST: <span id="best-score-val">0</span></p>
+            <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
+        </div>
+    </div>
 
-// --- ROCKS / BALLS SYSTEM ---
-const rocks = [];
-const rockColors = ['#ff3366', '#ff9900', '#33cc33', '#00ccff', '#cc33ff'];
-
-function spawnRock(x, y, hp, sizeIndex) {
-    const sizes = [24, 38, 52]; // Small, Medium, Large
-    const radius = sizes[sizeIndex];
-    rocks.push({
-        x: x || Math.random() * (canvas.width - 100) + 50,
-        y: y || -radius,
-        vx: (Math.random() - 0.5) * 4,
-        vy: 1,
-        gravity: 0.35,
-        bounceForce: -12 - sizeIndex * 1.5,
-        radius: radius,
-        hp: hp || Math.floor(Math.random() * 20 + 10) * (sizeIndex + 1),
-        maxHp: hp,
-        sizeIndex: sizeIndex,
-        color: rockColors[Math.floor(Math.random() * rockColors.length)]
-    });
-}
-
-// Initial Rocks
-spawnRock(canvas.width * 0.3, 100, 25, 2);
-spawnRock(canvas.width * 0.7, 100, 15, 1);
-
-// --- PARTICLES & EFFECTS ---
-const particles = [];
-function createParticles(x, y, color, count = 8) {
-    for (let i = 0; i < count; i++) {
-        particles.push({
-            x: x, y: y,
-            vx: (Math.random() - 0.5) * 8,
-            vy: (Math.random() - 0.5) * 8,
-            radius: Math.random() * 4 + 2,
-            color: color,
-            alpha: 1,
-            life: 0.04
-        });
-    }
-}
-
-// --- UPDATE LOOP ---
-function update() {
-    if (gameOver) return;
-
-    // Cannon Movement (Smooth Lerp)
-    cannon.x += (cannon.targetX - cannon.x) * 0.25;
-    cannon.x = Math.max(cannon.width / 2, Math.min(canvas.width - cannon.width / 2, cannon.x));
-    cannon.recoil *= 0.8;
-
-    // Shooting
-    const now = Date.now();
-    if (now - lastShotTime > fireRate) {
-        shoot();
-        lastShotTime = now;
-    }
-
-    // Bullets Update
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        const b = bullets[i];
-        b.y -= b.speed;
-        if (b.y < -10) bullets.splice(i, 1);
-    }
-
-    // Rocks Update & Physics
-    for (let i = rocks.length - 1; i >= 0; i--) {
-        const r = rocks[i];
-        
-        // Physics
-        r.vy += r.gravity;
-        r.x += r.vx;
-        r.y += r.vy;
-
-        // Wall Bounce
-        if (r.x - r.radius < 0 || r.x + r.radius > canvas.width) {
-            r.vx *= -1;
-            r.x = r.x - r.radius < 0 ? r.radius : canvas.width - r.radius;
-        }
-
-        // Floor Bounce
-        const floorY = canvas.height - 40;
-        if (r.y + r.radius > floorY) {
-            r.y = floorY - r.radius;
-            r.vy = r.bounceForce;
-        }
-
-        // Bullet Collisions
-        for (let j = bullets.length - 1; j >= 0; j--) {
-            const b = bullets[j];
-            const dist = Math.hypot(b.x - r.x, b.y - r.y);
-            
-            if (dist < r.radius + b.radius) {
-                // Hit!
-                r.hp--;
-                score += 10;
-                document.getElementById('score').innerText = `SCORE: ${score}`;
-                createParticles(b.x, b.y, '#fff', 3);
-                bullets.splice(j, 1);
-
-                // Rock Destroyed
-                if (r.hp <= 0) {
-                    createParticles(r.x, r.y, r.color, 20);
-                    coins += (r.sizeIndex + 1) * 5;
-                    document.getElementById('coins').innerText = `🪙 ${coins}`;
-
-                    // Split into smaller rocks if not smallest
-                    if (r.sizeIndex > 0) {
-                        spawnRock(r.x - 15, r.y, Math.ceil(r.maxHp / 2), r.sizeIndex - 1);
-                        spawnRock(r.x + 15, r.y, Math.ceil(r.maxHp / 2), r.sizeIndex - 1);
-                    }
-                    rocks.splice(i, 1);
-                    break;
-                }
-            }
-        }
-
-        // Player Collision (Game Over)
-        const cannonDist = Math.hypot(cannon.x - r.x, (cannon.y - 10) - r.y);
-        if (cannonDist < r.radius + 20) {
-            gameOver = true;
-            setTimeout(() => alert('GAME OVER! Total Score: ' + score), 100);
-        }
-    }
-
-    // Auto-spawn new rocks if screen cleared
-    if (rocks.length === 0) {
-        spawnRock(canvas.width * 0.2, 50, 40, 2);
-        spawnRock(canvas.width * 0.8, 50, 30, 2);
-    }
-
-    // Particles Update
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.alpha -= p.life;
-        if (p.alpha <= 0) particles.splice(i, 1);
-    }
-}
-
-// --- RENDER LOOP ---
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Floor Line
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height - 40);
-    ctx.lineTo(canvas.width, canvas.height - 40);
-    ctx.stroke();
-
-    // Draw Bullets
-    ctx.fillStyle = '#ffeb3b';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#ffeb3b';
-    bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.shadowBlur = 0; // Reset shadow
-
-    // Draw Cannon
-    ctx.save();
-    ctx.translate(cannon.x, cannon.y + cannon.recoil);
-    
-    // Barrel
-    ctx.fillStyle = '#444';
-    ctx.fillRect(-12, -35, 24, 25);
-    ctx.fillStyle = '#ffd700';
-    ctx.fillRect(-14, -38, 28, 5);
-
-    // Body
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(0, 0, 28, Math.PI, 0);
-    ctx.fill();
-    ctx.strokeStyle = '#00ccff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Wheels
-    ctx.fillStyle = '#666';
-    ctx.beginPath(); ctx.arc(-22, 10, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(22, 10, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-
-    // Draw Rocks
-    rocks.forEach(r => {
-        ctx.save();
-        ctx.translate(r.x, r.y);
-
-        // Rock Body
-        ctx.fillStyle = r.color;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = r.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, r.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Inner Border
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        // HP Text
-        ctx.fillStyle = '#fff';
-        ctx.font = `900 ${r.radius * 0.7}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(r.hp, 0, 2);
-
-        ctx.restore();
-    });
-
-    // Draw Particles
-    particles.forEach(p => {
-        ctx.save();
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    });
-
-    requestAnimationFrame(() => {
-        update();
-        draw();
-    });
-}
-
-draw();
-</script>
+    <script src="main.js"></script>
 </body>
 </html>
