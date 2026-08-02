@@ -1,12 +1,19 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- Mobile Detection ---
+    // --- Mobile Only Check ---
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     }
+
+    const warningEl = document.getElementById('mobile-only-warning');
+    
+    // אם המשתמש במחשב - מציגים את האזהרה ועוצרים את האתחול
     if (!isMobileDevice()) {
-        const warning = document.getElementById('mobile-only-warning');
-        if (warning) warning.style.display = 'flex';
+        if (warningEl) warningEl.style.display = 'flex';
+        return; 
+    } else {
+        // אם המשתמש בסלולרי - מסירים את האזהרה לחלוטין שלא תחסום מגע
+        if (warningEl) warningEl.style.display = 'none';
     }
 
     function requestFullScreen() {
@@ -18,6 +25,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.zIndex = '1';
+    canvas.style.touchAction = 'none'; // מונע גלילה של הדפדפן במגע
     document.body.appendChild(canvas);
 
     let width, height, dpr;
@@ -317,16 +329,17 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- State & Start Menu Integration ---
+    // --- Game State ---
     let gameStarted = false;
     let isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
     let score = 0;
 
-    // Display start screen at launch
     const startOverlay = document.getElementById('start-overlay');
-    if (startOverlay) startOverlay.classList.remove('hidden');
+    if (startOverlay) {
+        startOverlay.style.display = 'flex';
+    }
 
     function updateUI() {
         const coinsVal = document.getElementById('coins-val');
@@ -640,35 +653,44 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Controls ---
+    // --- Touch Controls Only ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
-    const startInput = (e) => {
+    const startTouch = (e) => {
         if (!gameStarted || isPaused) return;
         isDragging = true;
         isFiring = true;
-        const x = e.touches ? e.touches[0].clientX : e.clientX;
-        touchStartX = x;
+        touchStartX = e.touches[0].clientX;
     };
 
-    const moveInput = (e) => {
+    const moveTouch = (e) => {
         if (isDragging && gameStarted && !isPaused) {
-            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const x = e.touches[0].clientX;
             const deltaX = x - touchStartX;
             cannon.targetX += deltaX;
             touchStartX = x;
         }
     };
 
-    const stopInput = () => { isDragging = false; isFiring = false; };
+    const stopTouch = () => { isDragging = false; isFiring = false; };
 
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startInput(e); }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); moveInput(e); }, { passive: false });
-    canvas.addEventListener('touchend', stopInput, { passive: false });
+    // האזנה מפורשת לאירועי Touch עבור ניידים בלבד
+    window.addEventListener('touchstart', (e) => {
+        if (e.target === canvas) {
+            e.preventDefault();
+            startTouch(e);
+        }
+    }, { passive: false });
 
-    canvas.addEventListener('mousedown', startInput);
-    canvas.addEventListener('mousemove', moveInput);
-    canvas.addEventListener('mouseup', stopInput);
+    window.addEventListener('touchmove', (e) => {
+        if (isDragging) {
+            e.preventDefault();
+            moveTouch(e);
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', stopTouch);
+    window.addEventListener('touchcancel', stopTouch);
 
     // --- State Transitions ---
     function resetGame() {
@@ -700,34 +722,40 @@ window.addEventListener('DOMContentLoaded', () => {
         if (finalScoreVal) finalScoreVal.innerText = score;
         if (finalCoinsVal) finalCoinsVal.innerText = totalCoins;
         if (bestScoreVal) bestScoreVal.innerText = highScore;
-        if (gameOverModal) gameOverModal.classList.remove('hidden');
+        if (gameOverModal) gameOverModal.style.display = 'flex';
     }
 
-    // Handlers for Start Overlay Buttons
+    // Handlers
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
         resetGame();
         gameStarted = true;
         isPaused = false;
-        document.getElementById('start-overlay')?.classList.add('hidden');
+        
+        // הסרת ה-overlay לחלוטין
+        const overlay = document.getElementById('start-overlay');
+        if (overlay) overlay.style.display = 'none';
     });
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
         isPaused = true;
-        document.getElementById('pause-menu')?.classList.remove('hidden');
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.style.display = 'flex';
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => {
         requestFullScreen();
         isPaused = false;
-        document.getElementById('pause-menu')?.classList.add('hidden');
+        const pauseMenu = document.getElementById('pause-menu');
+        if (pauseMenu) pauseMenu.style.display = 'none';
     });
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
         requestFullScreen();
-        document.getElementById('game-over-modal')?.classList.add('hidden');
+        const gameOverModal = document.getElementById('game-over-modal');
+        if (gameOverModal) gameOverModal.style.display = 'none';
         resetGame();
         isPaused = false;
         gameStarted = true;
