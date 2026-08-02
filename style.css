@@ -32,7 +32,7 @@ canvas {
     top: 15px;
     left: 0;
     width: 100%;
-    padding: 0 15px;
+    padding: 0 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -46,7 +46,7 @@ canvas {
 
 /* HP Bar */
 #hp-container {
-    width: 120px;
+    width: 95px;
     height: 20px;
     background: rgba(0, 0, 0, 0.6);
     border: 2px solid #fff;
@@ -68,7 +68,7 @@ canvas {
     left: 50%;
     transform: translate(-50%, -50%);
     color: #fff;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: bold;
     text-shadow: 1px 1px 2px #000;
 }
@@ -84,13 +84,13 @@ canvas {
 #level-text {
     color: #fff;
     font-weight: 900;
-    font-size: 14px;
+    font-size: 13px;
     letter-spacing: 1px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
 .progress-outer {
-    width: 100px;
+    width: 75px;
     height: 8px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
@@ -104,26 +104,40 @@ canvas {
     transition: width 0.1s linear;
 }
 
+/* Coins Card */
+#coin-card {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(250, 204, 21, 0.4);
+    color: #facc15;
+    font-weight: 900;
+    font-size: 14px;
+}
+
 /* Score Card */
 #score-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     background: rgba(15, 23, 42, 0.75);
-    padding: 4px 12px;
+    padding: 4px 10px;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .score-label {
     color: #94a3b8;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: bold;
 }
 
 #score-val {
     color: #fff;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 900;
 }
 
@@ -132,10 +146,10 @@ canvas {
     background: rgba(15, 23, 42, 0.8);
     border: 1px solid rgba(255,255,255,0.3);
     color: #fff;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
 }
 
@@ -188,7 +202,7 @@ canvas {
     border-radius: 20px;
     font-size: 12px;
     font-weight: bold;
-    margin-bottom: 25px;
+    margin-bottom: 10px;
     display: inline-block;
 }
 

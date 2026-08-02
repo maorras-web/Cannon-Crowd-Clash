@@ -26,7 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let width, height, dpr;
     function resizeCanvas() {
-        dpr = window.devicePixelRatio || 1; // תמיכה ברזולוציית HD גבוהה
+        dpr = window.devicePixelRatio || 1;
         width = window.innerWidth;
         height = window.innerHeight;
 
@@ -83,6 +83,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
                 osc.start(now);
                 osc.stop(now + 0.08);
+            } else if (type === 'coin') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, now); // B5
+                osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
+                osc.start(now);
+                osc.stop(now + 0.16);
             } else if (type === 'explode') {
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(120, now);
@@ -95,21 +103,89 @@ window.addEventListener('DOMContentLoaded', () => {
         } catch(e) {}
     }
 
-    // --- 3. Particles System ---
+    // --- 3. Particles & Coins System ---
     const particles = [];
+    const coinsList = [];
+
+    function spawnCoins(x, y, count = 3) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.random() * Math.PI) + Math.PI; // Upward launch
+            const speed = Math.random() * 180 + 120;
+            coinsList.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 10,
+                gravity: 450,
+                value: 1
+            });
+        }
+    }
+
+    function updateCoins(dt) {
+        const floorY = height - 60;
+        for (let i = coinsList.length - 1; i >= 0; i--) {
+            const c = coinsList[i];
+            c.vy += c.gravity * dt;
+            c.x += c.vx * dt;
+            c.y += c.vy * dt;
+
+            // Bounce on floor
+            if (c.y + c.radius >= floorY) {
+                c.y = floorY - c.radius;
+                c.vy = -c.vy * 0.4;
+                c.vx *= 0.8;
+            }
+
+            // Magnetic attraction towards cannon
+            const distToCannon = Math.hypot(c.x - cannon.x, c.y - cannon.y);
+            if (distToCannon < 150) {
+                c.vx += (cannon.x - c.x) * 5 * dt;
+                c.vy += (cannon.y - c.y) * 5 * dt;
+            }
+
+            // Collect coin
+            if (distToCannon < c.radius + 28) {
+                totalCoins += c.value;
+                localStorage.setItem('cannon_total_coins', totalCoins);
+                updateCoinsUI();
+                playSound('coin');
+                coinsList.splice(i, 1);
+                continue;
+            }
+
+            // Draw Gold Coin
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.beginPath();
+            ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#facc15';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ca8a04';
+            ctx.stroke();
+
+            // Coin inner detail
+            ctx.fillStyle = '#eab308';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('$', 0, 0);
+            ctx.restore();
+        }
+    }
 
     function createExplosion(x, y, color, count = 12) {
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 200 + 40;
             particles.push({
-                x: x,
-                y: y,
+                x: x, y: y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 radius: Math.random() * 4 + 2,
-                color: color,
-                alpha: 1,
+                color: color, alpha: 1,
                 decay: Math.random() * 1.5 + 1
             });
         }
@@ -152,7 +228,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawEnvironment() {
-        // Sky Gradient
         const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
         skyGrad.addColorStop(0, '#38bdf8');
         skyGrad.addColorStop(0.6, '#bae6fd');
@@ -160,7 +235,6 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, width, height);
 
-        // Mountains
         ctx.fillStyle = '#64748b';
         ctx.beginPath();
         ctx.moveTo(0, height - 60);
@@ -172,16 +246,6 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.lineTo(0, height);
         ctx.fill();
 
-        ctx.fillStyle = '#94a3b8';
-        ctx.beginPath();
-        ctx.moveTo(width * 0.15, height - 60);
-        ctx.lineTo(width * 0.35, height - 130);
-        ctx.lineTo(width * 0.55, height - 60);
-        ctx.lineTo(width * 0.8, height - 140);
-        ctx.lineTo(width * 1.1, height - 60);
-        ctx.fill();
-
-        // Clouds
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         clouds.forEach(c => {
             if (gameStarted && !isPaused) c.x += c.speed * 0.016;
@@ -198,15 +262,12 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.restore();
         });
 
-        // Ground Floor
         const floorY = height - 60;
-        ctx.fillStyle = '#15803d'; // Grass Green
+        ctx.fillStyle = '#15803d';
         ctx.fillRect(0, floorY, width, 20);
-
-        ctx.fillStyle = '#78350f'; // Dirt Brown
+        ctx.fillStyle = '#78350f';
         ctx.fillRect(0, floorY + 20, width, 40);
 
-        // Grass edge line
         ctx.strokeStyle = '#4ade80';
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -215,15 +276,24 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- 5. State & High Score ---
+    // --- 5. State, Money & High Score ---
     let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
     let score = 0;
-    let highScore = localStorage.getItem('cannon_high_score_2d') || 0;
+    let highScore = parseInt(localStorage.getItem('cannon_high_score_2d')) || 0;
+    let totalCoins = parseInt(localStorage.getItem('cannon_total_coins')) || 0;
+
+    function updateCoinsUI() {
+        const coinsVal = document.getElementById('coins-val');
+        const startCoins = document.getElementById('start-coins');
+        if (coinsVal) coinsVal.innerText = totalCoins;
+        if (startCoins) startCoins.innerText = totalCoins;
+    }
 
     const startBestScoreEl = document.getElementById('start-best-score');
     if (startBestScoreEl) startBestScoreEl.innerText = highScore;
+    updateCoinsUI();
 
     function updateLevelUI() {
         const progressFill = document.getElementById('level-progress-fill');
@@ -238,9 +308,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. HP Mechanics ---
-    const maxHp = 500;
-    let currentHp = 500;
+    // --- 6. HP Mechanics (שודרג ל-1000) ---
+    const maxHp = 1000;
+    let currentHp = 1000;
 
     function updateHpBar() {
         const hpBar = document.getElementById('hp-bar');
@@ -273,7 +343,6 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.translate(cannon.x, cannon.y);
 
-        // Wheels
         ctx.fillStyle = '#334155';
         ctx.beginPath();
         ctx.arc(-22, 10, 12, 0, Math.PI * 2);
@@ -283,12 +352,10 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Barrels
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(-16, -30, 10, 30);
         ctx.fillRect(6, -30, 10, 30);
 
-        // Dome / Body
         const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
         gradient.addColorStop(0, '#93c5fd');
         gradient.addColorStop(1, cannonColor);
@@ -330,7 +397,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Rocks (Slower Physics & Easier Difficulty) ---
+    // --- 9. Rocks ---
     const rocks = [];
     const rockColors = ['#ef4444', '#f97316', '#22c55e', '#06b6d4', '#a855f7'];
 
@@ -356,9 +423,9 @@ window.addEventListener('DOMContentLoaded', () => {
         rocks.push({
             x: x !== undefined ? x : Math.random() * (width - 100) + 50,
             y: y !== undefined ? y : 80,
-            vx: (Math.random() > 0.5 ? 1 : -1) * (70 + Math.random() * 40), // מהירות אופקית איטית יותר
+            vx: (Math.random() > 0.5 ? 1 : -1) * (70 + Math.random() * 40),
             vy: 0,
-            gravity: 350, // כבידה נמוכה - נפילה איטית בהרבה!
+            gravity: 350,
             bounceForce: -(260 + sizeIndex * 40),
             radius: radius,
             hp: hp,
@@ -379,7 +446,6 @@ window.addEventListener('DOMContentLoaded', () => {
             r.x += r.vx * dt;
             r.y += r.vy * dt;
 
-            // Walls
             if (r.x - r.radius <= 0) {
                 r.x = r.radius;
                 r.vx = Math.abs(r.vx);
@@ -388,7 +454,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 r.vx = -Math.abs(r.vx);
             }
 
-            // Floor
             if (r.y + r.radius >= floorY) {
                 r.y = floorY - r.radius;
                 r.vy = r.bounceForce;
@@ -397,7 +462,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // Hit Cannon
             const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
             if (distToCannon < r.radius + 26) {
-                currentHp -= 25; // הורדנו נזק מ-100 ל-25
+                currentHp -= 25;
                 updateHpBar();
                 playSound('hit');
                 createExplosion(cannon.x, cannon.y - 10, '#ef4444', 12);
@@ -427,9 +492,13 @@ window.addEventListener('DOMContentLoaded', () => {
                     playSound('hit');
                     createExplosion(b.x, b.y, r.color, 3);
 
+                    // Rock Destroyed!
                     if (r.hp <= 0) {
                         playSound('explode');
                         createExplosion(r.x, r.y, r.color, 20);
+                        
+                        // יציאת מטבעות זהב בעת השמדה
+                        spawnCoins(r.x, r.y, (r.sizeIndex + 1) * 3);
 
                         if (r.sizeIndex > 0) {
                             const newHp = Math.ceil(r.maxHp / 2);
@@ -449,7 +518,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Draw Polygonal Rock
             if (rocks[i]) {
                 ctx.save();
                 ctx.translate(r.x, r.y);
@@ -477,7 +545,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         if (rocks.length === 0 && gameStarted && !isPaused) {
-            // כמות ניקוד/חיים מופחתת משמעותית לסלעים בראשוניים
             spawnRock(width * 0.3, 80, Math.max(5, 8 * currentLevel), 2);
             spawnRock(width * 0.7, 80, Math.max(4, 6 * currentLevel), 1);
         }
@@ -509,7 +576,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- 11. State Transitions & UI ---
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        rocks.length = 0; bullets.length = 0; particles.length = 0;
+        rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
@@ -518,6 +585,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         updateHpBar();
         updateLevelUI();
+        updateCoinsUI();
     }
 
     function gameOver() {
@@ -529,9 +597,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const gameOverModal = document.getElementById('game-over-modal');
         const finalScoreVal = document.getElementById('final-score-val');
+        const finalCoinsVal = document.getElementById('final-coins-val');
         const bestScoreVal = document.getElementById('best-score-val');
 
         if (finalScoreVal) finalScoreVal.innerText = score;
+        if (finalCoinsVal) finalCoinsVal.innerText = totalCoins;
         if (bestScoreVal) bestScoreVal.innerText = highScore;
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
@@ -587,7 +657,7 @@ window.addEventListener('DOMContentLoaded', () => {
             cannon.x += (cannon.targetX - cannon.x) * 0.25;
 
             shootTimer += dt;
-            if (isFiring && shootTimer >= 0.065) { // ירייה מהירה יותר!
+            if (isFiring && shootTimer >= 0.065) {
                 shootTimer = 0;
                 spawnBullet();
                 playSound('shoot');
@@ -595,6 +665,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             updateBullets(dt);
             updateRocks(dt);
+            updateCoins(dt);
             updateParticles(dt);
         }
 

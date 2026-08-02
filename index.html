@@ -16,10 +16,10 @@
 
     <!-- HUD במהלך המשחק -->
     <div id="ui-container">
-        <!-- מד חיים -->
+        <!-- מד חיים (עודכן ל-1000) -->
         <div id="hp-container">
             <div id="hp-bar"></div>
-            <span id="hp-text">500 / 500</span>
+            <span id="hp-text">1000 / 1000</span>
         </div>
 
         <!-- מד שלב -->
@@ -28,6 +28,12 @@
             <div class="progress-outer">
                 <div id="level-progress-fill"></div>
             </div>
+        </div>
+
+        <!-- מד מטבעות (חדש!) -->
+        <div id="coin-card">
+            <span class="coin-icon">🪙</span>
+            <span id="coins-val">0</span>
         </div>
 
         <!-- ניקוד -->
@@ -50,6 +56,10 @@
 
             <div class="best-badge">
                 BEST SCORE: <span id="start-best-score">0</span>
+            </div>
+
+            <div class="coins-badge" style="color: #facc15; font-weight: bold; margin-bottom: 20px;">
+                TOTAL COINS: 🪙 <span id="start-coins">0</span>
             </div>
 
             <div class="action-section">
@@ -83,12 +93,13 @@
         <div class="pause-card">
             <h2 style="color: #ef4444; font-size: 24px;">GAME OVER</h2>
             <p style="font-size: 1.1rem; color: #fff; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
+            <p style="font-size: 1rem; color: #facc15; margin: 5px 0;">COINS: 🪙 <strong id="final-coins-val">0</strong></p>
             <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">BEST: <span id="best-score-val">0</span></p>
             <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
         </div>
     </div>
 
-    <!-- טעינת ה-JS עם גרסה מעודכנת (v=3) -->
-    <script src="main.js?v=3"></script>
+    <!-- טעינת ה-JS עם גרסה v=4 -->
+    <script src="main.js?v=4"></script>
 </body>
 </html>
