@@ -1,19 +1,23 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- Mobile Only Check ---
+    // --- Splash Screen ---
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        const hideSplash = () => {
+            splashScreen.style.opacity = '0';
+            setTimeout(() => { splashScreen.style.display = 'none'; }, 500);
+            window.removeEventListener('pointerdown', hideSplash);
+        };
+        window.addEventListener('pointerdown', hideSplash);
+    }
+
+    // --- Mobile Detection ---
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     }
-
-    const warningEl = document.getElementById('mobile-only-warning');
-    
-    // אם המשתמש במחשב - מציגים את האזהרה ועוצרים את האתחול
     if (!isMobileDevice()) {
-        if (warningEl) warningEl.style.display = 'flex';
-        return; 
-    } else {
-        // אם המשתמש בסלולרי - מסירים את האזהרה לחלוטין שלא תחסום מגע
-        if (warningEl) warningEl.style.display = 'none';
+        const warning = document.getElementById('mobile-only-warning');
+        if (warning) warning.style.display = 'flex';
     }
 
     function requestFullScreen() {
@@ -25,11 +29,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.style.position = 'absolute';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
-    canvas.style.zIndex = '1';
-    canvas.style.touchAction = 'none'; // מונע גלילה של הדפדפן במגע
     document.body.appendChild(canvas);
 
     let width, height, dpr;
@@ -224,7 +223,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Environment Backgrounds ---
+    // --- Environment Backgrounds (Day, Sunset, Space) ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -278,6 +277,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.lineTo(0, height);
             ctx.fill();
         } else {
+            // Day Map (Default)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
             skyGrad.addColorStop(0, '#38bdf8');
             skyGrad.addColorStop(0.6, '#bae6fd');
@@ -297,6 +297,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
+        // Draw Clouds for Day & Sunset
         if (currentMap !== 'space') {
             ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
             clouds.forEach(c => {
@@ -329,17 +330,11 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- Game State ---
-    let gameStarted = false;
-    let isPaused = false;
+    // --- State, Level & Upgrades UI ---
+    let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
     let score = 0;
-
-    const startOverlay = document.getElementById('start-overlay');
-    if (startOverlay) {
-        startOverlay.style.display = 'flex';
-    }
 
     function updateUI() {
         const coinsVal = document.getElementById('coins-val');
@@ -350,36 +345,29 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
+        // Upgrade Costs & Levels
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
 
-        const fireRateLvl = document.getElementById('fire-rate-lvl');
-        const fireRateCostEl = document.getElementById('fire-rate-cost');
-        const buyFireRateBtn = document.getElementById('buy-fire-rate-btn');
-        if (fireRateLvl) fireRateLvl.innerText = `Lvl ${fireRateLevel}`;
-        if (fireRateCostEl) fireRateCostEl.innerText = fireRateCost;
-        if (buyFireRateBtn) buyFireRateBtn.disabled = totalCoins < fireRateCost;
+        document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
+        document.getElementById('fire-rate-cost').innerText = fireRateCost;
+        document.getElementById('buy-fire-rate-btn').disabled = totalCoins < fireRateCost;
 
-        const firePowerLvl = document.getElementById('fire-power-lvl');
-        const firePowerCostEl = document.getElementById('fire-power-cost');
-        const buyFirePowerBtn = document.getElementById('buy-fire-power-btn');
-        if (firePowerLvl) firePowerLvl.innerText = `Lvl ${firePowerLevel}`;
-        if (firePowerCostEl) firePowerCostEl.innerText = firePowerCost;
-        if (buyFirePowerBtn) buyFirePowerBtn.disabled = totalCoins < firePowerCost;
+        document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
+        document.getElementById('fire-power-cost').innerText = firePowerCost;
+        document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
-        const multishotStatus = document.getElementById('multishot-status');
         if (hasMultishot) {
-            if (multishotStatus) multishotStatus.innerText = 'UNLOCKED';
-            if (multishotBtn) {
-                multishotBtn.innerText = 'OWNED';
-                multishotBtn.disabled = true;
-            }
+            document.getElementById('multishot-status').innerText = 'UNLOCKED';
+            multishotBtn.innerText = 'OWNED';
+            multishotBtn.disabled = true;
         } else {
-            if (multishotStatus) multishotStatus.innerText = 'Locked';
-            if (multishotBtn) multishotBtn.disabled = totalCoins < 500;
+            document.getElementById('multishot-status').innerText = 'Locked';
+            multishotBtn.disabled = totalCoins < 500;
         }
 
+        // Map Selector UI
         updateMapSelectorUI();
     }
 
@@ -393,8 +381,6 @@ window.addEventListener('DOMContentLoaded', () => {
         maps.forEach(m => {
             const cardEl = document.getElementById(m.card);
             const btnEl = document.getElementById(m.btn);
-            if (!cardEl || !btnEl) return;
-
             const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
@@ -491,7 +477,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    // --- Bullets ---
+    // --- Bullets & Upgrades Logic ---
     const bullets = [];
     let shootTimer = 0;
 
@@ -653,44 +639,106 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Touch Controls Only ---
+    // --- Controls ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
-    const startTouch = (e) => {
-        if (!gameStarted || isPaused) return;
-        isDragging = true;
-        isFiring = true;
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDragging = true; isFiring = true;
         touchStartX = e.touches[0].clientX;
-    };
+    }, { passive: false });
 
-    const moveTouch = (e) => {
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
         if (isDragging && gameStarted && !isPaused) {
-            const x = e.touches[0].clientX;
-            const deltaX = x - touchStartX;
+            const currentX = e.touches[0].clientX;
+            const deltaX = currentX - touchStartX;
             cannon.targetX += deltaX;
-            touchStartX = x;
-        }
-    };
-
-    const stopTouch = () => { isDragging = false; isFiring = false; };
-
-    // האזנה מפורשת לאירועי Touch עבור ניידים בלבד
-    window.addEventListener('touchstart', (e) => {
-        if (e.target === canvas) {
-            e.preventDefault();
-            startTouch(e);
+            touchStartX = currentX;
         }
     }, { passive: false });
 
-    window.addEventListener('touchmove', (e) => {
-        if (isDragging) {
-            e.preventDefault();
-            moveTouch(e);
-        }
-    }, { passive: false });
+    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
+    canvas.addEventListener('touchend', stopInput, { passive: false });
 
-    window.addEventListener('touchend', stopTouch);
-    window.addEventListener('touchcancel', stopTouch);
+    // --- Menu Navigation & Purchases ---
+    const playTabBtn = document.getElementById('tab-play-btn');
+    const shopTabBtn = document.getElementById('tab-shop-btn');
+    const mapsTabBtn = document.getElementById('tab-maps-btn');
+
+    const playTabContent = document.getElementById('tab-play');
+    const shopTabContent = document.getElementById('tab-shop');
+    const mapsTabContent = document.getElementById('tab-maps');
+
+    function switchTab(activeBtn, activeContent) {
+        [playTabBtn, shopTabBtn, mapsTabBtn].forEach(b => b?.classList.remove('active'));
+        [playTabContent, shopTabContent, mapsTabContent].forEach(c => c?.classList.add('hidden'));
+
+        activeBtn?.classList.add('active');
+        activeContent?.classList.remove('hidden');
+    }
+
+    playTabBtn?.addEventListener('click', () => switchTab(playTabBtn, playTabContent));
+    shopTabBtn?.addEventListener('click', () => switchTab(shopTabBtn, shopTabContent));
+    mapsTabBtn?.addEventListener('click', () => switchTab(mapsTabBtn, mapsTabContent));
+
+    // Shop Buy Handlers
+    document.getElementById('buy-fire-rate-btn')?.addEventListener('click', () => {
+        const cost = fireRateLevel * 100;
+        if (totalCoins >= cost) {
+            totalCoins -= cost;
+            fireRateLevel++;
+            localStorage.setItem('cannon_total_coins', totalCoins);
+            localStorage.setItem('cannon_lvl_firerate', fireRateLevel);
+            updateUI();
+            playSound('coin');
+        }
+    });
+
+    document.getElementById('buy-fire-power-btn')?.addEventListener('click', () => {
+        const cost = firePowerLevel * 150;
+        if (totalCoins >= cost) {
+            totalCoins -= cost;
+            firePowerLevel++;
+            localStorage.setItem('cannon_total_coins', totalCoins);
+            localStorage.setItem('cannon_lvl_firepower', firePowerLevel);
+            updateUI();
+            playSound('coin');
+        }
+    });
+
+    document.getElementById('buy-multishot-btn')?.addEventListener('click', () => {
+        if (!hasMultishot && totalCoins >= 500) {
+            totalCoins -= 500;
+            hasMultishot = true;
+            localStorage.setItem('cannon_total_coins', totalCoins);
+            localStorage.setItem('cannon_has_multishot', 'true');
+            updateUI();
+            playSound('coin');
+        }
+    });
+
+    // Maps Selection & Purchase Handlers
+    function handleMapClick(mapId, cost) {
+        if (unlockedMaps.includes(mapId)) {
+            currentMap = mapId;
+            localStorage.setItem('cannon_selected_map', currentMap);
+            updateUI();
+        } else if (totalCoins >= cost) {
+            totalCoins -= cost;
+            unlockedMaps.push(mapId);
+            currentMap = mapId;
+            localStorage.setItem('cannon_total_coins', totalCoins);
+            localStorage.setItem('cannon_unlocked_maps', JSON.stringify(unlockedMaps));
+            localStorage.setItem('cannon_selected_map', currentMap);
+            updateUI();
+            playSound('coin');
+        }
+    }
+
+    document.getElementById('select-map-day')?.addEventListener('click', () => handleMapClick('day', 0));
+    document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
+    document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
 
     // --- State Transitions ---
     function resetGame() {
@@ -722,46 +770,55 @@ window.addEventListener('DOMContentLoaded', () => {
         if (finalScoreVal) finalScoreVal.innerText = score;
         if (finalCoinsVal) finalCoinsVal.innerText = totalCoins;
         if (bestScoreVal) bestScoreVal.innerText = highScore;
-        if (gameOverModal) gameOverModal.style.display = 'flex';
+        if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
-    // Handlers
+    function returnToMainMenu() {
+        gameStarted = false;
+        isPaused = false;
+        isFiring = false;
+        isDragging = false;
+
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        document.getElementById('pause-menu')?.classList.add('hidden');
+        document.getElementById('start-overlay')?.classList.remove('hidden');
+
+        updateUI();
+    }
+
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
         resetGame();
         gameStarted = true;
         isPaused = false;
-        
-        // הסרת ה-overlay לחלוטין
-        const overlay = document.getElementById('start-overlay');
-        if (overlay) overlay.style.display = 'none';
+        document.getElementById('start-overlay')?.classList.add('hidden');
     });
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
         isPaused = true;
-        const pauseMenu = document.getElementById('pause-menu');
-        if (pauseMenu) pauseMenu.style.display = 'flex';
+        document.getElementById('pause-menu')?.classList.remove('hidden');
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => {
         requestFullScreen();
         isPaused = false;
-        const pauseMenu = document.getElementById('pause-menu');
-        if (pauseMenu) pauseMenu.style.display = 'none';
+        document.getElementById('pause-menu')?.classList.add('hidden');
     });
+
+    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
+    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
         requestFullScreen();
-        const gameOverModal = document.getElementById('game-over-modal');
-        if (gameOverModal) gameOverModal.style.display = 'none';
+        document.getElementById('game-over-modal')?.classList.add('hidden');
         resetGame();
         isPaused = false;
         gameStarted = true;
     });
 
-    // --- Main Loop ---
+    // --- Main Game Loop ---
     let lastTime = performance.now();
 
     function gameLoop(now) {
@@ -794,7 +851,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     resizeCanvas();
-    resetGame();
     window.addEventListener('resize', resizeCanvas);
     requestAnimationFrame(gameLoop);
 });
