@@ -19,17 +19,23 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 1. Canvas Setup ---
+    // --- 1. Canvas HD Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     document.body.appendChild(canvas);
 
-    let width, height;
+    let width, height, dpr;
     function resizeCanvas() {
+        dpr = window.devicePixelRatio || 1; // תמיכה ברזולוציית HD גבוהה
         width = window.innerWidth;
         height = window.innerHeight;
-        canvas.width = width;
-        canvas.height = height;
+
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        ctx.scale(dpr, dpr);
         initClouds();
     }
 
@@ -65,7 +71,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(600, now);
                 osc.frequency.exponentialRampToValueAtTime(100, now + 0.06);
-                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.setValueAtTime(0.12, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
                 osc.start(now);
                 osc.stop(now + 0.06);
@@ -73,7 +79,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(220, now);
                 osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
-                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.setValueAtTime(0.15, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
                 osc.start(now);
                 osc.stop(now + 0.08);
@@ -81,7 +87,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(120, now);
                 osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
-                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.setValueAtTime(0.25, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
                 osc.start(now);
                 osc.stop(now + 0.25);
@@ -95,7 +101,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function createExplosion(x, y, color, count = 12) {
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 250 + 50;
+            const speed = Math.random() * 200 + 40;
             particles.push({
                 x: x,
                 y: y,
@@ -131,7 +137,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 4. Environment Background (Clouds & Mountains) ---
+    // --- 4. Environment Background ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -303,12 +309,12 @@ window.addEventListener('DOMContentLoaded', () => {
     let shootTimer = 0;
 
     function spawnBullet() {
-        bullets.push({ x: cannon.x - 11, y: cannon.y - 30, radius: 5 });
-        bullets.push({ x: cannon.x + 11, y: cannon.y - 30, radius: 5 });
+        bullets.push({ x: cannon.x - 11, y: cannon.y - 30, radius: 6 });
+        bullets.push({ x: cannon.x + 11, y: cannon.y - 30, radius: 6 });
     }
 
     function updateBullets(dt) {
-        const speed = 1300 * dt;
+        const speed = 1400 * dt;
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.y -= speed;
@@ -324,7 +330,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 9. Rocks (Polygonal Rock Physics) ---
+    // --- 9. Rocks (Slower Physics & Easier Difficulty) ---
     const rocks = [];
     const rockColors = ['#ef4444', '#f97316', '#22c55e', '#06b6d4', '#a855f7'];
 
@@ -343,17 +349,17 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnRock(x, y, hp, sizeIndex) {
-        const radii = [26, 40, 58];
+        const radii = [28, 42, 60];
         const radius = radii[sizeIndex];
         const color = rockColors[Math.floor(Math.random() * rockColors.length)];
 
         rocks.push({
             x: x !== undefined ? x : Math.random() * (width - 100) + 50,
             y: y !== undefined ? y : 80,
-            vx: (Math.random() > 0.5 ? 1 : -1) * (120 + Math.random() * 60),
+            vx: (Math.random() > 0.5 ? 1 : -1) * (70 + Math.random() * 40), // מהירות אופקית איטית יותר
             vy: 0,
-            gravity: 800,
-            bounceForce: -(390 + sizeIndex * 65),
+            gravity: 350, // כבידה נמוכה - נפילה איטית בהרבה!
+            bounceForce: -(260 + sizeIndex * 40),
             radius: radius,
             hp: hp,
             maxHp: hp,
@@ -391,10 +397,10 @@ window.addEventListener('DOMContentLoaded', () => {
             // Hit Cannon
             const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
             if (distToCannon < r.radius + 26) {
-                currentHp -= 100;
+                currentHp -= 25; // הורדנו נזק מ-100 ל-25
                 updateHpBar();
                 playSound('hit');
-                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 15);
+                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 12);
                 r.vy = r.bounceForce;
 
                 if (currentHp <= 0) {
@@ -412,18 +418,18 @@ window.addEventListener('DOMContentLoaded', () => {
                     bullets.splice(j, 1);
                     r.hp--;
                     score += 10;
-                    levelProgress += 2;
+                    levelProgress += 3;
 
                     const scoreVal = document.getElementById('score-val');
                     if (scoreVal) scoreVal.innerText = score;
 
                     updateLevelUI();
                     playSound('hit');
-                    createExplosion(b.x, b.y, r.color, 4);
+                    createExplosion(b.x, b.y, r.color, 3);
 
                     if (r.hp <= 0) {
                         playSound('explode');
-                        createExplosion(r.x, r.y, r.color, 25);
+                        createExplosion(r.x, r.y, r.color, 20);
 
                         if (r.sizeIndex > 0) {
                             const newHp = Math.ceil(r.maxHp / 2);
@@ -471,8 +477,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         if (rocks.length === 0 && gameStarted && !isPaused) {
-            spawnRock(width * 0.25, 80, 20 * currentLevel, 2);
-            spawnRock(width * 0.75, 80, 15 * currentLevel, 1);
+            // כמות ניקוד/חיים מופחתת משמעותית לסלעים בראשוניים
+            spawnRock(width * 0.3, 80, Math.max(5, 8 * currentLevel), 2);
+            spawnRock(width * 0.7, 80, Math.max(4, 6 * currentLevel), 1);
         }
     }
 
@@ -580,7 +587,7 @@ window.addEventListener('DOMContentLoaded', () => {
             cannon.x += (cannon.targetX - cannon.x) * 0.25;
 
             shootTimer += dt;
-            if (isFiring && shootTimer >= 0.08) {
+            if (isFiring && shootTimer >= 0.065) { // ירייה מהירה יותר!
                 shootTimer = 0;
                 spawnBullet();
                 playSound('shoot');
