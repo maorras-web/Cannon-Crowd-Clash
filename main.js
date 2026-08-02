@@ -1,5 +1,18 @@
 window.addEventListener('DOMContentLoaded', () => {
 
+    // --- Splash Screen Handling ---
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        const hideSplash = () => {
+            splashScreen.style.opacity = '0';
+            setTimeout(() => {
+                splashScreen.style.display = 'none';
+            }, 500);
+            window.removeEventListener('pointerdown', hideSplash);
+        };
+        window.addEventListener('pointerdown', hideSplash);
+    }
+
     // --- 0. Mobile Detection ---
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -85,8 +98,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.stop(now + 0.08);
             } else if (type === 'coin') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(987.77, now); // B5
-                osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+                osc.frequency.setValueAtTime(987.77, now);
+                osc.frequency.setValueAtTime(1318.51, now + 0.08);
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.16);
                 osc.start(now);
@@ -109,7 +122,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function spawnCoins(x, y, count = 3) {
         for (let i = 0; i < count; i++) {
-            const angle = (Math.random() * Math.PI) + Math.PI; // Upward launch
+            const angle = (Math.random() * Math.PI) + Math.PI;
             const speed = Math.random() * 180 + 120;
             coinsList.push({
                 x: x,
@@ -131,21 +144,18 @@ window.addEventListener('DOMContentLoaded', () => {
             c.x += c.vx * dt;
             c.y += c.vy * dt;
 
-            // Bounce on floor
             if (c.y + c.radius >= floorY) {
                 c.y = floorY - c.radius;
                 c.vy = -c.vy * 0.4;
                 c.vx *= 0.8;
             }
 
-            // Magnetic attraction towards cannon
             const distToCannon = Math.hypot(c.x - cannon.x, c.y - cannon.y);
             if (distToCannon < 150) {
                 c.vx += (cannon.x - c.x) * 5 * dt;
                 c.vy += (cannon.y - c.y) * 5 * dt;
             }
 
-            // Collect coin
             if (distToCannon < c.radius + 28) {
                 totalCoins += c.value;
                 localStorage.setItem('cannon_total_coins', totalCoins);
@@ -155,7 +165,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // Draw Gold Coin
             ctx.save();
             ctx.translate(c.x, c.y);
             ctx.beginPath();
@@ -166,7 +175,6 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.strokeStyle = '#ca8a04';
             ctx.stroke();
 
-            // Coin inner detail
             ctx.fillStyle = '#eab308';
             ctx.font = 'bold 10px sans-serif';
             ctx.textAlign = 'center';
@@ -308,7 +316,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 6. HP Mechanics (שודרג ל-1000) ---
+    // --- 6. HP Mechanics (1000 HP) ---
     const maxHp = 1000;
     let currentHp = 1000;
 
@@ -459,7 +467,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 r.vy = r.bounceForce;
             }
 
-            // Hit Cannon
             const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
             if (distToCannon < r.radius + 26) {
                 currentHp -= 25;
@@ -474,7 +481,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Hit Bullet
             for (let j = bullets.length - 1; j >= 0; j--) {
                 const b = bullets[j];
                 const distToBullet = Math.hypot(r.x - b.x, r.y - b.y);
@@ -492,12 +498,10 @@ window.addEventListener('DOMContentLoaded', () => {
                     playSound('hit');
                     createExplosion(b.x, b.y, r.color, 3);
 
-                    // Rock Destroyed!
                     if (r.hp <= 0) {
                         playSound('explode');
                         createExplosion(r.x, r.y, r.color, 20);
                         
-                        // יציאת מטבעות זהב בעת השמדה
                         spawnCoins(r.x, r.y, (r.sizeIndex + 1) * 3);
 
                         if (r.sizeIndex > 0) {

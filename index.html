@@ -8,6 +8,17 @@
 </head>
 <body>
 
+    <!-- 0. מסך פתיח מקדים (Splash Screen) -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="cannon-preview-3d">
+                <img src="https://img.freepik.com/free-psd/3d-illustration-game-asset-cannon_23-2150912185.png" alt="3D Cannon">
+            </div>
+            <h1 class="splash-title">BALL BLAST</h1>
+            <p class="splash-tap-text">TAP ANYWHERE TO START</p>
+        </div>
+    </div>
+
     <!-- אזהרה למחשבים שולחניים -->
     <div id="mobile-only-warning">
         <h2>MOBILE ONLY</h2>
@@ -16,7 +27,7 @@
 
     <!-- HUD במהלך המשחק -->
     <div id="ui-container">
-        <!-- מד חיים (עודכן ל-1000) -->
+        <!-- מד חיים (1000 HP) -->
         <div id="hp-container">
             <div id="hp-bar"></div>
             <span id="hp-text">1000 / 1000</span>
@@ -30,7 +41,7 @@
             </div>
         </div>
 
-        <!-- מד מטבעות (חדש!) -->
+        <!-- מד מטבעות -->
         <div id="coin-card">
             <span class="coin-icon">🪙</span>
             <span id="coins-val">0</span>
@@ -46,7 +57,7 @@
         <button id="pause-btn" class="icon-btn">⏸</button>
     </div>
 
-    <!-- 1. מסך פתיחה -->
+    <!-- 1. מסך תפריט ראשי -->
     <div id="start-overlay">
         <div id="start-menu">
             <div class="header-section">
@@ -99,7 +110,7 @@
         </div>
     </div>
 
-    <!-- טעינת ה-JS עם גרסה v=4 -->
-    <script src="main.js?v=4"></script>
+    <!-- טעינת ה-JS עם גרסה מעודכנת v=5 -->
+    <script src="main.js?v=5"></script>
 </body>
 </html>
