@@ -23,7 +23,7 @@
 
     <!-- HUD במהלך המשחק -->
     <div id="ui-container">
-        <!-- מד חיים (1000 HP) -->
+        <!-- מד חיים -->
         <div id="hp-container">
             <div id="hp-bar"></div>
             <span id="hp-text">1000 / 1000</span>
@@ -53,25 +53,72 @@
         <button id="pause-btn" class="icon-btn">⏸</button>
     </div>
 
-    <!-- 1. מסך תפריט ראשי -->
+    <!-- 1. מסך תפריט ראשי + חנות ומפות -->
     <div id="start-overlay">
         <div id="start-menu">
-            <div class="header-section">
-                <h1 class="game-title">BALL BLAST</h1>
-                <p class="game-subtitle">Destroy bouncing spheres & upgrade your cannon!</p>
+            <h1 class="game-title">BALL BLAST</h1>
+            <p class="game-subtitle">Upgrade your cannon & unlock maps!</p>
+
+            <div class="stats-row">
+                <div class="best-badge">BEST: <span id="start-best-score">0</span></div>
+                <div class="coins-badge">🪙 <span id="start-coins">0</span></div>
             </div>
 
-            <div class="best-badge">
-                BEST SCORE: <span id="start-best-score">0</span>
+            <!-- לשוניות ניווט בתפריט -->
+            <div class="menu-tabs">
+                <button id="tab-play-btn" class="tab-btn active">PLAY</button>
+                <button id="tab-shop-btn" class="tab-btn">SHOP</button>
+                <button id="tab-maps-btn" class="tab-btn">MAPS</button>
             </div>
 
-            <div class="coins-badge" style="color: #facc15; font-weight: bold; margin-bottom: 20px;">
-                TOTAL COINS: 🪙 <span id="start-coins">0</span>
-            </div>
-
-            <div class="action-section">
+            <!-- תוכן לשונית PLAY -->
+            <div id="tab-play" class="tab-content">
                 <button id="start-btn" class="btn">START GAME</button>
             </div>
+
+            <!-- תוכן לשונית SHOP -->
+            <div id="tab-shop" class="tab-content hidden">
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>FIRE RATE</strong>
+                        <span id="fire-rate-lvl">Lvl 1</span>
+                    </div>
+                    <button id="buy-fire-rate-btn" class="buy-btn">🪙 <span id="fire-rate-cost">100</span></button>
+                </div>
+
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>FIRE POWER</strong>
+                        <span id="fire-power-lvl">Lvl 1</span>
+                    </div>
+                    <button id="buy-fire-power-btn" class="buy-btn">🪙 <span id="fire-power-cost">150</span></button>
+                </div>
+
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>TRIPLE CANNON</strong>
+                        <span id="multishot-status">Locked</span>
+                    </div>
+                    <button id="buy-multishot-btn" class="buy-btn">🪙 <span id="multishot-cost">500</span></button>
+                </div>
+            </div>
+
+            <!-- תוכן לשונית MAPS -->
+            <div id="tab-maps" class="tab-content hidden">
+                <div class="map-card selected" id="map-card-day">
+                    <span>☀️ DAY MOUNTAINS</span>
+                    <button id="select-map-day" class="map-btn">SELECTED</button>
+                </div>
+                <div class="map-card" id="map-card-sunset">
+                    <span>🌅 SUNSET HILLS</span>
+                    <button id="select-map-sunset" class="map-btn">🪙 500</button>
+                </div>
+                <div class="map-card" id="map-card-space">
+                    <span>🌌 NEON SPACE</span>
+                    <button id="select-map-space" class="map-btn">🪙 1500</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -106,6 +153,6 @@
         </div>
     </div>
 
-    <script src="main.js?v=6"></script>
+    <script src="main.js?v=7"></script>
 </body>
 </html>
