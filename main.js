@@ -1,4 +1,4 @@
-/* main.js - v2.1.0 Fixed Engine & Input Handling */
+/* main.js - v2.2.0 Fixed HTML Overlay & Touch Listener */
 
 // --- הגדרות קנווס ---
 const canvas = document.getElementById('gameCanvas') || createGameCanvas();
@@ -17,6 +17,36 @@ function resizeCanvas() {
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+
+// --- חיבור והעלמת אלמנטי HTML (Splash & UI Overlays) ---
+function setupHTMLOverlays() {
+    const splashScreen = document.getElementById('splash-screen');
+    const startOverlay = document.getElementById('start-overlay');
+    const uiContainer = document.getElementById('ui-container');
+    const gameOverModal = document.getElementById('game-over-modal');
+
+    // העלמת תפריטים המתנגשים עם שרטוט הקנווס
+    if (uiContainer) uiContainer.style.display = 'none';
+    if (gameOverModal) gameOverModal.style.display = 'none';
+
+    function hideSplash() {
+        if (splashScreen) splashScreen.style.display = 'none';
+        if (startOverlay) startOverlay.style.display = 'none';
+    }
+
+    if (splashScreen) {
+        splashScreen.addEventListener('pointerdown', hideSplash);
+        splashScreen.addEventListener('touchstart', hideSplash, { passive: true });
+        splashScreen.addEventListener('click', hideSplash);
+    }
+}
+
+// הפעלת החיבור מיד עם טעינת ה-DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupHTMLOverlays);
+} else {
+    setupHTMLOverlays();
+}
 
 // --- שמירת נתונים (LocalStorage) ---
 const SAVE_KEY = 'ball_blast_save_data';
@@ -516,7 +546,7 @@ function handleTap(e) {
     }
 }
 
-// מאזיני אירועים ללחיצה ומגע
+// מאזיני אירועים ללחיצה ומגע על ה-Canvas
 canvas.addEventListener('pointerdown', handleTap);
 window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'Enter') {
