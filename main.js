@@ -1,4 +1,4 @@
-/* main.js - v2.0.0 Complete Game Engine */
+/* main.js - v2.1.0 Fixed Engine & Input Handling */
 
 // --- הגדרות קנווס ---
 const canvas = document.getElementById('gameCanvas') || createGameCanvas();
@@ -40,7 +40,7 @@ let gameState = {
     levelProgress: 0,
     levelTarget: 1000,
     gameOver: false,
-    inShop: false,
+    inShop: true,
     rockSpawnTimer: 0,
     rockSpawnInterval: 90
 };
@@ -65,17 +65,14 @@ class Cannon {
     }
 
     get fireRateCooldown() {
-        // חישוב מהירות הירי לפי רמת ה-Fire Rate בחנות
         return Math.max(3, 12 - saveData.fireRateLvl * 0.7);
     }
 
     get damage() {
-        // חישוב עוצמת הירי לפי רמת ה-Fire Power בחנות
         return 8 + saveData.firePowerLvl * 4;
     }
 
     get magnetRadius() {
-        // טווח המגנט לפי הרמה בחנות
         return saveData.coinMagnetLvl * 65;
     }
 
@@ -86,7 +83,6 @@ class Cannon {
         if (this.x < 0) this.x = 0;
         if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
 
-        // מנגנון ירי
         this.shootTimer++;
         if (this.shootTimer >= this.fireRateCooldown) {
             this.shoot();
@@ -99,20 +95,16 @@ class Cannon {
         const topY = this.y - 10;
 
         if (saveData.tripleCannonUnlocked) {
-            // ירי משולש (Triple Cannon)
             bullets.push(new Bullet(centerX, topY, 0));
             bullets.push(new Bullet(centerX - 10, topY, -0.18));
             bullets.push(new Bullet(centerX + 10, topY, 0.18));
         } else {
-            // ירי יחיד רגיל
             bullets.push(new Bullet(centerX, topY, 0));
         }
     }
 
     draw() {
         ctx.save();
-        
-        // קנה/קנים
         ctx.fillStyle = '#1e272e';
         if (saveData.tripleCannonUnlocked) {
             ctx.fillRect(this.x + this.width / 2 - 16, this.y - 12, 8, 20);
@@ -122,13 +114,11 @@ class Cannon {
             ctx.fillRect(this.x + this.width / 2 - 6, this.y - 14, 12, 22);
         }
 
-        // גוף התותח (כיפה חצי עגולה)
         ctx.fillStyle = '#00d2d3';
         ctx.beginPath();
         ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, Math.PI, 0, false);
         ctx.fill();
 
-        // גלגלים
         ctx.fillStyle = '#2d3436';
         ctx.beginPath();
         ctx.arc(this.x + 12, this.y + this.height - 4, 11, 0, Math.PI * 2);
@@ -187,7 +177,6 @@ class Rock {
         this.bouncePower = -9.2;
         this.markedForDeletion = false;
 
-        // צבעים דינמיים לפי החיים
         const colors = ['#00b894', '#0984e3', '#6c5ce7', '#e17055', '#d63031'];
         this.color = colors[Math.floor(Math.random() * colors.length)];
     }
@@ -197,24 +186,20 @@ class Rock {
         this.vy += this.gravity;
         this.y += this.vy;
 
-        // הדהוד מהקירות
         if (this.x - this.radius <= 0 || this.x + this.radius >= canvas.width) {
             this.vx *= -1;
         }
 
-        // קפיצה מהרצפה
         if (this.y + this.radius >= canvas.height - 25) {
             this.y = canvas.height - 25 - this.radius;
             this.vy = this.bouncePower;
         }
 
-        // השמדה ופיצול
         if (this.hp <= 0) {
             this.markedForDeletion = true;
             createParticles(this.x, this.y, this.color, 14);
             spawnCoins(this.x, this.y, Math.floor(this.maxHp / 6) + 1);
 
-            // פיצול לסלעים קטנים יותר
             if (this.radius > 22) {
                 rocks.push(new Rock(this.x - 12, this.y, this.radius * 0.7, Math.floor(this.maxHp / 2)));
                 rocks.push(new Rock(this.x + 12, this.y, this.radius * 0.7, Math.floor(this.maxHp / 2)));
@@ -228,7 +213,6 @@ class Rock {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3.5;
 
-        // ציור בצורת מضلע/משושה (Hexagon)
         ctx.beginPath();
         const sides = 6;
         for (let i = 0; i < sides; i++) {
@@ -242,7 +226,6 @@ class Rock {
         ctx.fill();
         ctx.stroke();
 
-        // מספר חיים במרכז
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
@@ -259,14 +242,12 @@ class BatEnemy {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
         
-        // ממדים מפלצתיים
         this.width = 180;
         this.height = 110;
         
         this.x = (canvasWidth - this.width) / 2;
         this.y = 80;
         
-        // חיים חזקים ומותאמים לשלב
         this.hp = currentLevel * 350 + 500;
         this.maxHp = this.hp;
         
@@ -287,7 +268,7 @@ class BatEnemy {
         if (this.hp <= 0) {
             this.markedForDeletion = true;
             createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ff0044', 50);
-            spawnCoins(this.x + this.width / 2, this.y + this.height / 2, 45); // שלל מטבעות ענק
+            spawnCoins(this.x + this.width / 2, this.y + this.height / 2, 45);
         }
     }
 
@@ -298,11 +279,9 @@ class BatEnemy {
         const centerY = this.y + this.height / 2;
         const wingFlap = Math.sin(this.wingAngle) * 45;
 
-        // הילה אדומה-זוהרת
         ctx.shadowBlur = 25;
         ctx.shadowColor = '#ff0044';
 
-        // 1. גוף העטלף
         ctx.fillStyle = '#0d001a';
         ctx.strokeStyle = '#a600ff';
         ctx.lineWidth = 4;
@@ -312,7 +291,6 @@ class BatEnemy {
         ctx.fill();
         ctx.stroke();
 
-        // 2. כנף שמאל מפלצתית
         ctx.beginPath();
         ctx.moveTo(centerX - 20, centerY - 10);
         ctx.quadraticCurveTo(centerX - 70, centerY - 60 + wingFlap, centerX - 110, centerY - 15 + wingFlap);
@@ -324,7 +302,6 @@ class BatEnemy {
         ctx.fill();
         ctx.stroke();
 
-        // 3. כנף ימין מפלצתית
         ctx.beginPath();
         ctx.moveTo(centerX + 20, centerY - 10);
         ctx.quadraticCurveTo(centerX + 70, centerY - 60 + wingFlap, centerX + 110, centerY - 15 + wingFlap);
@@ -336,7 +313,6 @@ class BatEnemy {
         ctx.fill();
         ctx.stroke();
 
-        // 4. אוזניים חדות
         ctx.fillStyle = '#260033';
         ctx.beginPath();
         ctx.moveTo(centerX - 25, centerY - 30);
@@ -354,7 +330,6 @@ class BatEnemy {
         ctx.fill();
         ctx.stroke();
 
-        // 5. עיניים אדומות זוהרות
         ctx.fillStyle = '#ff0000';
         ctx.shadowBlur = 15;
         ctx.shadowColor = '#ff0000';
@@ -363,7 +338,6 @@ class BatEnemy {
         ctx.arc(centerX + 12, centerY - 12, 8, 0, Math.PI * 2);
         ctx.fill();
 
-        // 6. ניבים חדים
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 0;
         ctx.beginPath();
@@ -377,7 +351,6 @@ class BatEnemy {
 
         ctx.restore();
 
-        // 7. מד חיים (HP) מעל הראש
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
@@ -402,14 +375,12 @@ class Coin {
         this.x += this.vx;
         this.y += this.vy;
 
-        // מנע נפילה מחוץ לרצפה
         if (this.y + this.radius >= canvas.height - 20) {
             this.y = canvas.height - 20 - this.radius;
             this.vy *= -0.4;
             this.vx *= 0.8;
         }
 
-        // לוגיקת מגנט (אקטיבי לפי השדרוג בחנות)
         const cannonCenterX = cannon.x + cannon.width / 2;
         const cannonCenterY = cannon.y + cannon.height / 2;
         const dist = Math.hypot(cannonCenterX - this.x, cannonCenterY - this.y);
@@ -420,7 +391,6 @@ class Coin {
             this.y += Math.sin(angle) * 9;
         }
 
-        // איסוף מטבע ע"י השחקן
         if (dist < cannon.width / 2 + this.radius) {
             saveData.coins++;
             saveProgress();
@@ -485,27 +455,82 @@ function createParticles(x, y, color, count) {
     }
 }
 
-// --- אירועי קלט (מגע ועכבר) ---
-window.addEventListener('mousemove', (e) => {
+// --- ניהול אירועי קלט (Input Manager) ---
+function updateInputPosition(e) {
     const rect = canvas.getBoundingClientRect();
-    playerInputX = e.clientX - rect.left;
-});
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const scaleX = canvas.width / rect.width;
+    playerInputX = (clientX - rect.left) * scaleX;
+}
 
-window.addEventListener('touchmove', (e) => {
+window.addEventListener('mousemove', updateInputPosition);
+window.addEventListener('touchmove', updateInputPosition, { passive: true });
+
+function handleTap(e) {
     const rect = canvas.getBoundingClientRect();
-    if (e.touches.length > 0) {
-        playerInputX = e.touches[0].clientX - rect.left;
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const clickX = (clientX - rect.left) * scaleX;
+    const clickY = (clientY - rect.top) * scaleY;
+
+    if (gameState.inShop) {
+        // 1. לחיצה על כפתור START GAME
+        const startBtnY = canvas.height - 110;
+        if (clickY >= startBtnY && clickY <= startBtnY + 60) {
+            gameState.inShop = false;
+            return;
+        }
+
+        // 2. לחיצה על שדרוגי החנות
+        if (clickY >= 140 && clickY <= 200) {
+            if (saveData.coins >= saveData.fireRateLvl * 150) {
+                saveData.coins -= saveData.fireRateLvl * 150;
+                saveData.fireRateLvl++;
+                saveProgress();
+            }
+        } else if (clickY >= 220 && clickY <= 280) {
+            if (saveData.coins >= saveData.firePowerLvl * 200) {
+                saveData.coins -= saveData.firePowerLvl * 200;
+                saveData.firePowerLvl++;
+                saveProgress();
+            }
+        } else if (clickY >= 300 && clickY <= 360) {
+            if (saveData.coins >= (saveData.coinMagnetLvl + 1) * 250) {
+                saveData.coins -= (saveData.coinMagnetLvl + 1) * 250;
+                saveData.coinMagnetLvl++;
+                saveProgress();
+            }
+        } else if (clickY >= 380 && clickY <= 440) {
+            if (!saveData.tripleCannonUnlocked && saveData.coins >= 2000) {
+                saveData.coins -= 2000;
+                saveData.tripleCannonUnlocked = true;
+                saveProgress();
+            }
+        }
+    } else if (gameState.gameOver) {
+        initGame();
+    }
+}
+
+// מאזיני אירועים ללחיצה ומגע
+canvas.addEventListener('pointerdown', handleTap);
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+        if (gameState.inShop) gameState.inShop = false;
+        else if (gameState.gameOver) initGame();
     }
 });
 
 // --- מנגנון ניהול יצירת סלעים / בוס ---
 function handleSpawning() {
-    // 1. **שינוי קריטי:** אם יש עטלף פעיל במגרש -> עצירת נפילת סלעים מוחלטת!
     if (activeBat && activeBat.hp > 0 && !activeBat.markedForDeletion) {
         return;
     }
 
-    // 2. נפילת סלעים רגילה לפי קצב
     if (gameState.levelProgress < gameState.levelTarget) {
         gameState.rockSpawnTimer++;
         if (gameState.rockSpawnTimer >= gameState.rockSpawnInterval) {
@@ -513,7 +538,6 @@ function handleSpawning() {
             gameState.rockSpawnTimer = 0;
         }
     } else if (rocks.length === 0 && !activeBat) {
-        // 3. הגעה ליעד השלב וסיום כל הסלעים -> זימון עטלף-בוס מפלצתי!
         activeBat = new BatEnemy(canvas.width, canvas.height, gameState.level);
     }
 }
@@ -521,7 +545,6 @@ function handleSpawning() {
 // --- בדיקת התנגשויות (Collisions) ---
 function checkCollisions() {
     bullets.forEach(bullet => {
-        // כדורים נגד סלעים
         rocks.forEach(rock => {
             const dist = Math.hypot(bullet.x - rock.x, bullet.y - rock.y);
             if (dist < bullet.radius + rock.radius) {
@@ -533,7 +556,6 @@ function checkCollisions() {
             }
         });
 
-        // כדורים נגד העטלף
         if (activeBat && !activeBat.markedForDeletion) {
             if (
                 bullet.x > activeBat.x &&
@@ -549,7 +571,6 @@ function checkCollisions() {
                 if (activeBat.hp <= 0) {
                     activeBat.markedForDeletion = true;
                     activeBat = null;
-                    // מעבר לשלב הבא
                     gameState.level++;
                     gameState.levelProgress = 0;
                     gameState.levelTarget = gameState.level * 1200;
@@ -558,7 +579,6 @@ function checkCollisions() {
         }
     });
 
-    // סלעים נגד תותח (פגיעה = Game Over)
     rocks.forEach(rock => {
         const dist = Math.hypot(rock.x - (cannon.x + cannon.width / 2), rock.y - (cannon.y + cannon.height / 2));
         if (dist < rock.radius + cannon.width / 3) {
@@ -571,7 +591,6 @@ function checkCollisions() {
 function drawHUD() {
     ctx.save();
     
-    // 1. מד התקדמות בשלב (Top Progress Bar)
     const barW = 200;
     const barH = 16;
     const barX = canvas.width / 2 - barW / 2;
@@ -586,24 +605,20 @@ function drawHUD() {
     ctx.lineWidth = 2;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    // טקסט התקדמות
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(`${Math.floor(gameState.levelProgress)} / ${gameState.levelTarget}`, canvas.width / 2, barY + 12);
 
-    // 2. תווית LEVEL
     ctx.fillStyle = '#fdc23e';
     ctx.font = 'bold 16px Arial';
     ctx.fillText(`LEVEL ${gameState.level}`, canvas.width / 2, barY - 6);
 
-    // 3. מציג מטבעות (Coins Counter)
     ctx.fillStyle = '#f1c40f';
     ctx.font = 'bold 18px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`🪙 ${saveData.coins}`, 20, 32);
 
-    // 4. ניקוד (Score)
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'right';
     ctx.fillText(`SCORE: ${gameState.score}`, canvas.width - 20, 32);
@@ -614,64 +629,40 @@ function drawHUD() {
 // --- חנות שדרוגים (Shop UI) ---
 function drawShop() {
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 15, 30, 0.92)';
+    ctx.fillStyle = 'rgba(15, 15, 30, 0.95)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('UPGRADE SHOP', canvas.width / 2, 70);
+    ctx.fillText('UPGRADE SHOP', canvas.width / 2, 60);
 
     ctx.fillStyle = '#f1c40f';
     ctx.font = 'bold 20px Arial';
-    ctx.fillText(`Coins: 🪙 ${saveData.coins}`, canvas.width / 2, 105);
+    ctx.fillText(`Coins: 🪙 ${saveData.coins}`, canvas.width / 2, 95);
 
-    // כפתורי שדרוג
-    drawShopItem(150, 'FIRE RATE', `Lvl ${saveData.fireRateLvl}`, saveData.fireRateLvl * 150, () => {
-        if (saveData.coins >= saveData.fireRateLvl * 150) {
-            saveData.coins -= saveData.fireRateLvl * 150;
-            saveData.fireRateLvl++;
-            saveProgress();
-        }
-    });
-
-    drawShopItem(230, 'FIRE POWER', `Lvl ${saveData.firePowerLvl}`, saveData.firePowerLvl * 200, () => {
-        if (saveData.coins >= saveData.firePowerLvl * 200) {
-            saveData.coins -= saveData.firePowerLvl * 200;
-            saveData.firePowerLvl++;
-            saveProgress();
-        }
-    });
-
-    drawShopItem(310, 'COIN MAGNET', `Lvl ${saveData.coinMagnetLvl}`, (saveData.coinMagnetLvl + 1) * 250, () => {
-        if (saveData.coins >= (saveData.coinMagnetLvl + 1) * 250) {
-            saveData.coins -= (saveData.coinMagnetLvl + 1) * 250;
-            saveData.coinMagnetLvl++;
-            saveProgress();
-        }
-    });
-
-    const tripleText = saveData.tripleCannonUnlocked ? 'OWNED' : '2000 COINS';
-    drawShopItem(390, 'TRIPLE CANNON', saveData.tripleCannonUnlocked ? 'UNLOCKED' : 'BUY', 2000, () => {
-        if (!saveData.tripleCannonUnlocked && saveData.coins >= 2000) {
-            saveData.coins -= 2000;
-            saveData.tripleCannonUnlocked = true;
-            saveProgress();
-        }
-    });
+    drawShopItem(140, 'FIRE RATE', `Lvl ${saveData.fireRateLvl}`, saveData.fireRateLvl * 150);
+    drawShopItem(220, 'FIRE POWER', `Lvl ${saveData.firePowerLvl}`, saveData.firePowerLvl * 200);
+    drawShopItem(300, 'COIN MAGNET', `Lvl ${saveData.coinMagnetLvl}`, (saveData.coinMagnetLvl + 1) * 250);
+    drawShopItem(380, 'TRIPLE CANNON', saveData.tripleCannonUnlocked ? 'UNLOCKED' : 'BUY', saveData.tripleCannonUnlocked ? 'OWNED' : 2000);
 
     // כפתור התחלת משחק
+    const startBtnY = canvas.height - 110;
     ctx.fillStyle = '#00b894';
-    ctx.fillRect(canvas.width / 2 - 100, canvas.height - 100, 200, 50);
+    ctx.fillRect(canvas.width / 2 - 110, startBtnY, 220, 55);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(canvas.width / 2 - 110, startBtnY, 220, 55);
+
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px Arial';
-    ctx.fillText('START GAME', canvas.width / 2, canvas.height - 68);
+    ctx.fillText('START GAME', canvas.width / 2, startBtnY + 35);
 
     ctx.restore();
 }
 
-function drawShopItem(y, title, subtitle, cost, onClick) {
-    const btnW = 340;
+function drawShopItem(y, title, subtitle, cost) {
+    const btnW = 320;
     const btnH = 60;
     const btnX = canvas.width / 2 - btnW / 2;
 
@@ -696,46 +687,6 @@ function drawShopItem(y, title, subtitle, cost, onClick) {
     ctx.fillText(typeof cost === 'number' ? `🪙 ${cost}` : cost, btnX + btnW - 15, y + 36);
 }
 
-// לחיצות בחנות
-canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    if (gameState.inShop) {
-        // בדיקת לחיצה על כפתורי השדרוגים
-        if (clickY >= 150 && clickY <= 210) {
-            if (saveData.coins >= saveData.fireRateLvl * 150) {
-                saveData.coins -= saveData.fireRateLvl * 150;
-                saveData.fireRateLvl++;
-                saveProgress();
-            }
-        } else if (clickY >= 230 && clickY <= 290) {
-            if (saveData.coins >= saveData.firePowerLvl * 200) {
-                saveData.coins -= saveData.firePowerLvl * 200;
-                saveData.firePowerLvl++;
-                saveProgress();
-            }
-        } else if (clickY >= 310 && clickY <= 370) {
-            if (saveData.coins >= (saveData.coinMagnetLvl + 1) * 250) {
-                saveData.coins -= (saveData.coinMagnetLvl + 1) * 250;
-                saveData.coinMagnetLvl++;
-                saveProgress();
-            }
-        } else if (clickY >= 390 && clickY <= 450) {
-            if (!saveData.tripleCannonUnlocked && saveData.coins >= 2000) {
-                saveData.coins -= 2000;
-                saveData.tripleCannonUnlocked = true;
-                saveProgress();
-            }
-        } else if (clickY >= canvas.height - 100 && clickY <= canvas.height - 50) {
-            gameState.inShop = false;
-        }
-    } else if (gameState.gameOver) {
-        initGame();
-    }
-});
-
 // --- אתחול וסיום משחק ---
 function initGame() {
     cannon = new Cannon();
@@ -749,7 +700,7 @@ function initGame() {
     gameState.levelProgress = 0;
     gameState.levelTarget = 1000;
     gameState.gameOver = false;
-    gameState.inShop = true; // פתיחת חנות בתחילה
+    gameState.inShop = true;
 }
 
 function endGame() {
@@ -767,10 +718,8 @@ function animate() {
     if (gameState.inShop) {
         drawShop();
     } else if (!gameState.gameOver) {
-        // 1. ניהול יצירת סלעים/עטלף
         handleSpawning();
 
-        // 2. עדכון מיקומים
         cannon.update(playerInputX);
         bullets.forEach(b => b.update());
         rocks.forEach(r => r.update());
@@ -781,16 +730,13 @@ function animate() {
             activeBat.update();
         }
 
-        // 3. בדיקת התנגשויות
         checkCollisions();
 
-        // 4. ניקוי עצמים שאינם פעילים
         bullets = bullets.filter(b => !b.markedForDeletion);
         rocks = rocks.filter(r => !r.markedForDeletion);
         coins = coins.filter(c => !c.markedForDeletion);
         particles = particles.filter(p => !p.markedForDeletion);
 
-        // 5. ציור אלמנטים
         cannon.draw();
         bullets.forEach(b => b.draw());
         rocks.forEach(r => r.draw());
@@ -801,10 +747,8 @@ function animate() {
             activeBat.draw(ctx);
         }
 
-        // 6. ממשק HUD
         drawHUD();
     } else {
-        // מסך Game Over
         ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
