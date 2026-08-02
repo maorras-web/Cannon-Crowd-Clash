@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 0. Mobile Detection & Fullscreen ---
+    // --- 0. Mobile Detection ---
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     }
@@ -19,7 +19,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 1. Canvas Setup (2D Context) ---
+    // --- 1. Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     document.body.appendChild(canvas);
@@ -30,9 +30,8 @@ window.addEventListener('DOMContentLoaded', () => {
         height = window.innerHeight;
         canvas.width = width;
         canvas.height = height;
+        initClouds();
     }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
 
     // --- 2. Audio Engine ---
     let audioCtx = null;
@@ -72,25 +71,145 @@ window.addEventListener('DOMContentLoaded', () => {
                 osc.stop(now + 0.06);
             } else if (type === 'hit') {
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(180, now);
-                osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
-                gain.gain.setValueAtTime(0.25, now);
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
                 osc.start(now);
                 osc.stop(now + 0.08);
             } else if (type === 'explode') {
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(100, now);
-                osc.frequency.exponentialRampToValueAtTime(20, now + 0.2);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
                 osc.start(now);
-                osc.stop(now + 0.2);
+                osc.stop(now + 0.25);
             }
         } catch(e) {}
     }
 
-    // --- 3. State & High Score ---
+    // --- 3. Particles System ---
+    const particles = [];
+
+    function createExplosion(x, y, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 250 + 50;
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: Math.random() * 4 + 2,
+                color: color,
+                alpha: 1,
+                decay: Math.random() * 1.5 + 1
+            });
+        }
+    }
+
+    function updateParticles(dt) {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.alpha -= p.decay * dt;
+
+            if (p.alpha <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    // --- 4. Environment Background (Clouds & Mountains) ---
+    const clouds = [];
+    function initClouds() {
+        clouds.length = 0;
+        for (let i = 0; i < 4; i++) {
+            clouds.push({
+                x: Math.random() * width,
+                y: Math.random() * (height * 0.25) + 40,
+                speed: Math.random() * 15 + 10,
+                scale: Math.random() * 0.5 + 0.8
+            });
+        }
+    }
+
+    function drawEnvironment() {
+        // Sky Gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+        skyGrad.addColorStop(0, '#38bdf8');
+        skyGrad.addColorStop(0.6, '#bae6fd');
+        skyGrad.addColorStop(1, '#e0f2fe');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        // Mountains
+        ctx.fillStyle = '#64748b';
+        ctx.beginPath();
+        ctx.moveTo(0, height - 60);
+        ctx.lineTo(width * 0.2, height - 180);
+        ctx.lineTo(width * 0.45, height - 60);
+        ctx.lineTo(width * 0.75, height - 210);
+        ctx.lineTo(width, height - 60);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.fill();
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(width * 0.15, height - 60);
+        ctx.lineTo(width * 0.35, height - 130);
+        ctx.lineTo(width * 0.55, height - 60);
+        ctx.lineTo(width * 0.8, height - 140);
+        ctx.lineTo(width * 1.1, height - 60);
+        ctx.fill();
+
+        // Clouds
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        clouds.forEach(c => {
+            if (gameStarted && !isPaused) c.x += c.speed * 0.016;
+            if (c.x - 100 > width) c.x = -100;
+
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.scale(c.scale, c.scale);
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.arc(20, -10, 20, 0, Math.PI * 2);
+            ctx.arc(40, 0, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // Ground Floor
+        const floorY = height - 60;
+        ctx.fillStyle = '#15803d'; // Grass Green
+        ctx.fillRect(0, floorY, width, 20);
+
+        ctx.fillStyle = '#78350f'; // Dirt Brown
+        ctx.fillRect(0, floorY + 20, width, 40);
+
+        // Grass edge line
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, floorY);
+        ctx.lineTo(width, floorY);
+        ctx.stroke();
+    }
+
+    // --- 5. State & High Score ---
     let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
@@ -113,7 +232,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 4. HP Mechanics ---
+    // --- 6. HP Mechanics ---
     const maxHp = 500;
     let currentHp = 500;
 
@@ -133,37 +252,43 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- 5. Cannon Entity ---
+    // --- 7. Cannon Entity ---
     let cannonColor = '#2563eb';
-    const cannon = {
-        x: 0,
-        y: 0,
-        targetX: 0
-    };
+    const cannon = { x: 0, y: 0, targetX: 0 };
 
     window.changeCannonColor = function(hexColorStr) {
         cannonColor = hexColorStr;
     };
 
     function drawCannon() {
-        const floorY = height - 40;
+        const floorY = height - 60;
         cannon.y = floorY - 20;
 
         ctx.save();
         ctx.translate(cannon.x, cannon.y);
 
-        // Barrels
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(-18, -25, 10, 25);
-        ctx.fillRect(8, -25, 10, 25);
+        // Wheels
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(-22, 10, 12, 0, Math.PI * 2);
+        ctx.arc(22, 10, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
 
-        // Dome
+        // Barrels
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-16, -30, 10, 30);
+        ctx.fillRect(6, -30, 10, 30);
+
+        // Dome / Body
         const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
-        gradient.addColorStop(0, '#38bdf8');
+        gradient.addColorStop(0, '#93c5fd');
         gradient.addColorStop(1, cannonColor);
 
         ctx.beginPath();
-        ctx.arc(0, 0, 28, Math.PI, 0, false);
+        ctx.arc(0, 0, 26, Math.PI, 0, false);
         ctx.fillStyle = gradient;
         ctx.fill();
         ctx.lineWidth = 3;
@@ -173,24 +298,24 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    // --- 6. Bullets ---
+    // --- 8. Bullets ---
     const bullets = [];
     let shootTimer = 0;
 
     function spawnBullet() {
-        bullets.push({ x: cannon.x - 13, y: cannon.y - 25, radius: 5 });
-        bullets.push({ x: cannon.x + 13, y: cannon.y - 25, radius: 5 });
+        bullets.push({ x: cannon.x - 11, y: cannon.y - 30, radius: 5 });
+        bullets.push({ x: cannon.x + 11, y: cannon.y - 30, radius: 5 });
     }
 
     function updateBullets(dt) {
-        const speed = 1200 * dt;
+        const speed = 1300 * dt;
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.y -= speed;
 
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffeb3b';
+            ctx.fillStyle = '#facc15';
             ctx.fill();
 
             if (b.y < -10) {
@@ -199,12 +324,26 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. Balls (2D Physics) ---
+    // --- 9. Rocks (Polygonal Rock Physics) ---
     const rocks = [];
-    const rockColors = ['#ff3366', '#ff9900', '#22c55e', '#00ccff', '#a855f7'];
+    const rockColors = ['#ef4444', '#f97316', '#22c55e', '#06b6d4', '#a855f7'];
+
+    function createRockVertices(radius) {
+        const points = [];
+        const numSides = 8;
+        for (let i = 0; i < numSides; i++) {
+            const angle = (i / numSides) * Math.PI * 2;
+            const variance = radius * (0.85 + Math.random() * 0.3);
+            points.push({
+                x: Math.cos(angle) * variance,
+                y: Math.sin(angle) * variance
+            });
+        }
+        return points;
+    }
 
     function spawnRock(x, y, hp, sizeIndex) {
-        const radii = [25, 38, 55];
+        const radii = [26, 40, 58];
         const radius = radii[sizeIndex];
         const color = rockColors[Math.floor(Math.random() * rockColors.length)];
 
@@ -214,17 +353,18 @@ window.addEventListener('DOMContentLoaded', () => {
             vx: (Math.random() > 0.5 ? 1 : -1) * (120 + Math.random() * 60),
             vy: 0,
             gravity: 800,
-            bounceForce: -(380 + sizeIndex * 70),
+            bounceForce: -(390 + sizeIndex * 65),
             radius: radius,
             hp: hp,
             maxHp: hp,
             sizeIndex: sizeIndex,
-            color: color
+            color: color,
+            vertices: createRockVertices(radius)
         });
     }
 
     function updateRocks(dt) {
-        const floorY = height - 40;
+        const floorY = height - 60;
 
         for (let i = rocks.length - 1; i >= 0; i--) {
             const r = rocks[i];
@@ -250,10 +390,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Hit Cannon
             const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
-            if (distToCannon < r.radius + 28) {
+            if (distToCannon < r.radius + 26) {
                 currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
+                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 15);
                 r.vy = r.bounceForce;
 
                 if (currentHp <= 0) {
@@ -278,14 +419,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     updateLevelUI();
                     playSound('hit');
+                    createExplosion(b.x, b.y, r.color, 4);
 
                     if (r.hp <= 0) {
                         playSound('explode');
+                        createExplosion(r.x, r.y, r.color, 25);
 
                         if (r.sizeIndex > 0) {
                             const newHp = Math.ceil(r.maxHp / 2);
-                            spawnRock(r.x - 20, r.y, newHp, r.sizeIndex - 1);
-                            spawnRock(r.x + 20, r.y, newHp, r.sizeIndex - 1);
+                            spawnRock(r.x - 18, r.y, newHp, r.sizeIndex - 1);
+                            spawnRock(r.x + 18, r.y, newHp, r.sizeIndex - 1);
                         }
 
                         rocks.splice(i, 1);
@@ -300,28 +443,29 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Draw Ball
+            // Draw Polygonal Rock
             if (rocks[i]) {
                 ctx.save();
+                ctx.translate(r.x, r.y);
+
                 ctx.beginPath();
-                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                ctx.moveTo(r.vertices[0].x, r.vertices[0].y);
+                for (let v = 1; v < r.vertices.length; v++) {
+                    ctx.lineTo(r.vertices[v].x, r.vertices[v].y);
+                }
+                ctx.closePath();
 
-                const grad = ctx.createRadialGradient(r.x - r.radius * 0.3, r.y - r.radius * 0.3, r.radius * 0.1, r.x, r.y, r.radius);
-                grad.addColorStop(0, '#ffffff');
-                grad.addColorStop(0.3, r.color);
-                grad.addColorStop(1, '#000000');
-
-                ctx.fillStyle = grad;
+                ctx.fillStyle = r.color;
                 ctx.fill();
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#ffffff';
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = `900 ${Math.max(16, r.radius * 0.7)}px Rubik, sans-serif`;
+                ctx.font = `900 ${Math.max(16, r.radius * 0.65)}px Rubik, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(r.hp, r.x, r.y);
+                ctx.fillText(r.hp, 0, 0);
                 ctx.restore();
             }
         }
@@ -332,7 +476,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 8. Mobile Controls ---
+    // --- 10. Controls ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
     canvas.addEventListener('touchstart', (e) => {
@@ -355,10 +499,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
     canvas.addEventListener('touchend', stopInput, { passive: false });
 
-    // --- 9. Game State Transitions ---
+    // --- 11. State Transitions & UI ---
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        rocks.length = 0; bullets.length = 0;
+        rocks.length = 0; bullets.length = 0; particles.length = 0;
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
@@ -385,7 +529,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
-    // UI Buttons
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
@@ -423,18 +566,14 @@ window.addEventListener('DOMContentLoaded', () => {
         gameStarted = true;
     });
 
-    // --- 10. Loop ---
+    // --- 12. Main Game Loop ---
     let lastTime = performance.now();
 
     function gameLoop(now) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
-        ctx.fillStyle = '#050714';
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.fillStyle = '#0284c7';
-        ctx.fillRect(0, height - 40, width, 40);
+        drawEnvironment();
 
         if (gameStarted && !isPaused) {
             cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
@@ -449,11 +588,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
             updateBullets(dt);
             updateRocks(dt);
+            updateParticles(dt);
         }
 
         drawCannon();
         requestAnimationFrame(gameLoop);
     }
 
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
     requestAnimationFrame(gameLoop);
 });
