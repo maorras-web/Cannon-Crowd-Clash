@@ -3,258 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Cannon Crowd Clash - Remastered Physics</title>
+    <title>Ball Blast - Arcade Prototype</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body { overflow: hidden; background: #05050a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #canvas-container { width: 100vw; height: 100vh; display: block; }
-        
-        /* UI Overlay */
+        body { 
+            background: #111; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 480px;
+            max-height: 850px;
+            background: linear-gradient(to bottom, #1a1c29, #0e1017);
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
         #ui {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
-            padding: 20px; box-sizing: border-box;
+            position: absolute; top: 15px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 20px;
+            box-sizing: border-box; pointer-events: none;
         }
-        .hud-header {
-            display: flex; justify-content: space-between; align-items: center;
+        .score-box {
+            color: #fff; font-size: 1.5rem; font-weight: 900;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
-        .badge {
-            background: rgba(5, 5, 20, 0.75); border: 2px solid #00f3ff;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
-            color: #fff; padding: 10px 20px; border-radius: 20px;
-            font-weight: bold; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;
+        .coins-box {
+            color: #ffd700; font-size: 1.5rem; font-weight: 900;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
         }
     </style>
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="canvas-container"></div>
-
+<div id="game-container">
     <div id="ui">
-        <div class="hud-header">
-            <div class="badge" id="score-display">SCORE: 0</div>
-            <div class="badge" id="level-display">LEVEL 1</div>
-        </div>
+        <div class="score-box" id="score">SCORE: 0</div>
+        <div class="coins-box" id="coins">🪙 0</div>
     </div>
+    <canvas id="gameCanvas"></canvas>
+</div>
 
-    <script>
-        // --- SETUP SCENE & CAMERA ---
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x05050a, 0.015);
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 18, 25);
-        camera.lookAt(0, 2, -10);
+function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        container.appendChild(renderer.domElement);
+// --- GAME STATE ---
+let score = 0;
+let coins = 0;
+let gameOver = false;
 
-        // --- LIGHTS ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
+// --- CANNON (PLAYER) ---
+const cannon = {
+    x: canvas.width / 2,
+    y: canvas.height - 70,
+    width: 60,
+    height: 50,
+    targetX: canvas.width / 2,
+    recoil: 0
+};
 
-        const dirLight = new THREE.DirectionalLight(0x00f3ff, 1.2);
-        dirLight.position.set(10, 20, 10);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+// Controls
+window.addEventListener('pointermove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    cannon.targetX = e.clientX - rect.left;
+});
+window.addEventListener('touchmove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    cannon.targetX = e.touches[0].clientX - rect.left;
+});
 
-        // --- TRACK & GRID ---
-        const trackGeo = new THREE.PlaneGeometry(14, 200);
-        const trackMat = new THREE.MeshStandardMaterial({ color: 0x0a0a16, roughness: 0.4 });
-        const track = new THREE.Mesh(trackGeo, trackMat);
-        track.rotation.x = -Math.PI / 2;
-        track.position.z = -90;
-        track.receiveShadow = true;
-        scene.add(track);
+// --- BULLETS SYSTEM ---
+const bullets = [];
+let lastShotTime = 0;
+const fireRate = 80; // ms
 
-        const grid = new THREE.GridHelper(14, 20, 0x00f3ff, 0x112244);
-        grid.position.set(0, 0.05, -90);
-        grid.scale.z = 10;
-        scene.add(grid);
+function shoot() {
+    bullets.push({
+        x: cannon.x,
+        y: cannon.y - 20,
+        radius: 5,
+        speed: 16
+    });
+    cannon.recoil = 8;
+}
 
-        // --- CANNON (PLAYER) WITH RECOIL ANIMATION ---
-        const cannonGroup = new THREE.Group();
-        cannonGroup.position.set(0, 0, 5);
+// --- ROCKS / BALLS SYSTEM ---
+const rocks = [];
+const rockColors = ['#ff3366', '#ff9900', '#33cc33', '#00ccff', '#cc33ff'];
 
-        const baseGeo = new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0x8000ff, roughness: 0.2, metalness: 0.8 });
-        const cannonBase = new THREE.Mesh(baseGeo, baseMat);
-        cannonBase.position.y = 0;
-        cannonGroup.add(cannonBase);
+function spawnRock(x, y, hp, sizeIndex) {
+    const sizes = [24, 38, 52]; // Small, Medium, Large
+    const radius = sizes[sizeIndex];
+    rocks.push({
+        x: x || Math.random() * (canvas.width - 100) + 50,
+        y: y || -radius,
+        vx: (Math.random() - 0.5) * 4,
+        vy: 1,
+        gravity: 0.35,
+        bounceForce: -12 - sizeIndex * 1.5,
+        radius: radius,
+        hp: hp || Math.floor(Math.random() * 20 + 10) * (sizeIndex + 1),
+        maxHp: hp,
+        sizeIndex: sizeIndex,
+        color: rockColors[Math.floor(Math.random() * rockColors.length)]
+    });
+}
 
-        const ringGeo = new THREE.TorusGeometry(1.3, 0.1, 16, 32);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = 0.1;
-        cannonGroup.add(ring);
+// Initial Rocks
+spawnRock(canvas.width * 0.3, 100, 25, 2);
+spawnRock(canvas.width * 0.7, 100, 15, 1);
 
-        scene.add(cannonGroup);
-
-        // --- CONTROLS & INPUT ---
-        let targetX = 0;
-        let isPointerDown = false;
-        let lastPointerX = 0;
-
-        window.addEventListener('pointerdown', (e) => {
-            isPointerDown = true;
-            lastPointerX = e.clientX;
+// --- PARTICLES & EFFECTS ---
+const particles = [];
+function createParticles(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            radius: Math.random() * 4 + 2,
+            color: color,
+            alpha: 1,
+            life: 0.04
         });
+    }
+}
 
-        window.addEventListener('pointermove', (e) => {
-            if (!isPointerDown) return;
-            const deltaX = (e.clientX - lastPointerX) * 0.035;
-            targetX += deltaX;
-            targetX = Math.max(-5.5, Math.min(5.5, targetX));
-            lastPointerX = e.clientX;
-        });
+// --- UPDATE LOOP ---
+function update() {
+    if (gameOver) return;
 
-        window.addEventListener('pointerup', () => isPointerDown = false);
+    // Cannon Movement (Smooth Lerp)
+    cannon.x += (cannon.targetX - cannon.x) * 0.25;
+    cannon.x = Math.max(cannon.width / 2, Math.min(canvas.width - cannon.width / 2, cannon.x));
+    cannon.recoil *= 0.8;
 
-        // --- AUDIO SYSTEM (Web Audio API) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playShootSound() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+    // Shooting
+    const now = Date.now();
+    if (now - lastShotTime > fireRate) {
+        shoot();
+        lastShotTime = now;
+    }
+
+    // Bullets Update
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.y -= b.speed;
+        if (b.y < -10) bullets.splice(i, 1);
+    }
+
+    // Rocks Update & Physics
+    for (let i = rocks.length - 1; i >= 0; i--) {
+        const r = rocks[i];
+        
+        // Physics
+        r.vy += r.gravity;
+        r.x += r.vx;
+        r.y += r.vy;
+
+        // Wall Bounce
+        if (r.x - r.radius < 0 || r.x + r.radius > canvas.width) {
+            r.vx *= -1;
+            r.x = r.x - r.radius < 0 ? r.radius : canvas.width - r.radius;
         }
 
-        // --- CROWD & BULLET PHYSICS SYSTEM ---
-        const bullets = [];
-        const bulletGeo = new THREE.SphereGeometry(0.35, 16, 16);
-        const bulletMat = new THREE.MeshStandardMaterial({ 
-            color: 0x00f3ff, 
-            emissive: 0x00aaff, 
-            emissiveIntensity: 0.8,
-            roughness: 0.1 
-        });
-
-        let lastShootTime = 0;
-        const SHOOT_INTERVAL = 120; // ms
-        let score = 0;
-
-        function spawnBullet() {
-            const mesh = new THREE.Mesh(bulletGeo, bulletMat);
-            mesh.castShadow = true;
-            mesh.position.set(
-                cannonGroup.position.x + (Math.random() - 0.5) * 0.4,
-                0.5,
-                cannonGroup.position.z - 0.8
-            );
-
-            // Give initial impulse forward + sideways spread
-            bullets.push({
-                mesh: mesh,
-                vx: (Math.random() - 0.5) * 0.05,
-                vz: -0.45 - Math.random() * 0.05,
-                radius: 0.35
-            });
-
-            scene.add(mesh);
-            playShootSound();
-
-            // Cannon Recoil Animation
-            cannonGroup.position.z = 5.3;
-            cannonGroup.scale.set(1.15, 0.85, 1.15);
+        // Floor Bounce
+        const floorY = canvas.height - 40;
+        if (r.y + r.radius > floorY) {
+            r.y = floorY - r.radius;
+            r.vy = r.bounceForce;
         }
 
-        // --- UPDATE FLOCKING & CROWD SEPARATION ---
-        function updateBullets() {
-            const separationDistance = 0.75;
-            const separationForce = 0.015;
-
-            for (let i = 0; i < bullets.length; i++) {
-                const b1 = bullets[i];
-
-                // Move forward
-                b1.mesh.position.z += b1.vz;
-                b1.mesh.position.x += b1.vx;
-
-                // Dampen horizontal velocity gradually
-                b1.vx *= 0.92;
-
-                // Flocking: Separation (Push away if overlapping)
-                for (let j = i + 1; j < bullets.length; j++) {
-                    const b2 = bullets[j];
-                    const dx = b2.mesh.position.x - b1.mesh.position.x;
-                    const dz = b2.mesh.position.z - b1.mesh.position.z;
-                    const dist = Math.hypot(dx, dz);
-
-                    if (dist < separationDistance && dist > 0) {
-                        const force = (separationDistance - dist) * separationForce;
-                        const pushX = (dx / dist) * force;
-                        const pushZ = (dz / dist) * force;
-
-                        b1.mesh.position.x -= pushX;
-                        b1.mesh.position.z -= pushZ;
-                        b2.mesh.position.x += pushX;
-                        b2.mesh.position.z += pushZ;
-                    }
-                }
-
-                // Track Boundary Limits
-                b1.mesh.position.x = Math.max(-6.2, Math.min(6.2, b1.mesh.position.x));
-
-                // Cleanup far bullets
-                if (b1.mesh.position.z < -180) {
-                    scene.remove(b1.mesh);
-                    bullets.splice(i, 1);
-                    i--;
-                }
-            }
-        }
-
-        // --- GAME LOOP ---
-        function animate(time) {
-            requestAnimationFrame(animate);
-
-            // 1. Smooth Cannon Movement (Lerp)
-            cannonGroup.position.x += (targetX - cannonGroup.position.x) * 0.15;
-
-            // 2. Cannon Elastic Recoil Recovery
-            cannonGroup.position.z += (5 - cannonGroup.position.z) * 0.2;
-            cannonGroup.scale.x += (1 - cannonGroup.scale.x) * 0.2;
-            cannonGroup.scale.y += (1 - cannonGroup.scale.y) * 0.2;
-            cannonGroup.scale.z += (1 - cannonGroup.scale.z) * 0.2;
-
-            // 3. Continuous Shooting
-            if (time - lastShootTime > SHOOT_INTERVAL) {
-                spawnBullet();
-                lastShootTime = time;
+        // Bullet Collisions
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            const b = bullets[j];
+            const dist = Math.hypot(b.x - r.x, b.y - r.y);
+            
+            if (dist < r.radius + b.radius) {
+                // Hit!
+                r.hp--;
                 score += 10;
-                document.getElementById('score-display').innerText = `SCORE: ${score}`;
+                document.getElementById('score').innerText = `SCORE: ${score}`;
+                createParticles(b.x, b.y, '#fff', 3);
+                bullets.splice(j, 1);
+
+                // Rock Destroyed
+                if (r.hp <= 0) {
+                    createParticles(r.x, r.y, r.color, 20);
+                    coins += (r.sizeIndex + 1) * 5;
+                    document.getElementById('coins').innerText = `🪙 ${coins}`;
+
+                    // Split into smaller rocks if not smallest
+                    if (r.sizeIndex > 0) {
+                        spawnRock(r.x - 15, r.y, Math.ceil(r.maxHp / 2), r.sizeIndex - 1);
+                        spawnRock(r.x + 15, r.y, Math.ceil(r.maxHp / 2), r.sizeIndex - 1);
+                    }
+                    rocks.splice(i, 1);
+                    break;
+                }
             }
-
-            // 4. Update Physics & Crowd Dynamics
-            updateBullets();
-
-            renderer.render(scene, camera);
         }
 
-        // --- WINDOW RESIZE ---
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        // Player Collision (Game Over)
+        const cannonDist = Math.hypot(cannon.x - r.x, (cannon.y - 10) - r.y);
+        if (cannonDist < r.radius + 20) {
+            gameOver = true;
+            setTimeout(() => alert('GAME OVER! Total Score: ' + score), 100);
+        }
+    }
 
-        // Start Loop
-        animate(0);
-    </script>
+    // Auto-spawn new rocks if screen cleared
+    if (rocks.length === 0) {
+        spawnRock(canvas.width * 0.2, 50, 40, 2);
+        spawnRock(canvas.width * 0.8, 50, 30, 2);
+    }
+
+    // Particles Update
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.life;
+        if (p.alpha <= 0) particles.splice(i, 1);
+    }
+}
+
+// --- RENDER LOOP ---
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Floor Line
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - 40);
+    ctx.lineTo(canvas.width, canvas.height - 40);
+    ctx.stroke();
+
+    // Draw Bullets
+    ctx.fillStyle = '#ffeb3b';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ffeb3b';
+    bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.shadowBlur = 0; // Reset shadow
+
+    // Draw Cannon
+    ctx.save();
+    ctx.translate(cannon.x, cannon.y + cannon.recoil);
+    
+    // Barrel
+    ctx.fillStyle = '#444';
+    ctx.fillRect(-12, -35, 24, 25);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(-14, -38, 28, 5);
+
+    // Body
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(0, 0, 28, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = '#00ccff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Wheels
+    ctx.fillStyle = '#666';
+    ctx.beginPath(); ctx.arc(-22, 10, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(22, 10, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Draw Rocks
+    rocks.forEach(r => {
+        ctx.save();
+        ctx.translate(r.x, r.y);
+
+        // Rock Body
+        ctx.fillStyle = r.color;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = r.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, r.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Inner Border
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // HP Text
+        ctx.fillStyle = '#fff';
+        ctx.font = `900 ${r.radius * 0.7}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(r.hp, 0, 2);
+
+        ctx.restore();
+    });
+
+    // Draw Particles
+    particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    requestAnimationFrame(() => {
+        update();
+        draw();
+    });
+}
+
+draw();
+</script>
 </body>
 </html>

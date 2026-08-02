@@ -22,7 +22,7 @@ canvas {
     touch-action: none;
 }
 
-/* חסימה למחשבים שולחניים - מיועד למובייל בלבד */
+/* === חסימה למחשבים שולחניים - מיועד למובייל בלבד === */
 #mobile-only-warning {
     display: none;
     position: fixed;
@@ -55,7 +55,7 @@ canvas {
     pointer-events: none !important;
 }
 
-/* === UI תוך כדי משחק === */
+/* === UI תוך כדי משחק (HUD) === */
 #ui-container, .hud-container {
     position: fixed;
     top: 15px;
@@ -134,8 +134,8 @@ canvas {
 #level-progress-fill {
     width: 0%;
     height: 100%;
-    background: linear-gradient(90deg, #38bdf8, #818cf8);
-    box-shadow: 0 0 8px #38bdf8;
+    background: linear-gradient(90deg, #ff9900, #ff3366);
+    box-shadow: 0 0 8px #ff9900;
     transition: width 0.3s ease;
 }
 
@@ -168,6 +168,7 @@ canvas {
     line-height: 1;
 }
 
+/* === כפתורי אייקונים === */
 .icon-btn {
     pointer-events: auto;
     background: rgba(13, 21, 39, 0.85);
@@ -191,7 +192,7 @@ canvas {
     transform: scale(0.92);
 }
 
-/* === מסכי Overlay (פתיחה, עצירה ו-Game Over) === */
+/* === מסכי Overlay (תפריט פתיחה, עצירה ו-Game Over) === */
 #start-overlay, .overlay {
     position: fixed;
     top: 0;
@@ -229,10 +230,10 @@ canvas {
     font-size: clamp(2.5rem, 9vw, 4rem);
     font-weight: 900;
     line-height: 0.95;
-    background: linear-gradient(180deg, #ffffff 0%, #38bdf8 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #ff9900 50%, #ff3366 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
+    text-shadow: 0 10px 30px rgba(255, 153, 0, 0.4);
     letter-spacing: -1px;
 }
 
@@ -244,7 +245,7 @@ canvas {
     padding: 0 10px;
 }
 
-/* בחירת צבע התותח בתוך כרטיס ה-Pause */
+/* === בחירת צבע התותח בתוך כרטיס ה-Pause === */
 .customization-section {
     width: 100%;
     background: rgba(255, 255, 255, 0.04);
@@ -284,7 +285,7 @@ canvas {
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
 }
 
-/* שיא אישי */
+/* === שיא אישי (High Score) === */
 .best-badge {
     background: rgba(56, 189, 248, 0.1);
     border: 1px solid rgba(56, 189, 248, 0.25);
@@ -295,7 +296,7 @@ canvas {
     font-size: 0.95rem;
 }
 
-/* כפתורים */
+/* === כפתורים כלליים === */
 .btn {
     padding: 14px 32px;
     font-size: 1.1rem;
@@ -329,7 +330,7 @@ canvas {
     font-size: 1.3rem;
 }
 
-/* תפריטי Pause / Game Over */
+/* === תפריטי Pause / Game Over === */
 #pause-menu, #game-over-modal {
     position: fixed;
     top: 0;
