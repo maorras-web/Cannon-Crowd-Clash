@@ -1,8 +1,14 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- 0. UI & Touch Controls ---
-    document.documentElement.style.touchAction = 'none';
-    document.body.style.touchAction = 'none';
+    // --- 0. Mobile Detection & Fullscreen ---
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    }
+
+    if (!isMobileDevice()) {
+        const warning = document.getElementById('mobile-only-warning');
+        if (warning) warning.style.display = 'flex';
+    }
 
     function requestFullScreen() {
         const docEl = document.documentElement;
@@ -13,7 +19,22 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 1. Audio Engine ---
+    // --- 1. Canvas Setup (2D Context) ---
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    document.body.appendChild(canvas);
+
+    let width, height;
+    function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- 2. Audio Engine ---
     let audioCtx = null;
     let masterGainNode = null;
     let masterVolume = 0.25;
@@ -43,37 +64,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (type === 'shoot') {
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(700, now);
-                osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-                gain.gain.setValueAtTime(0.2, now);
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.06);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
+                osc.start(now);
+                osc.stop(now + 0.06);
+            } else if (type === 'hit') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+                gain.gain.setValueAtTime(0.25, now);
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
                 osc.start(now);
                 osc.stop(now + 0.08);
-            } else if (type === 'hit') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(160, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
             } else if (type === 'explode') {
                 osc.type = 'square';
-                osc.frequency.setValueAtTime(120, now);
-                osc.frequency.exponentialRampToValueAtTime(20, now + 0.25);
-                gain.gain.setValueAtTime(0.5, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(20, now + 0.2);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
                 osc.start(now);
-                osc.stop(now + 0.25);
+                osc.stop(now + 0.2);
             }
         } catch(e) {}
     }
 
-    // --- 2. HighScore & State ---
-    let currentLevel = 1;
-    let levelProgress = 0;
+    // --- 3. State & High Score ---
+    let gameStarted = false, isPaused = false;
+    let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
-    let highScore = localStorage.getItem('cannon_high_score') || 0;
+    let score = 0;
+    let highScore = localStorage.getItem('cannon_high_score_2d') || 0;
 
     const startBestScoreEl = document.getElementById('start-best-score');
     if (startBestScoreEl) startBestScoreEl.innerText = highScore;
@@ -90,54 +112,6 @@ window.addEventListener('DOMContentLoaded', () => {
             levelText.innerText = `LEVEL ${currentLevel}`;
         }
     }
-
-    // --- 3. Three.js Scene Setup ---
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x030712, 0.008);
-
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1500);
-    camera.position.set(0, 14, 28);
-    camera.lookAt(0, 8, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.4;
-
-    renderer.domElement.style.touchAction = 'none';
-    document.body.appendChild(renderer.domElement);
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x1e1b4b, 1.5);
-    scene.add(ambientLight);
-
-    const mainLight = new THREE.DirectionalLight(0x38bdf8, 2.5);
-    mainLight.position.set(15, 40, 20);
-    scene.add(mainLight);
-
-    let cameraShakeIntensity = 0;
-    function triggerCameraShake(intensity) {
-        cameraShakeIntensity = Math.max(cameraShakeIntensity, intensity);
-    }
-
-    // Arena Bounds
-    const arenaWidth = 18;
-    const arenaHeight = 22;
-    const floorY = 0;
-    const maxBoundX = arenaWidth / 2 - 1.2;
-
-    const floorGeo = new THREE.BoxGeometry(arenaWidth, 0.5, 6);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x070d1e, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.1 });
-    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-    floorMesh.position.set(0, floorY - 0.25, 0);
-    scene.add(floorMesh);
 
     // --- 4. HP Mechanics ---
     const maxHp = 500;
@@ -159,94 +133,127 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- 5. Ball Physics System ---
-    const rocks = [];
-    const rockColors = [0xff3366, 0xff9900, 0x33cc33, 0x00ccff, 0xcc33ff];
+    // --- 5. Cannon Entity ---
+    let cannonColor = '#2563eb';
+    const cannon = {
+        x: 0,
+        y: 0,
+        targetX: 0
+    };
 
-    function createDynamicNumberTexture(text, colorHex) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128; canvas.height = 128;
-        const ctx = canvas.getContext('2d');
+    window.changeCannonColor = function(hexColorStr) {
+        cannonColor = hexColorStr;
+    };
 
-        ctx.clearRect(0, 0, 128, 128);
-        ctx.fillStyle = colorHex;
+    function drawCannon() {
+        const floorY = height - 40;
+        cannon.y = floorY - 20;
+
+        ctx.save();
+        ctx.translate(cannon.x, cannon.y);
+
+        // Barrels
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-18, -25, 10, 25);
+        ctx.fillRect(8, -25, 10, 25);
+
+        // Dome
+        const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
+        gradient.addColorStop(0, '#38bdf8');
+        gradient.addColorStop(1, cannonColor);
+
         ctx.beginPath();
-        ctx.arc(64, 64, 60, 0, Math.PI * 2);
+        ctx.arc(0, 0, 28, Math.PI, 0, false);
+        ctx.fillStyle = gradient;
         ctx.fill();
-
+        ctx.lineWidth = 3;
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 8;
         ctx.stroke();
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 52px Rubik, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, 64, 64);
-
-        return new THREE.CanvasTexture(canvas);
+        ctx.restore();
     }
 
+    // --- 6. Bullets ---
+    const bullets = [];
+    let shootTimer = 0;
+
+    function spawnBullet() {
+        bullets.push({ x: cannon.x - 13, y: cannon.y - 25, radius: 5 });
+        bullets.push({ x: cannon.x + 13, y: cannon.y - 25, radius: 5 });
+    }
+
+    function updateBullets(dt) {
+        const speed = 1200 * dt;
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const b = bullets[i];
+            b.y -= speed;
+
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffeb3b';
+            ctx.fill();
+
+            if (b.y < -10) {
+                bullets.splice(i, 1);
+            }
+        }
+    }
+
+    // --- 7. Balls (2D Physics) ---
+    const rocks = [];
+    const rockColors = ['#ff3366', '#ff9900', '#22c55e', '#00ccff', '#a855f7'];
+
     function spawnRock(x, y, hp, sizeIndex) {
-        const sizes = [1.2, 1.8, 2.6];
-        const radius = sizes[sizeIndex];
+        const radii = [25, 38, 55];
+        const radius = radii[sizeIndex];
         const color = rockColors[Math.floor(Math.random() * rockColors.length)];
 
-        const geo = new THREE.IcosahedronGeometry(radius, 2);
-        const colorHexStr = '#' + color.toString(16).padStart(6, '0');
-        
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: color, 
-            roughness: 0.2, 
-            metalness: 0.5,
-            map: createDynamicNumberTexture(hp.toString(), colorHexStr)
-        });
-
-        const rockMesh = new THREE.Mesh(geo, mat);
-        rockMesh.position.set(x || (Math.random() - 0.5) * (arenaWidth - 4), y || arenaHeight - 2, 0);
-
-        const rockData = {
-            mesh: rockMesh,
-            vx: (Math.random() - 0.5) * 6,
-            vy: -2,
-            gravity: -18,
-            bounceForce: 12 + sizeIndex * 2.5,
+        rocks.push({
+            x: x !== undefined ? x : Math.random() * (width - 100) + 50,
+            y: y !== undefined ? y : 80,
+            vx: (Math.random() > 0.5 ? 1 : -1) * (120 + Math.random() * 60),
+            vy: 0,
+            gravity: 800,
+            bounceForce: -(380 + sizeIndex * 70),
             radius: radius,
             hp: hp,
             maxHp: hp,
             sizeIndex: sizeIndex,
             color: color
-        };
-
-        scene.add(rockMesh);
-        rocks.push(rockData);
+        });
     }
 
-    function updateRocks(delta) {
+    function updateRocks(dt) {
+        const floorY = height - 40;
+
         for (let i = rocks.length - 1; i >= 0; i--) {
             const r = rocks[i];
-            
-            r.vy += r.gravity * delta;
-            r.mesh.position.x += r.vx * delta;
-            r.mesh.position.y += r.vy * delta;
-            r.mesh.rotation.x += delta * 2;
-            r.mesh.rotation.z += delta * 2;
 
-            if (r.mesh.position.x - r.radius < -arenaWidth / 2 || r.mesh.position.x + r.radius > arenaWidth / 2) {
-                r.vx *= -1;
-                r.mesh.position.x = THREE.MathUtils.clamp(r.mesh.position.x, -arenaWidth / 2 + r.radius, arenaWidth / 2 - r.radius);
+            r.vy += r.gravity * dt;
+            r.x += r.vx * dt;
+            r.y += r.vy * dt;
+
+            // Walls
+            if (r.x - r.radius <= 0) {
+                r.x = r.radius;
+                r.vx = Math.abs(r.vx);
+            } else if (r.x + r.radius >= width) {
+                r.x = width - r.radius;
+                r.vx = -Math.abs(r.vx);
             }
 
-            if (r.mesh.position.y - r.radius <= floorY) {
-                r.mesh.position.y = floorY + r.radius;
+            // Floor
+            if (r.y + r.radius >= floorY) {
+                r.y = floorY - r.radius;
                 r.vy = r.bounceForce;
             }
 
-            if (Math.abs(r.mesh.position.x - cannonGroup.position.x) < r.radius + 1.0 && r.mesh.position.y - r.radius < 1.5) {
-                currentHp -= 150;
+            // Hit Cannon
+            const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
+            if (distToCannon < r.radius + 28) {
+                currentHp -= 100;
                 updateHpBar();
                 playSound('hit');
-                triggerCameraShake(0.4);
                 r.vy = r.bounceForce;
 
                 if (currentHp <= 0) {
@@ -254,152 +261,106 @@ window.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
             }
-        }
 
-        if (rocks.length === 0 && gameStarted && !isPaused) {
-            spawnRock(-4, arenaHeight - 2, 20 * currentLevel, 2);
-            spawnRock(4, arenaHeight - 2, 15 * currentLevel, 1);
-        }
-    }
+            // Hit Bullet
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const b = bullets[j];
+                const distToBullet = Math.hypot(r.x - b.x, r.y - b.y);
 
-    // --- 6. Cannon ---
-    const cannonGroup = new THREE.Group();
-    const cannonMeshGroup = new THREE.Group();
-
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.15, metalness: 0.85 });
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9 });
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.95 });
-
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 0.8, 24), baseMat);
-    cannonMeshGroup.add(base);
-
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 20, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
-    dome.position.y = 0.3;
-    cannonMeshGroup.add(dome);
-
-    const barrelL = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-    barrelL.position.set(-0.45, 1.2, 0);
-    cannonMeshGroup.add(barrelL);
-
-    const barrelR = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.0, 16), barrelMat);
-    barrelR.position.set(0.45, 1.2, 0);
-    cannonMeshGroup.add(barrelR);
-
-    cannonGroup.add(cannonMeshGroup);
-    cannonGroup.position.set(0, floorY + 0.5, 0);
-    scene.add(cannonGroup);
-
-    window.changeCannonColor = function(hexColor) {
-        baseMat.color.set(hexColor);
-    };
-
-    // --- 7. Bullets ---
-    const bulletGeo = new THREE.SphereGeometry(0.3, 12, 12);
-    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-    const bullets = [];
-
-    function spawnBullet(x, y) {
-        const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-        bullet.position.set(x, y, 0);
-        scene.add(bullet);
-        bullets.push(bullet);
-    }
-
-    function updateBullets(delta) {
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            const b = bullets[i];
-            b.position.y += 45.0 * delta;
-
-            let hit = false;
-            for (let j = rocks.length - 1; j >= 0; j--) {
-                const r = rocks[j];
-                const dist = b.position.distanceTo(r.mesh.position);
-
-                if (dist < r.radius + 0.3) {
+                if (distToBullet < r.radius + b.radius) {
+                    bullets.splice(j, 1);
                     r.hp--;
                     score += 10;
                     levelProgress += 2;
-                    
+
                     const scoreVal = document.getElementById('score-val');
                     if (scoreVal) scoreVal.innerText = score;
-                    
+
                     updateLevelUI();
                     playSound('hit');
 
-                    const colorHexStr = '#' + r.color.toString(16).padStart(6, '0');
-                    r.mesh.material.map = createDynamicNumberTexture(r.hp.toString(), colorHexStr);
-                    r.mesh.material.map.needsUpdate = true;
-
                     if (r.hp <= 0) {
                         playSound('explode');
-                        scene.remove(r.mesh);
 
                         if (r.sizeIndex > 0) {
-                            spawnRock(r.mesh.position.x - 0.8, r.mesh.position.y, Math.ceil(r.maxHp / 2), r.sizeIndex - 1);
-                            spawnRock(r.mesh.position.x + 0.8, r.mesh.position.y, Math.ceil(r.maxHp / 2), r.sizeIndex - 1);
+                            const newHp = Math.ceil(r.maxHp / 2);
+                            spawnRock(r.x - 20, r.y, newHp, r.sizeIndex - 1);
+                            spawnRock(r.x + 20, r.y, newHp, r.sizeIndex - 1);
                         }
 
-                        rocks.splice(j, 1);
+                        rocks.splice(i, 1);
 
                         if (levelProgress >= maxLevelProgress) {
                             currentLevel++;
                             levelProgress = 0;
                             updateLevelUI();
                         }
+                        break;
                     }
-
-                    hit = true;
-                    break;
                 }
             }
 
-            if (hit || b.position.y > arenaHeight) {
-                scene.remove(b);
-                bullets.splice(i, 1);
+            // Draw Ball
+            if (rocks[i]) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+
+                const grad = ctx.createRadialGradient(r.x - r.radius * 0.3, r.y - r.radius * 0.3, r.radius * 0.1, r.x, r.y, r.radius);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.3, r.color);
+                grad.addColorStop(1, '#000000');
+
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `900 ${Math.max(16, r.radius * 0.7)}px Rubik, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(r.hp, r.x, r.y);
+                ctx.restore();
             }
+        }
+
+        if (rocks.length === 0 && gameStarted && !isPaused) {
+            spawnRock(width * 0.25, 80, 20 * currentLevel, 2);
+            spawnRock(width * 0.75, 80, 15 * currentLevel, 1);
         }
     }
 
-    // --- 8. Controls & State Handling ---
-    let targetX = 0, isDragging = false, isFiring = false, previousTouchX = 0;
-    let gameStarted = false, isPaused = false, score = 0, shootTimer = 0;
+    // --- 8. Mobile Controls ---
+    let isDragging = false, isFiring = false, touchStartX = 0;
 
-    function stopInput() { isDragging = false; isFiring = false; }
-
-    renderer.domElement.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); isDragging = true; isFiring = true; previousTouchX = e.touches[0].clientX; 
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        isFiring = true;
+        touchStartX = e.touches[0].clientX;
     }, { passive: false });
-    
-    renderer.domElement.addEventListener('touchend', (e) => { e.preventDefault(); stopInput(); }, { passive: false });
-    
-    renderer.domElement.addEventListener('touchmove', (e) => {
+
+    canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
         if (isDragging && gameStarted && !isPaused) {
-            targetX += (e.touches[0].clientX - previousTouchX) * 0.045;
-            previousTouchX = e.touches[0].clientX;
+            const currentX = e.touches[0].clientX;
+            const deltaX = currentX - touchStartX;
+            cannon.targetX += deltaX;
+            touchStartX = currentX;
         }
     }, { passive: false });
 
-    renderer.domElement.addEventListener('mousedown', (e) => { isDragging = true; isFiring = true; previousTouchX = e.clientX; });
-    renderer.domElement.addEventListener('mouseup', stopInput);
-    renderer.domElement.addEventListener('mousemove', (e) => {
-        if (isDragging && gameStarted && !isPaused) {
-            targetX += (e.clientX - previousTouchX) * 0.045;
-            previousTouchX = e.clientX;
-        }
-    });
+    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
+    canvas.addEventListener('touchend', stopInput, { passive: false });
 
+    // --- 9. Game State Transitions ---
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        cameraShakeIntensity = 0;
-        
-        for (let r of rocks) scene.remove(r.mesh);
-        rocks.length = 0;
-        for (let b of bullets) scene.remove(b);
-        bullets.length = 0;
-
-        cannonGroup.position.set(0, floorY + 0.5, 0);
-        targetX = 0;
+        rocks.length = 0; bullets.length = 0;
+        cannon.x = width / 2;
+        cannon.targetX = width / 2;
 
         const scoreVal = document.getElementById('score-val');
         if (scoreVal) scoreVal.innerText = '0';
@@ -409,10 +370,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function gameOver() {
-        gameStarted = false; stopInput();
+        gameStarted = false; isFiring = false; isDragging = false;
         if (score > highScore) {
             highScore = score;
-            localStorage.setItem('cannon_high_score', highScore);
+            localStorage.setItem('cannon_high_score_2d', highScore);
         }
 
         const gameOverModal = document.getElementById('game-over-modal');
@@ -424,15 +385,14 @@ window.addEventListener('DOMContentLoaded', () => {
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
-    // --- Event Listeners לתפריטים ---
+    // UI Buttons
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
         resetGame();
         gameStarted = true;
         isPaused = false;
-        const startOverlay = document.getElementById('start-overlay');
-        if (startOverlay) startOverlay.classList.add('hidden');
+        document.getElementById('start-overlay')?.classList.add('hidden');
     });
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
@@ -441,10 +401,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.remove('hidden');
     });
 
-    document.getElementById('resume-btn')?.addEventListener('click', () => { 
+    document.getElementById('resume-btn')?.addEventListener('click', () => {
         requestFullScreen();
-        isPaused = false; 
-        document.getElementById('pause-menu')?.classList.add('hidden'); 
+        isPaused = false;
+        document.getElementById('pause-menu')?.classList.add('hidden');
     });
 
     document.getElementById('restart-from-pause-btn')?.addEventListener('click', () => {
@@ -463,41 +423,37 @@ window.addEventListener('DOMContentLoaded', () => {
         gameStarted = true;
     });
 
-    // --- 9. Render Loop ---
-    let clock = new THREE.Clock();
+    // --- 10. Loop ---
+    let lastTime = performance.now();
 
-    function animate() {
-        requestAnimationFrame(animate);
+    function gameLoop(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
 
-        const delta = Math.min(clock.getDelta(), 0.1);
+        ctx.fillStyle = '#050714';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(0, height - 40, width, 40);
 
         if (gameStarted && !isPaused) {
-            targetX = Math.max(-maxBoundX, Math.min(maxBoundX, targetX));
-            cannonGroup.position.x = THREE.MathUtils.lerp(cannonGroup.position.x, targetX, delta * 15);
+            cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
+            cannon.x += (cannon.targetX - cannon.x) * 0.25;
 
-            shootTimer += delta;
+            shootTimer += dt;
             if (isFiring && shootTimer >= 0.08) {
                 shootTimer = 0;
-                spawnBullet(cannonGroup.position.x - 0.45, cannonGroup.position.y + 1.2);
-                spawnBullet(cannonGroup.position.x + 0.45, cannonGroup.position.y + 1.2);
+                spawnBullet();
                 playSound('shoot');
             }
 
-            updateBullets(delta);
-            updateRocks(delta);
-
-            if (cameraShakeIntensity > 0) {
-                cameraShakeIntensity = THREE.MathUtils.lerp(cameraShakeIntensity, 0, delta * 8);
-                camera.position.x = (Math.random() - 0.5) * cameraShakeIntensity;
-                camera.position.y = 14 + (Math.random() - 0.5) * cameraShakeIntensity;
-            } else {
-                camera.position.x = 0;
-                camera.position.y = 14;
-            }
+            updateBullets(dt);
+            updateRocks(dt);
         }
 
-        renderer.render(scene, camera);
+        drawCannon();
+        requestAnimationFrame(gameLoop);
     }
 
-    animate();
+    requestAnimationFrame(gameLoop);
 });

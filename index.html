@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ball Blast 3D</title>
+    <title>Ball Blast 2D</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+
+    <!-- אזהרה למחשבים שולחניים -->
+    <div id="mobile-only-warning">
+        <h2>MOBILE ONLY</h2>
+        <p>Please open this game on your mobile phone!</p>
+    </div>
 
     <!-- HUD במהלך המשחק -->
     <div id="ui-container">
@@ -36,12 +40,12 @@
         <button id="pause-btn" class="icon-btn">⏸</button>
     </div>
 
-    <!-- 1. מסך פתיחה (Start Overlay) -->
+    <!-- 1. מסך פתיחה באנגלית -->
     <div id="start-overlay">
         <div id="start-menu">
             <div class="header-section">
                 <h1 class="game-title">BALL BLAST</h1>
-                <p class="game-subtitle">Destroy the bouncing spheres and upgrade your firepower!</p>
+                <p class="game-subtitle">Destroy bouncing spheres & upgrade your cannon!</p>
             </div>
 
             <div class="best-badge">
@@ -54,7 +58,7 @@
         </div>
     </div>
 
-    <!-- 2. תפריט עצירה (Pause Menu) -->
+    <!-- 2. תפריט עצירה (Pause) -->
     <div id="pause-menu" class="hidden">
         <div class="pause-card">
             <h2>GAME PAUSED</h2>
@@ -62,10 +66,10 @@
             <div class="customization-section">
                 <span class="section-label">CANNON COLOR</span>
                 <div class="color-picker">
-                    <button class="color-btn active" style="background: #2563eb;" onclick="changeCannonColor(0x2563eb)"></button>
-                    <button class="color-btn" style="background: #dc2626;" onclick="changeCannonColor(0xdc2626)"></button>
-                    <button class="color-btn" style="background: #16a34a;" onclick="changeCannonColor(0x16a34a)"></button>
-                    <button class="color-btn" style="background: #9333ea;" onclick="changeCannonColor(0x9333ea)"></button>
+                    <button class="color-btn active" style="background: #2563eb;" onclick="changeCannonColor('#2563eb')"></button>
+                    <button class="color-btn" style="background: #dc2626;" onclick="changeCannonColor('#dc2626')"></button>
+                    <button class="color-btn" style="background: #16a34a;" onclick="changeCannonColor('#16a34a')"></button>
+                    <button class="color-btn" style="background: #9333ea;" onclick="changeCannonColor('#9333ea')"></button>
                 </div>
             </div>
 
@@ -74,7 +78,7 @@
         </div>
     </div>
 
-    <!-- 3. מסך סיום (Game Over Modal) -->
+    <!-- 3. מסך Game Over -->
     <div id="game-over-modal" class="hidden">
         <div class="pause-card">
             <h2 style="color: #ef4444;">GAME OVER</h2>
