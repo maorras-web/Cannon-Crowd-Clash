@@ -301,7 +301,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
-        // Draw Clouds for Day & Sunset
+        // Draw Clouds
         if (currentMap !== 'space') {
             ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
             clouds.forEach(c => {
@@ -349,7 +349,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
-        // Upgrade Costs & Levels
+        // Upgrade Costs
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
@@ -380,7 +380,6 @@ window.addEventListener('DOMContentLoaded', () => {
             multishotBtn.disabled = totalCoins < 500;
         }
 
-        // Map Selector UI
         updateMapSelectorUI();
     }
 
@@ -490,7 +489,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    // --- Bullets & Upgrades Logic ---
+    // --- Bullets ---
     const bullets = [];
     let shootTimer = 0;
 
@@ -652,6 +651,132 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Enemy Animal (Angry Bat / Dragon) ---
+    const enemies = [];
+    let enemySpawnTimer = 0;
+    let enemyAnimTime = 0;
+
+    function updateEnemies(dt) {
+        enemyAnimTime += dt * 8; // מהירות נפנוף הכנפיים
+
+        enemySpawnTimer += dt;
+        // הופעת עטלף אויב כל 10 שניות
+        if (enemySpawnTimer > 10 && enemies.length === 0 && gameStarted && !isPaused) {
+            enemySpawnTimer = 0;
+            enemies.push({
+                x: Math.random() > 0.5 ? 50 : width - 50,
+                y: 130,
+                vx: 100,
+                radius: 24,
+                hp: 15 + (currentLevel * 5),
+                maxHp: 15 + (currentLevel * 5)
+            });
+        }
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+
+            // תנועה מצד לצד + תנודה אנכית כעין מעוף
+            e.x += e.vx * dt;
+            e.y += Math.sin(enemyAnimTime * 0.5) * 0.6;
+
+            if (e.x - e.radius <= 10 || e.x + e.radius >= width - 10) {
+                e.vx = -e.vx;
+            }
+
+            // התנגשות בתותח
+            const distToCannon = Math.hypot(e.x - cannon.x, e.y - cannon.y);
+            if (distToCannon < e.radius + 26) {
+                currentHp -= 40;
+                updateHpBar();
+                playSound('hit');
+                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 15);
+                enemies.splice(i, 1);
+                if (currentHp <= 0) { gameOver(); return; }
+                continue;
+            }
+
+            // פגיעת קליעים בחיה
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const b = bullets[j];
+                const distToBullet = Math.hypot(e.x - b.x, e.y - b.y);
+
+                if (distToBullet < e.radius + b.radius) {
+                    bullets.splice(j, 1);
+                    e.hp -= b.dmg;
+                    score += 20;
+                    playSound('hit');
+                    createExplosion(b.x, b.y, '#a855f7', 4);
+
+                    if (e.hp <= 0) {
+                        playSound('explode');
+                        createExplosion(e.x, e.y, '#a855f7', 25);
+                        spawnCoins(e.x, e.y, 6);
+                        enemies.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            if (enemies[i]) {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+
+                const wingFlap = Math.sin(enemyAnimTime) * 18;
+
+                // ציור כנפיים (סגול)
+                ctx.fillStyle = '#581c87';
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 2;
+
+                // כנף שמאל
+                ctx.beginPath();
+                ctx.moveTo(0, -5);
+                ctx.quadraticCurveTo(-25, -30 + wingFlap, -45, -5 + wingFlap);
+                ctx.quadraticCurveTo(-20, 10, 0, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                // כנף ימין
+                ctx.beginPath();
+                ctx.moveTo(0, -5);
+                ctx.quadraticCurveTo(25, -30 + wingFlap, 45, -5 + wingFlap);
+                ctx.quadraticCurveTo(20, 10, 0, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                // גוף וראש העטלף
+                ctx.fillStyle = '#3b0764';
+                ctx.beginPath();
+                ctx.arc(0, 0, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // אוזניים
+                ctx.fillStyle = '#581c87';
+                ctx.beginPath();
+                ctx.moveTo(-8, -10); ctx.lineTo(-14, -22); ctx.lineTo(-2, -12);
+                ctx.moveTo(8, -10); ctx.lineTo(14, -22); ctx.lineTo(2, -12);
+                ctx.fill();
+
+                // עיניים אדומות
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(-5, -3, 3, 0, Math.PI * 2);
+                ctx.arc(5, -3, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // מד חיים מעל החיה
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(Math.max(0, e.hp), 0, -26);
+
+                ctx.restore();
+            }
+        }
+    }
+
     // --- Controls ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
@@ -769,6 +894,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
         rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
+        enemies.length = 0; enemySpawnTimer = 0;
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
@@ -867,6 +993,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             updateBullets(dt);
             updateRocks(dt);
+            updateEnemies(dt);
             updateCoins(dt);
             updateParticles(dt);
         }
