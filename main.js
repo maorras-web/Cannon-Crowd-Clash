@@ -52,6 +52,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let fireRateLevel = parseInt(localStorage.getItem('cannon_lvl_firerate')) || 1;
     let firePowerLevel = parseInt(localStorage.getItem('cannon_lvl_firepower')) || 1;
+    let magnetLevel = parseInt(localStorage.getItem('cannon_lvl_magnet')) || 0;
     let hasMultishot = localStorage.getItem('cannon_has_multishot') === 'true';
 
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
@@ -140,6 +141,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function updateCoins(dt) {
         const floorY = height - 60;
+        const magnetRadius = 150 + (magnetLevel * 120);
+        const magnetSpeed = 5 + (magnetLevel * 4);
+
         for (let i = coinsList.length - 1; i >= 0; i--) {
             const c = coinsList[i];
             c.vy += c.gravity * dt;
@@ -153,9 +157,9 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             const distToCannon = Math.hypot(c.x - cannon.x, c.y - cannon.y);
-            if (distToCannon < 150) {
-                c.vx += (cannon.x - c.x) * 5 * dt;
-                c.vy += (cannon.y - c.y) * 5 * dt;
+            if (distToCannon < magnetRadius) {
+                c.vx += (cannon.x - c.x) * magnetSpeed * dt;
+                c.vy += (cannon.y - c.y) * magnetSpeed * dt;
             }
 
             if (distToCannon < c.radius + 28) {
@@ -348,6 +352,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Upgrade Costs & Levels
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
+        const magnetCost = (magnetLevel + 1) * 200;
 
         document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
         document.getElementById('fire-rate-cost').innerText = fireRateCost;
@@ -356,6 +361,14 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
         document.getElementById('fire-power-cost').innerText = firePowerCost;
         document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
+
+        const magnetLvlEl = document.getElementById('magnet-lvl');
+        const magnetCostEl = document.getElementById('magnet-cost');
+        const buyMagnetBtn = document.getElementById('buy-magnet-btn');
+
+        if (magnetLvlEl) magnetLvlEl.innerText = `Lvl ${magnetLevel}`;
+        if (magnetCostEl) magnetCostEl.innerText = magnetCost;
+        if (buyMagnetBtn) buyMagnetBtn.disabled = totalCoins < magnetCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
         if (hasMultishot) {
@@ -702,6 +715,18 @@ window.addEventListener('DOMContentLoaded', () => {
             firePowerLevel++;
             localStorage.setItem('cannon_total_coins', totalCoins);
             localStorage.setItem('cannon_lvl_firepower', firePowerLevel);
+            updateUI();
+            playSound('coin');
+        }
+    });
+
+    document.getElementById('buy-magnet-btn')?.addEventListener('click', () => {
+        const cost = (magnetLevel + 1) * 200;
+        if (totalCoins >= cost) {
+            totalCoins -= cost;
+            magnetLevel++;
+            localStorage.setItem('cannon_total_coins', totalCoins);
+            localStorage.setItem('cannon_lvl_magnet', magnetLevel);
             updateUI();
             playSound('coin');
         }
