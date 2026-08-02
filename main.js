@@ -212,7 +212,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Environment Backgrounds (Day, Sunset, Space) ---
+    // --- Environment Backgrounds ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -266,7 +266,6 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.lineTo(0, height);
             ctx.fill();
         } else {
-            // Day Map (Default)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
             skyGrad.addColorStop(0, '#38bdf8');
             skyGrad.addColorStop(0.6, '#bae6fd');
@@ -286,7 +285,6 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
-        // Draw Clouds for Day & Sunset
         if (currentMap !== 'space') {
             ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
             clouds.forEach(c => {
@@ -319,11 +317,16 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- State, Level & Upgrades UI ---
-    let gameStarted = false, isPaused = false;
+    // --- State & Start Menu Integration ---
+    let gameStarted = false;
+    let isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
     let score = 0;
+
+    // Display start screen at launch
+    const startOverlay = document.getElementById('start-overlay');
+    if (startOverlay) startOverlay.classList.remove('hidden');
 
     function updateUI() {
         const coinsVal = document.getElementById('coins-val');
@@ -334,7 +337,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
-        // Upgrade Costs & Levels
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
 
@@ -365,7 +367,6 @@ window.addEventListener('DOMContentLoaded', () => {
             if (multishotBtn) multishotBtn.disabled = totalCoins < 500;
         }
 
-        // Map Selector UI
         updateMapSelectorUI();
     }
 
@@ -477,7 +478,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    // --- Bullets & Upgrades Logic ---
+    // --- Bullets ---
     const bullets = [];
     let shootTimer = 0;
 
@@ -642,103 +643,32 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- Controls ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isDragging = true; isFiring = true;
-        touchStartX = e.touches[0].clientX;
-    }, { passive: false });
+    const startInput = (e) => {
+        if (!gameStarted || isPaused) return;
+        isDragging = true;
+        isFiring = true;
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        touchStartX = x;
+    };
 
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+    const moveInput = (e) => {
         if (isDragging && gameStarted && !isPaused) {
-            const currentX = e.touches[0].clientX;
-            const deltaX = currentX - touchStartX;
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const deltaX = x - touchStartX;
             cannon.targetX += deltaX;
-            touchStartX = currentX;
+            touchStartX = x;
         }
-    }, { passive: false });
+    };
 
-    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
+    const stopInput = () => { isDragging = false; isFiring = false; };
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startInput(e); }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); moveInput(e); }, { passive: false });
     canvas.addEventListener('touchend', stopInput, { passive: false });
 
-    // --- Menu Navigation & Purchases ---
-    const playTabBtn = document.getElementById('tab-play-btn');
-    const shopTabBtn = document.getElementById('tab-shop-btn');
-    const mapsTabBtn = document.getElementById('tab-maps-btn');
-
-    const playTabContent = document.getElementById('tab-play');
-    const shopTabContent = document.getElementById('tab-shop');
-    const mapsTabContent = document.getElementById('tab-maps');
-
-    function switchTab(activeBtn, activeContent) {
-        [playTabBtn, shopTabBtn, mapsTabBtn].forEach(b => b?.classList.remove('active'));
-        [playTabContent, shopTabContent, mapsTabContent].forEach(c => c?.classList.add('hidden'));
-
-        activeBtn?.classList.add('active');
-        activeContent?.classList.remove('hidden');
-    }
-
-    playTabBtn?.addEventListener('click', () => switchTab(playTabBtn, playTabContent));
-    shopTabBtn?.addEventListener('click', () => switchTab(shopTabBtn, shopTabContent));
-    mapsTabBtn?.addEventListener('click', () => switchTab(mapsTabBtn, mapsTabContent));
-
-    // Shop Buy Handlers
-    document.getElementById('buy-fire-rate-btn')?.addEventListener('click', () => {
-        const cost = fireRateLevel * 100;
-        if (totalCoins >= cost) {
-            totalCoins -= cost;
-            fireRateLevel++;
-            localStorage.setItem('cannon_total_coins', totalCoins);
-            localStorage.setItem('cannon_lvl_firerate', fireRateLevel);
-            updateUI();
-            playSound('coin');
-        }
-    });
-
-    document.getElementById('buy-fire-power-btn')?.addEventListener('click', () => {
-        const cost = firePowerLevel * 150;
-        if (totalCoins >= cost) {
-            totalCoins -= cost;
-            firePowerLevel++;
-            localStorage.setItem('cannon_total_coins', totalCoins);
-            localStorage.setItem('cannon_lvl_firepower', firePowerLevel);
-            updateUI();
-            playSound('coin');
-        }
-    });
-
-    document.getElementById('buy-multishot-btn')?.addEventListener('click', () => {
-        if (!hasMultishot && totalCoins >= 500) {
-            totalCoins -= 500;
-            hasMultishot = true;
-            localStorage.setItem('cannon_total_coins', totalCoins);
-            localStorage.setItem('cannon_has_multishot', 'true');
-            updateUI();
-            playSound('coin');
-        }
-    });
-
-    // Maps Selection & Purchase Handlers
-    function handleMapClick(mapId, cost) {
-        if (unlockedMaps.includes(mapId)) {
-            currentMap = mapId;
-            localStorage.setItem('cannon_selected_map', currentMap);
-            updateUI();
-        } else if (totalCoins >= cost) {
-            totalCoins -= cost;
-            unlockedMaps.push(mapId);
-            currentMap = mapId;
-            localStorage.setItem('cannon_total_coins', totalCoins);
-            localStorage.setItem('cannon_unlocked_maps', JSON.stringify(unlockedMaps));
-            localStorage.setItem('cannon_selected_map', currentMap);
-            updateUI();
-            playSound('coin');
-        }
-    }
-
-    document.getElementById('select-map-day')?.addEventListener('click', () => handleMapClick('day', 0));
-    document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
-    document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
+    canvas.addEventListener('mousedown', startInput);
+    canvas.addEventListener('mousemove', moveInput);
+    canvas.addEventListener('mouseup', stopInput);
 
     // --- State Transitions ---
     function resetGame() {
@@ -773,19 +703,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
-    function returnToMainMenu() {
-        gameStarted = false;
-        isPaused = false;
-        isFiring = false;
-        isDragging = false;
-
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        document.getElementById('pause-menu')?.classList.add('hidden');
-        document.getElementById('start-overlay')?.classList.remove('hidden');
-
-        updateUI();
-    }
-
+    // Handlers for Start Overlay Buttons
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
@@ -807,9 +725,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.add('hidden');
     });
 
-    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
-    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
-
     document.getElementById('restart-btn')?.addEventListener('click', () => {
         requestFullScreen();
         document.getElementById('game-over-modal')?.classList.add('hidden');
@@ -818,7 +733,7 @@ window.addEventListener('DOMContentLoaded', () => {
         gameStarted = true;
     });
 
-    // --- Main Game Loop ---
+    // --- Main Loop ---
     let lastTime = performance.now();
 
     function gameLoop(now) {
@@ -851,6 +766,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     resizeCanvas();
+    resetGame();
     window.addEventListener('resize', resizeCanvas);
     requestAnimationFrame(gameLoop);
 });
