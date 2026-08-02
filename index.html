@@ -40,7 +40,7 @@
         <button id="pause-btn" class="icon-btn">⏸</button>
     </div>
 
-    <!-- 1. מסך פתיחה באנגלית -->
+    <!-- 1. מסך פתיחה -->
     <div id="start-overlay">
         <div id="start-menu">
             <div class="header-section">
@@ -63,31 +63,32 @@
         <div class="pause-card">
             <h2>GAME PAUSED</h2>
 
-            <div class="customization-section">
-                <span class="section-label">CANNON COLOR</span>
-                <div class="color-picker">
-                    <button class="color-btn active" style="background: #2563eb;" onclick="changeCannonColor('#2563eb')"></button>
-                    <button class="color-btn" style="background: #dc2626;" onclick="changeCannonColor('#dc2626')"></button>
-                    <button class="color-btn" style="background: #16a34a;" onclick="changeCannonColor('#16a34a')"></button>
-                    <button class="color-btn" style="background: #9333ea;" onclick="changeCannonColor('#9333ea')"></button>
+            <div class="customization-section" style="margin: 20px 0;">
+                <span class="section-label" style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 10px;">CANNON COLOR</span>
+                <div class="color-picker" style="display: flex; justify-content: center; gap: 10px;">
+                    <button class="color-btn active" style="background: #2563eb; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#2563eb')"></button>
+                    <button class="color-btn" style="background: #dc2626; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#dc2626')"></button>
+                    <button class="color-btn" style="background: #16a34a; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#16a34a')"></button>
+                    <button class="color-btn" style="background: #9333ea; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#9333ea')"></button>
                 </div>
             </div>
 
             <button id="resume-btn" class="btn">RESUME</button>
-            <button id="restart-from-pause-btn" class="btn btn-restart" style="margin-top: 8px;">RESTART</button>
+            <button id="restart-from-pause-btn" class="btn btn-restart" style="margin-top: 10px;">RESTART</button>
         </div>
     </div>
 
     <!-- 3. מסך Game Over -->
     <div id="game-over-modal" class="hidden">
         <div class="pause-card">
-            <h2 style="color: #ef4444;">GAME OVER</h2>
-            <p style="font-size: 1.1rem; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
-            <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 15px;">BEST: <span id="best-score-val">0</span></p>
+            <h2 style="color: #ef4444; font-size: 24px;">GAME OVER</h2>
+            <p style="font-size: 1.1rem; color: #fff; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
+            <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">BEST: <span id="best-score-val">0</span></p>
             <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <!-- טעינת ה-JS עם גרסה למניעת Cache -->
+    <script src="main.js?v=2"></script>
 </body>
 </html>

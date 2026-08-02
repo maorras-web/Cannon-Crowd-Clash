@@ -1,94 +1,65 @@
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
-    font-family: 'Rubik', system-ui, -apple-system, sans-serif;
+    -webkit-touch-callout: none;
 }
 
 html, body {
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    height: -webkit-fill-available; /* פתרון ייעודי למסכי מובייל וחיתוך תחתון */
     overflow: hidden;
-    background-color: #050714;
-    touch-action: none;
+    background-color: #000;
+    font-family: system-ui, -apple-system, sans-serif;
 }
 
 canvas {
     display: block;
-    width: 100vw;
-    height: 100vh;
-    touch-action: none;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
 }
 
-/* === חסימה למחשבים שולחניים - מיועד למובייל בלבד === */
-#mobile-only-warning {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: #050714;
-    color: #ffffff;
-    z-index: 9999;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 20px;
-}
-
-#mobile-only-warning h2 {
-    font-size: 2rem;
-    color: #38bdf8;
-    margin-bottom: 10px;
-}
-
-@media (min-width: 601px) {
-    #mobile-only-warning {
-        display: flex !important;
-    }
-}
-
-.hidden {
-    display: none !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-/* === UI תוך כדי משחק (HUD) === */
-#ui-container, .hud-container {
-    position: fixed;
+/* UI overlay */
+#ui-container {
+    position: absolute;
     top: 15px;
     left: 0;
     width: 100%;
-    padding: 0 12px;
+    padding: 0 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 100;
+    z-index: 10;
     pointer-events: none;
 }
 
-/* === מד חיים לתותח (HP Bar) === */
+#ui-container button {
+    pointer-events: auto;
+}
+
+/* HP Bar */
 #hp-container {
-    position: relative;
-    width: 110px;
-    height: 24px;
-    background-color: rgba(13, 21, 39, 0.85);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+    width: 120px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #fff;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    position: relative;
 }
 
 #hp-bar {
     width: 100%;
     height: 100%;
     background-color: #22c55e;
-    box-shadow: 0 0 10px #22c55e;
-    transition: width 0.25s ease-out, background-color 0.3s ease, box-shadow 0.3s ease;
+    transition: width 0.2s ease, background-color 0.2s ease;
 }
 
 #hp-text {
@@ -96,296 +67,158 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 11px;
-    letter-spacing: 0.5px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
-    pointer-events: none;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
 }
 
-/* === מד התקדמות שלבים / בוס (Level Bar) === */
+/* Level Bar */
 #level-bar-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 120px;
+    gap: 4px;
 }
 
 #level-text {
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 11px;
-    margin-bottom: 3px;
-    text-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
-    letter-spacing: 0.5px;
+    color: #fff;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
 .progress-outer {
-    width: 100%;
+    width: 100px;
     height: 8px;
-    background: rgba(13, 21, 39, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     overflow: hidden;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
 }
 
 #level-progress-fill {
     width: 0%;
     height: 100%;
-    background: linear-gradient(90deg, #ff9900, #ff3366);
-    box-shadow: 0 0 8px #ff9900;
-    transition: width 0.3s ease;
+    background: #eab308;
+    transition: width 0.1s linear;
 }
 
-/* === כרטיס ניקוד === */
+/* Score Card */
 #score-card {
-    background: rgba(13, 21, 39, 0.85);
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    color: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    min-width: 75px;
+    background: rgba(15, 23, 42, 0.75);
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .score-label {
-    font-size: 0.6rem;
-    color: #38bdf8;
-    font-weight: 800;
-    letter-spacing: 1px;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: bold;
 }
 
 #score-val {
-    font-size: 1.1rem;
+    color: #fff;
+    font-size: 16px;
     font-weight: 900;
-    line-height: 1;
 }
 
-/* === כפתורי אייקונים === */
+/* Buttons & Overlays */
 .icon-btn {
-    pointer-events: auto;
-    background: rgba(13, 21, 39, 0.85);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    width: 38px;
-    height: 38px;
-    font-size: 1.1rem;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 16px;
     cursor: pointer;
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: transform 0.1s;
 }
 
-.icon-btn:active {
-    transform: scale(0.92);
-}
-
-/* === מסכי Overlay (תפריט פתיחה, עצירה ו-Game Over) === */
-#start-overlay, .overlay {
+#start-overlay, #pause-menu, #game-over-modal {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85) 0%, rgba(5, 7, 20, 0.98) 100%);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 1000;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 7, 20, 0.85);
+    backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: opacity 0.4s ease;
+    z-index: 100;
 }
 
-#start-menu {
-    width: 100%;
-    height: 100%;
-    max-width: 480px;
-    padding: 40px 24px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
+.hidden {
+    display: none !important;
+}
+
+#start-menu, .pause-card {
+    background: #0f172a;
+    border: 2px solid #1e293b;
+    padding: 30px 20px;
+    border-radius: 20px;
     text-align: center;
-}
-
-.header-section {
-    margin-top: 20px;
+    width: 85%;
+    max-width: 340px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 }
 
 .game-title {
-    font-size: clamp(2.5rem, 9vw, 4rem);
+    color: #38bdf8;
+    font-size: 28px;
     font-weight: 900;
-    line-height: 0.95;
-    background: linear-gradient(180deg, #ffffff 0%, #ff9900 50%, #ff3366 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 10px 30px rgba(255, 153, 0, 0.4);
-    letter-spacing: -1px;
+    margin-bottom: 5px;
 }
 
 .game-subtitle {
     color: #94a3b8;
-    font-size: 0.95rem;
-    margin-top: 15px;
-    line-height: 1.4;
-    padding: 0 10px;
-}
-
-/* === בחירת צבע התותח בתוך כרטיס ה-Pause === */
-.customization-section {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 12px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    margin: 6px 0;
-}
-
-.section-label {
-    display: block;
-    color: #38bdf8;
-    font-size: 0.75rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-}
-
-.color-picker {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-}
-
-.color-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
-}
-
-.color-btn.active {
-    transform: scale(1.15);
-    border-color: #ffffff;
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
-}
-
-/* === שיא אישי (High Score) === */
-.best-badge {
-    background: rgba(56, 189, 248, 0.1);
-    border: 1px solid rgba(56, 189, 248, 0.25);
-    color: #e0f2fe;
-    padding: 10px 24px;
-    border-radius: 30px;
-    font-weight: 700;
-    font-size: 0.95rem;
-}
-
-/* === כפתורים כלליים === */
-.btn {
-    padding: 14px 32px;
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: #ffffff;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    border: none;
-    border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4), 0 0 20px rgba(56, 189, 248, 0.2);
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.btn:active {
-    transform: scale(0.96);
-}
-
-.btn-restart {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-    box-shadow: 0 10px 25px rgba(22, 163, 74, 0.4);
-}
-
-.action-section {
-    width: 100%;
+    font-size: 12px;
     margin-bottom: 20px;
 }
 
-#start-btn {
+.best-badge {
+    background: rgba(255,255,255,0.05);
+    color: #e2e8f0;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 25px;
+    display: inline-block;
+}
+
+.btn {
     width: 100%;
-    padding: 18px;
-    font-size: 1.3rem;
-}
-
-/* === תפריטי Pause / Game Over === */
-#pause-menu, #game-over-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(5, 7, 20, 0.88);
-    backdrop-filter: blur(10px);
-    z-index: 2000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.pause-card {
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 24px 20px;
-    border-radius: 24px;
-    text-align: center;
-    width: 88%;
-    max-width: 340px;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: #2563eb;
     color: white;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-}
-
-.pause-card h2 {
-    color: #38bdf8;
-    font-size: 1.4rem;
-}
-
-.volume-control-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-}
-
-.volume-control-menu label {
-    font-size: 13px;
-    color: #cbd5e1;
-    font-weight: 600;
-}
-
-.volume-control-menu input[type="range"] {
-    width: 100%;
-    accent-color: #2563eb;
+    font-weight: bold;
+    font-size: 16px;
     cursor: pointer;
 }
 
-#resume-btn, #restart-btn {
+.btn-restart {
+    background: #22c55e;
+}
+
+#mobile-only-warning {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
+    background: #000;
+    color: #fff;
+    z-index: 999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
