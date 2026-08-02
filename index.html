@@ -138,21 +138,25 @@
             </div>
 
             <button id="resume-btn" class="btn">RESUME</button>
-            <button id="restart-from-pause-btn" class="btn btn-restart" style="margin-top: 10px;">RESTART</button>
+            <button id="pause-home-btn" class="btn btn-secondary" style="margin-top: 10px;">MAIN MENU</button>
         </div>
     </div>
 
-    <!-- 3. מסך Game Over -->
+    <!-- 3. מסך Game Over (עם כפתור מעבר לחנות) -->
     <div id="game-over-modal" class="hidden">
         <div class="pause-card">
             <h2 style="color: #ef4444; font-size: 24px;">GAME OVER</h2>
             <p style="font-size: 1.1rem; color: #fff; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
             <p style="font-size: 1rem; color: #facc15; margin: 5px 0;">COINS: 🪙 <strong id="final-coins-val">0</strong></p>
             <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">BEST: <span id="best-score-val">0</span></p>
-            <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
+            
+            <div class="modal-buttons">
+                <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
+                <button id="home-btn" class="btn btn-secondary">MAIN MENU / SHOP</button>
+            </div>
         </div>
     </div>
 
-    <script src="main.js?v=7"></script>
+    <script src="main.js?v=8"></script>
 </body>
 </html>

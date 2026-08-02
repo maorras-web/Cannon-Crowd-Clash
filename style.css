@@ -356,6 +356,12 @@ canvas {
     background: #22c55e;
 }
 
+.modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .btn {
     width: 100%;
     padding: 14px;
@@ -364,12 +370,16 @@ canvas {
     background: #2563eb;
     color: white;
     font-weight: bold;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
 }
 
 .btn-restart {
     background: #22c55e;
+}
+
+.btn-secondary {
+    background: #475569;
 }
 
 #mobile-only-warning {

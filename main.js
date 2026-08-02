@@ -773,6 +773,19 @@ window.addEventListener('DOMContentLoaded', () => {
         if (gameOverModal) gameOverModal.classList.remove('hidden');
     }
 
+    function returnToMainMenu() {
+        gameStarted = false;
+        isPaused = false;
+        isFiring = false;
+        isDragging = false;
+
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        document.getElementById('pause-menu')?.classList.add('hidden');
+        document.getElementById('start-overlay')?.classList.remove('hidden');
+
+        updateUI();
+    }
+
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
         initAudio();
@@ -794,13 +807,8 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pause-menu')?.classList.add('hidden');
     });
 
-    document.getElementById('restart-from-pause-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        document.getElementById('pause-menu')?.classList.add('hidden');
-        resetGame();
-        isPaused = false;
-        gameStarted = true;
-    });
+    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
+    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
         requestFullScreen();
@@ -823,7 +831,6 @@ window.addEventListener('DOMContentLoaded', () => {
             cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
             cannon.x += (cannon.targetX - cannon.x) * 0.25;
 
-            // Fire rate adjustment based on level
             const fireInterval = Math.max(0.02, 0.075 - (fireRateLevel * 0.007));
 
             shootTimer += dt;
