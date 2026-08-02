@@ -26,17 +26,19 @@ canvas {
     z-index: 1;
 }
 
-/* 0. Splash Screen */
+/* 0. Splash Screen עם תמונת הרקע */
 #splash-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    background: url('splash-bg.jpg') center/cover no-repeat;
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
     align-items: center;
+    flex-direction: column;
+    padding-bottom: 60px;
     z-index: 200;
     cursor: pointer;
     transition: opacity 0.5s ease, visibility 0.5s ease;
@@ -47,52 +49,20 @@ canvas {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 20px;
-}
-
-.cannon-preview-3d {
-    width: 180px;
-    height: 180px;
-    margin-bottom: 20px;
-    filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.6));
-    animation: floatCannon 3s ease-in-out infinite;
-}
-
-.cannon-preview-3d img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-@keyframes floatCannon {
-    0%, 100% {
-        transform: translateY(0) rotate(0deg);
-    }
-    50% {
-        transform: translateY(-15px) rotate(3deg);
-    }
-}
-
-.splash-title {
-    color: #38bdf8;
-    font-size: 32px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    text-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
-    margin-bottom: 25px;
 }
 
 .splash-tap-text {
     color: #facc15;
-    font-size: 14px;
-    font-weight: bold;
-    letter-spacing: 1.5px;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 0 5px rgba(0, 0, 0, 0.8);
     animation: pulseText 1.5s infinite;
 }
 
 @keyframes pulseText {
-    0%, 100% { opacity: 0.3; transform: scale(0.98); }
-    50% { opacity: 1; transform: scale(1.02); }
+    0%, 100% { opacity: 0.4; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.04); }
 }
 
 /* UI overlay */
