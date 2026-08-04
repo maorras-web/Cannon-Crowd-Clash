@@ -1,6 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- Background Ambient Music System ---
+    // --- Background Ambient Music System (Menu Only) ---
     const MENU_MUSIC_URL = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3';
     
     let menuMusic = new Audio(MENU_MUSIC_URL);
@@ -8,7 +8,7 @@ window.addEventListener('DOMContentLoaded', () => {
     menuMusic.volume = 0.3;
 
     function playMenuMusic() {
-        if (menuMusic.paused) {
+        if (menuMusic.paused && !gameStarted) {
             menuMusic.play().catch(err => {
                 console.warn("Autoplay blocked, waiting for user interaction:", err);
             });
@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initAudio();
             audioUnlocked = true;
         }
-        playMenuMusic(); // מבטיח שהמוזיקה תופעל בנגיעה הראשונה במידה והדפדפן חסם אוטופליי
+        playMenuMusic();
     }
 
     // --- Splash Screen ---
@@ -815,7 +815,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function gameOver() {
         gameStarted = false; isFiring = false; isDragging = false;
-        playMenuMusic(); // מחזיר את מוזיקת הרקע כשחוזרים לטאב הפסידה/תפריט
+        playMenuMusic();
 
         if (score > highScore) {
             highScore = score;
@@ -838,7 +838,7 @@ window.addEventListener('DOMContentLoaded', () => {
         isPaused = false;
         isFiring = false;
         isDragging = false;
-        playMenuMusic(); // מחזיר את המוזיקה בחזרה לתפריט הראשי
+        playMenuMusic();
 
         document.getElementById('game-over-modal')?.classList.add('hidden');
         document.getElementById('pause-menu')?.classList.add('hidden');
@@ -849,7 +849,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
         unlockAudio();
-        stopMenuMusic(); // מפסיק את מוזיקת התפריט כשמתחילים משחק
+        stopMenuMusic();
         requestFullScreen();
         resetGame();
         gameStarted = true;
@@ -875,7 +875,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
         unlockAudio();
-        stopMenuMusic(); // מפסיק מוזיקה אם הייתה פעילה ב-Game Over
+        stopMenuMusic();
         requestFullScreen();
         document.getElementById('game-over-modal')?.classList.add('hidden');
         resetGame();
