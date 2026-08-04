@@ -15,8 +15,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (splash) splash.style.display = 'none';
         const startOverlay = document.getElementById('start-overlay');
         if (startOverlay) startOverlay.style.display = 'none';
-        
-        // עצירת הרצת הקוד כליל עבור מחשבים
         return; 
     }
 
@@ -39,6 +37,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.scale(dpr, dpr);
         initClouds();
     }
+    window.addEventListener('resize', resizeCanvas);
 
     // --- State Variables ---
     let gameStarted = false;
@@ -137,12 +136,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (type === 'shoot') {
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.06);
-                gain.gain.setValueAtTime(0.12, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
+                osc.frequency.setValueAtTime(700, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
                 osc.start(now);
-                osc.stop(now + 0.06);
+                osc.stop(now + 0.08);
             } else if (type === 'hit') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(220, now);
@@ -211,7 +210,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 c.vy += (cannon.y - c.y) * magnetSpeed * dt;
             }
 
-            if (distToCannon < c.radius + 28) {
+            if (distToCannon < c.radius + 35) {
                 totalCoins += c.value;
                 localStorage.setItem('cannon_total_coins', totalCoins);
                 updateUI();
@@ -476,9 +475,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (levelText) levelText.innerText = `LEVEL ${currentLevel}`;
     }
 
-    // --- HP Mechanics ---
-    const maxHp = 1000;
-    let currentHp = 1000;
+    // --- HP Mechanics (10,000 HP) ---
+    const maxHp = 10000;
+    let currentHp = 10000;
 
     function updateHpBar() {
         const hpBar = document.getElementById('hp-bar');
@@ -489,14 +488,14 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.width = `${percentage}%`;
         hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
 
-        let colorHex = '#22c55e';
+        let colorHex = '#3b82f6';
         if (percentage < 30) colorHex = '#ef4444';
         else if (percentage < 60) colorHex = '#eab308';
         hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- Cannon Entity ---
-    let cannonColor = '#2563eb';
+    // --- Upgraded Titan Cannon Entity ---
+    let cannonColor = '#3b82f6';
     const cannon = { x: 0, y: 0, targetX: 0 };
 
     window.changeCannonColor = function(hexColorStr) {
@@ -510,34 +509,60 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.translate(cannon.x, cannon.y);
 
-        ctx.fillStyle = '#334155';
+        // זוהר תחתון (Glow Aura)
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f0ff';
+
+        // זחלי תנועה / גלגלים עתידניים
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-32, 8, 64, 16);
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillRect(-28, 12, 56, 8);
+
+        // בסיס התותח הראשי
+        ctx.fillStyle = '#1e293b';
         ctx.beginPath();
-        ctx.arc(-22, 10, 12, 0, Math.PI * 2);
-        ctx.arc(22, 10, 12, 0, Math.PI * 2);
+        ctx.moveTo(-26, 8);
+        ctx.lineTo(-18, -18);
+        ctx.lineTo(18, -18);
+        ctx.lineTo(26, 8);
+        ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#00f0ff';
         ctx.stroke();
 
-        ctx.fillStyle = '#1e293b';
+        // קנים כפולים משוריינים
+        ctx.fillStyle = '#0284c7';
         if (hasMultishot) {
-            ctx.fillRect(-20, -30, 8, 30);
-            ctx.fillRect(-4, -34, 8, 34);
-            ctx.fillRect(12, -30, 8, 30);
+            ctx.fillRect(-24, -45, 10, 32);
+            ctx.fillRect(-5, -50, 10, 37);
+            ctx.fillRect(14, -45, 10, 32);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(-22, -47, 6, 4);
+            ctx.fillRect(-3, -52, 6, 4);
+            ctx.fillRect(16, -47, 6, 4);
         } else {
-            ctx.fillRect(-16, -30, 10, 30);
-            ctx.fillRect(6, -30, 10, 30);
+            ctx.fillRect(-18, -45, 12, 32);
+            ctx.fillRect(6, -45, 12, 32);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(-16, -47, 8, 4);
+            ctx.fillRect(8, -47, 8, 4);
         }
 
-        const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
-        gradient.addColorStop(0, '#93c5fd');
+        // כיפה מרכזית עם זוהר הליבה
+        const gradient = ctx.createRadialGradient(0, -4, 2, 0, -4, 22);
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(0.4, '#38bdf8');
         gradient.addColorStop(1, cannonColor);
 
         ctx.beginPath();
-        ctx.arc(0, 0, 26, Math.PI, 0, false);
+        ctx.arc(0, -4, 20, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2.5;
         ctx.strokeStyle = '#ffffff';
         ctx.stroke();
 
@@ -551,12 +576,12 @@ window.addEventListener('DOMContentLoaded', () => {
     function spawnBullet() {
         const damage = firePowerLevel;
         if (hasMultishot) {
-            bullets.push({ x: cannon.x - 16, y: cannon.y - 30, radius: 6, dmg: damage });
-            bullets.push({ x: cannon.x, y: cannon.y - 34, radius: 6, dmg: damage });
-            bullets.push({ x: cannon.x + 16, y: cannon.y - 30, radius: 6, dmg: damage });
+            bullets.push({ x: cannon.x - 19, y: cannon.y - 45, radius: 7, dmg: damage });
+            bullets.push({ x: cannon.x, y: cannon.y - 50, radius: 8, dmg: damage });
+            bullets.push({ x: cannon.x + 19, y: cannon.y - 45, radius: 7, dmg: damage });
         } else {
-            bullets.push({ x: cannon.x - 11, y: cannon.y - 30, radius: 6, dmg: damage });
-            bullets.push({ x: cannon.x + 11, y: cannon.y - 30, radius: 6, dmg: damage });
+            bullets.push({ x: cannon.x - 12, y: cannon.y - 45, radius: 7, dmg: damage });
+            bullets.push({ x: cannon.x + 12, y: cannon.y - 45, radius: 7, dmg: damage });
         }
     }
 
@@ -566,10 +591,14 @@ window.addEventListener('DOMContentLoaded', () => {
             const b = bullets[i];
             b.y -= speed;
 
+            ctx.save();
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00f0ff';
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#facc15';
+            ctx.fillStyle = '#38bdf8';
             ctx.fill();
+            ctx.restore();
 
             if (b.y < -10) bullets.splice(i, 1);
         }
@@ -626,8 +655,8 @@ window.addEventListener('DOMContentLoaded', () => {
             if (r.y + r.radius >= floorY) { r.y = floorY - r.radius; r.vy = r.bounceForce; }
 
             const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
-            if (distToCannon < r.radius + 26) {
-                currentHp -= 25;
+            if (distToCannon < r.radius + 32) {
+                currentHp -= 150;
                 updateHpBar();
                 playSound('hit');
                 createExplosion(cannon.x, cannon.y - 10, '#ef4444', 12);
@@ -872,19 +901,26 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-modal')?.classList.add('hidden');
         document.getElementById('pause-menu')?.classList.add('hidden');
         document.getElementById('start-overlay')?.classList.remove('hidden');
-
-        updateUI();
     }
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
+        requestFullScreen();
         unlockAudio();
         stopMenuMusic();
-        requestFullScreen();
+        document.getElementById('start-overlay')?.classList.add('hidden');
         resetGame();
         gameStarted = true;
-        isPaused = false;
-        document.getElementById('start-overlay')?.classList.add('hidden');
     });
+
+    document.getElementById('restart-btn')?.addEventListener('click', () => {
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        resetGame();
+        stopMenuMusic();
+        gameStarted = true;
+    });
+
+    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
+    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
@@ -893,45 +929,31 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => {
-        unlockAudio();
-        requestFullScreen();
         isPaused = false;
         document.getElementById('pause-menu')?.classList.add('hidden');
     });
 
-    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
-    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
-
-    document.getElementById('restart-btn')?.addEventListener('click', () => {
-        unlockAudio();
-        stopMenuMusic();
-        requestFullScreen();
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        resetGame();
-        isPaused = false;
-        gameStarted = true;
-    });
-
     // --- Main Game Loop ---
     let lastTime = performance.now();
-
     function gameLoop(now) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
+        ctx.clearRect(0, 0, width, height);
         drawEnvironment();
 
         if (gameStarted && !isPaused) {
-            cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
+            // תנועת תותח מוחלקת
             cannon.x += (cannon.targetX - cannon.x) * 0.25;
+            cannon.x = Math.max(35, Math.min(width - 35, cannon.x));
 
-            const fireInterval = Math.max(0.02, 0.075 - (fireRateLevel * 0.007));
-
+            // מנגנון יריות
             shootTimer += dt;
+            const fireInterval = Math.max(0.08, 0.25 - (fireRateLevel * 0.02));
             if (isFiring && shootTimer >= fireInterval) {
-                shootTimer = 0;
                 spawnBullet();
                 playSound('shoot');
+                shootTimer = 0;
             }
 
             updateBullets(dt);
@@ -941,10 +963,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         drawCannon();
+
         requestAnimationFrame(gameLoop);
     }
 
+    // אתחול ראשוני
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    resetGame();
     requestAnimationFrame(gameLoop);
 });
