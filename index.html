@@ -2,33 +2,45 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
     <title>Cannon Crowd Clash</title>
     <style>
         * {
             box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
             margin: 0;
             padding: 0;
-            user-select: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        body {
+        body, html {
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            background-color: #1a1a1a;
-            color: #fff;
+            background-color: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
         }
 
         #game-container {
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100vw;
             height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        /* HUD & Overlay Elements */
-        #ui-layer {
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+        }
+
+        /* --- UI Overlays --- */
+        .ui-layer {
             position: absolute;
             top: 0;
             left: 0;
@@ -41,84 +53,66 @@
             padding: 20px;
         }
 
-        .hud-top {
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .hud {
             display: flex;
             justify-content: space-between;
             align-items: center;
             width: 100%;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
         }
 
-        .coin-counter {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 20px;
+        .hud-item {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #facc15;
-            border: 2px solid #eab308;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
         }
 
-        .hp-bar-container {
-            width: 250px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #ef4444;
-            border-radius: 12px;
-            padding: 4px;
-            position: relative;
-        }
-
-        .hp-bar-fill {
-            height: 20px;
-            width: 100%;
-            background: linear-gradient(90deg, #ef4444, #22c55e);
-            border-radius: 8px;
-            transition: width 0.2s ease;
-        }
-
-        .hp-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 14px;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px #000;
-        }
-
-        /* Shop Modal */
-        #shop-btn {
-            pointer-events: auto;
-            background: #3b82f6;
+        .btn {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
             color: white;
             border: none;
             padding: 12px 24px;
-            font-size: 18px;
+            font-size: 1.1rem;
             font-weight: bold;
-            border-radius: 12px;
+            border-radius: 25px;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
         }
 
-        #shop-btn:hover {
-            background: #2563eb;
-            transform: scale(1.05);
+        .btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(255, 75, 43, 0.6);
         }
 
-        .modal-overlay {
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            border-radius: 15px;
+        }
+
+        /* --- Modals / Screens --- */
+        .modal {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(10, 10, 25, 0.85);
+            backdrop-filter: blur(8px);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            pointer-events: auto;
+            gap: 20px;
             z-index: 10;
         }
 
@@ -126,114 +120,654 @@
             display: none !important;
         }
 
-        .shop-card {
-            background: #262626;
-            border: 2px solid #404040;
-            border-radius: 20px;
+        .modal-title {
+            font-size: 2.2rem;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            text-align: center;
+        }
+
+        .upgrade-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             width: 90%;
-            max-width: 450px;
-            padding: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 320px;
         }
 
-        .shop-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #404040;
-            padding-bottom: 10px;
-        }
-
-        .close-btn {
-            background: transparent;
-            border: none;
-            color: #a3a3a3;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .shop-item {
-            background: #171717;
-            border: 1px solid #333;
+        .upgrade-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
-            padding: 16px;
+            padding: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
         }
 
-        .shop-item-info h3 {
-            font-size: 18px;
-            color: #f3f4f6;
-            margin-bottom: 4px;
+        .upgrade-info {
+            display: flex;
+            flex-direction: column;
         }
 
-        .shop-item-info p {
-            font-size: 13px;
-            color: #9ca3af;
-        }
-
-        .buy-btn {
-            background: #eab308;
-            color: #000;
-            border: none;
-            padding: 10px 16px;
+        .upgrade-name {
             font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
+            font-size: 1rem;
         }
 
-        .buy-btn:disabled {
-            background: #525252;
-            color: #a3a3a3;
-            cursor: not-allowed;
+        .upgrade-cost {
+            font-size: 0.85rem;
+            color: #ffd700;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        input[type="range"] {
+            width: 150px;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container"></div>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
 
-    <div id="ui-layer">
-        <div class="hud-top">
-            <div class="coin-counter">
-                <span>🪙</span>
-                <span id="coin-count">0</span>
+        <!-- HUD LAYER -->
+        <div class="ui-layer">
+            <div class="hud">
+                <div class="hud-item">ניקוד: <span id="score-val">0</span></div>
+                <div class="hud-item">מטבעות: <span id="coins-val">0</span></div>
+                <button id="pause-btn" class="btn btn-small interactive">השהה</button>
             </div>
-
-            <div class="hp-bar-container">
-                <div id="hp-bar-fill" class="hp-bar-fill"></div>
-                <div id="hp-text" class="hp-text">1000 / 1000 HP</div>
-            </div>
-
-            <button id="shop-btn">🏪 חנות</button>
         </div>
-    </div>
 
-    <!-- Shop Modal -->
-    <div id="shop-modal" class="modal-overlay hidden">
-        <div class="shop-card">
-            <div class="shop-header">
-                <h2>חנות שדרוגים</h2>
-                <button id="close-shop-btn" class="close-btn">✖</button>
-            </div>
-            <div class="shop-body">
-                <div class="shop-item">
-                    <div class="shop-item-info">
-                        <h3>🎖️ תותח צבאי משוריין</h3>
-                        <p>שריון כבד, קנים כפולים ו-10,000 HP!</p>
+        <!-- START OVERLAY -->
+        <div id="start-overlay" class="modal interactive">
+            <h1 class="modal-title">Cannon Crowd Clash</h1>
+            <div class="upgrade-container">
+                <div class="upgrade-card">
+                    <div class="upgrade-info">
+                        <span class="upgrade-name">קצב ירייה</span>
+                        <span class="upgrade-cost" id="firerate-cost">מחיר: 10 מטבעות</span>
                     </div>
-                    <button id="buy-super-cannon-btn" class="buy-btn">🪙 3000</button>
+                    <button id="buy-firerate" class="btn btn-small">שדרג</button>
+                </div>
+                <div class="upgrade-card">
+                    <div class="upgrade-info">
+                        <span class="upgrade-name">עוצמת ירייה</span>
+                        <span class="upgrade-cost" id="power-cost">מחיר: 15 מטבעות</span>
+                    </div>
+                    <button id="buy-power" class="btn btn-small">שדרג</button>
                 </div>
             </div>
+            <button id="start-btn" class="btn" style="padding: 16px 40px; font-size: 1.4rem;">התחל משחק</button>
+        </div>
+
+        <!-- PAUSE MENU -->
+        <div id="pause-menu" class="modal interactive hidden">
+            <h2 class="modal-title">משחק מושהה</h2>
+            <div class="settings-row">
+                <label for="volume-slider">עוצמת שמע:</label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <button id="resume-btn" class="btn">המשך</button>
+            <button id="restart-btn" class="btn">התחל מחדש</button>
+            <button id="pause-menu-btn" class="btn">תפריט ראשי</button>
+        </div>
+
+        <!-- GAME OVER MODAL -->
+        <div id="game-over-modal" class="modal interactive hidden">
+            <h2 class="modal-title" style="color: #ff4b2b;">המשחק הסתיים!</h2>
+            <p style="font-size: 1.2rem;">הניקוד שלך: <span id="final-score">0</span></p>
+            <button id="restart-game-over-btn" class="btn">נסה שוב</button>
+            <button id="menu-game-over-btn" class="btn">תפריט ראשי</button>
         </div>
     </div>
 
-    <!-- Import Three.js Engine -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="main.js"></script>
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State Variables
+        let width = 0;
+        let height = 0;
+        let gameStarted = false;
+        let isPaused = false;
+        let score = 0;
+        let coins = Number(localStorage.getItem('ccc_coins')) || 0;
+
+        // Upgrades
+        let fireRateLevel = Number(localStorage.getItem('ccc_firerate')) || 1;
+        let powerLevel = Number(localStorage.getItem('ccc_power')) || 1;
+
+        // Entities
+        let cannon = { x: 0, y: 0, targetX: 0, radius: 25 };
+        let bullets = [];
+        let rocks = [];
+        let coinItems = [];
+        let particles = [];
+
+        // Game Controls & Timers
+        let isFiring = false;
+        let shootTimer = 0;
+        let rockSpawnTimer = 0;
+
+        // Audio System (Web Audio API)
+        let audioCtx = null;
+        let masterGainNode = null;
+        let masterVolume = 0.5;
+        let menuMusicInterval = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.gain.value = masterVolume;
+                masterGainNode.connect(audioCtx.destination);
+            }
+        }
+
+        function unlockAudio() {
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(masterGainNode);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'shoot') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'hit') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'coin') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.setValueAtTime(1200, now + 0.05);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+        }
+
+        function playMenuMusic() {
+            if (menuMusicInterval) return;
+            menuMusicInterval = setInterval(() => {
+                if (audioCtx && (isPaused || !gameStarted)) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(masterGainNode);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                }
+            }, 600);
+        }
+
+        function stopMenuMusic() {
+            if (menuMusicInterval) {
+                clearInterval(menuMusicInterval);
+                menuMusicInterval = null;
+            }
+        }
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            cannon.y = height - 70;
+            if (!gameStarted) {
+                cannon.x = width / 2;
+                cannon.targetX = width / 2;
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score-val').innerText = score;
+            document.getElementById('coins-val').innerText = coins;
+            document.getElementById('firerate-cost').innerText = `מחיר: ${fireRateLevel * 10} מטבעות`;
+            document.getElementById('power-cost').innerText = `מחיר: ${powerLevel * 15} מטבעות`;
+
+            localStorage.setItem('ccc_coins', coins);
+            localStorage.setItem('ccc_firerate', fireRateLevel);
+            localStorage.setItem('ccc_power', powerLevel);
+        }
+
+        function resetGame() {
+            score = 0;
+            bullets = [];
+            rocks = [];
+            coinItems = [];
+            particles = [];
+            cannon.x = width / 2;
+            cannon.targetX = width / 2;
+            updateUI();
+        }
+
+        function requestFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
+        // --- Touch & Mouse Events ---
+        function handleInputStart(x) {
+            unlockAudio();
+            if (!gameStarted || isPaused) return;
+            isFiring = true;
+            cannon.targetX = x;
+        }
+
+        function handleInputMove(x) {
+            if (!gameStarted || isPaused) return;
+            cannon.targetX = x;
+        }
+
+        function handleInputEnd() {
+            isFiring = false;
+        }
+
+        window.addEventListener('mousedown', (e) => handleInputStart(e.clientX));
+        window.addEventListener('mousemove', (e) => handleInputMove(e.clientX));
+        window.addEventListener('mouseup', handleInputEnd);
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) handleInputStart(e.touches[0].clientX);
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) handleInputMove(e.touches[0].clientX);
+        }, { passive: true });
+
+        window.addEventListener('touchend', handleInputEnd);
+
+        // --- Upgrades listeners ---
+        document.getElementById('buy-firerate')?.addEventListener('click', () => {
+            const cost = fireRateLevel * 10;
+            if (coins >= cost) {
+                coins -= cost;
+                fireRateLevel++;
+                updateUI();
+            }
+        });
+
+        document.getElementById('buy-power')?.addEventListener('click', () => {
+            const cost = powerLevel * 15;
+            if (coins >= cost) {
+                coins -= cost;
+                powerLevel++;
+                updateUI();
+            }
+        });
+
+        // --- Game Actions ---
+        function spawnBullet() {
+            bullets.push({
+                x: cannon.x,
+                y: cannon.y - 30,
+                radius: 6 + powerLevel,
+                damage: powerLevel,
+                speed: 600
+            });
+        }
+
+        function spawnRock() {
+            const radius = Math.random() * 20 + 20;
+            const hp = Math.floor(Math.random() * 5 * (1 + score / 50)) + 1;
+            rocks.push({
+                x: Math.random() * (width - radius * 2) + radius,
+                y: -radius,
+                radius: radius,
+                hp: hp,
+                maxHp: hp,
+                speed: Math.random() * 50 + 100
+            });
+        }
+
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 200,
+                    vy: (Math.random() - 0.5) * 200,
+                    radius: Math.random() * 3 + 2,
+                    color: color,
+                    life: 0.4
+                });
+            }
+        }
+
+        function triggerGameOver() {
+            gameStarted = false;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over-modal')?.classList.remove('hidden');
+            playMenuMusic();
+        }
+
+        function returnToMainMenu() {
+            document.getElementById('pause-menu')?.classList.add('hidden');
+            document.getElementById('game-over-modal')?.classList.add('hidden');
+            document.getElementById('start-overlay')?.classList.remove('hidden');
+            stopMenuMusic();
+            playMenuMusic();
+            gameStarted = false;
+            isPaused = false;
+            resetGame();
+        }
+
+        // --- Updates & Physics ---
+        function updateBullets(dt) {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.y -= b.speed * dt;
+                if (b.y < -20) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function updateRocks(dt) {
+            rockSpawnTimer += dt;
+            if (rockSpawnTimer > 1.2) {
+                spawnRock();
+                rockSpawnTimer = 0;
+            }
+
+            for (let i = rocks.length - 1; i >= 0; i--) {
+                const r = rocks[i];
+                r.y += r.speed * dt;
+
+                // Collision with Cannon (Game Over)
+                const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
+                if (distToCannon < r.radius + cannon.radius) {
+                    createParticles(cannon.x, cannon.y, '#ff4b2b', 25);
+                    triggerGameOver();
+                    return;
+                }
+
+                // Collision with Bullets
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const b = bullets[j];
+                    const dist = Math.hypot(r.x - b.x, r.y - b.y);
+
+                    if (dist < r.radius + b.radius) {
+                        r.hp -= b.damage;
+                        playSound('hit');
+                        createParticles(b.x, b.y, '#ff416c', 4);
+                        bullets.splice(j, 1);
+
+                        if (r.hp <= 0) {
+                            score += r.maxHp;
+                            if (Math.random() < 0.4) {
+                                coinItems.push({ x: r.x, y: r.y, speed: 150 });
+                            }
+                            createParticles(r.x, r.y, '#ffa500', 12);
+                            rocks.splice(i, 1);
+                            updateUI();
+                            break;
+                        }
+                    }
+                }
+
+                // Remove out-of-bounds rocks
+                if (r && r.y - r.radius > height) {
+                    rocks.splice(i, 1);
+                }
+            }
+        }
+
+        function updateCoins(dt) {
+            for (let i = coinItems.length - 1; i >= 0; i--) {
+                const c = coinItems[i];
+                c.y += c.speed * dt;
+
+                const dist = Math.hypot(c.x - cannon.x, c.y - cannon.y);
+                if (dist < cannon.radius + 15) {
+                    coins++;
+                    playSound('coin');
+                    createParticles(c.x, c.y, '#ffd700', 6);
+                    coinItems.splice(i, 1);
+                    updateUI();
+                    continue;
+                }
+
+                if (c.y > height + 20) {
+                    coinItems.splice(i, 1);
+                }
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // --- Rendering ---
+        function drawEnvironment() {
+            // Draw Bullets
+            ctx.fillStyle = '#ff416c';
+            for (const b of bullets) {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw Rocks
+            for (const r of rocks) {
+                ctx.fillStyle = '#4e54c8';
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#8f94fb';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw HP Text inside rock
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(r.hp, r.x, r.y);
+            }
+
+            // Draw Coins
+            ctx.fillStyle = '#ffd700';
+            for (const c of coinItems) {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // Draw Particles
+            for (const p of particles) {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life / 0.4);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function drawCannon() {
+            ctx.save();
+            ctx.translate(cannon.x, cannon.y);
+
+            // Barrel
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(-12, -35, 24, 35);
+
+            // Base
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(0, 0, cannon.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // --- Button Click Listeners (Start, Pause, Restart, Menu) ---
+        document.getElementById('start-btn')?.addEventListener('click', () => {
+            unlockAudio();
+            stopMenuMusic();
+            requestFullScreen();
+
+            resetGame();
+            gameStarted = true;
+            isPaused = false;
+
+            document.getElementById('start-overlay')?.classList.add('hidden');
+        });
+
+        document.getElementById('pause-btn')?.addEventListener('click', () => {
+            if (!gameStarted) return;
+            isPaused = !isPaused;
+            const pauseMenu = document.getElementById('pause-menu');
+
+            if (isPaused) {
+                pauseMenu?.classList.remove('hidden');
+                playMenuMusic();
+            } else {
+                pauseMenu?.classList.add('hidden');
+                stopMenuMusic();
+            }
+        });
+
+        document.getElementById('resume-btn')?.addEventListener('click', () => {
+            isPaused = false;
+            document.getElementById('pause-menu')?.classList.add('hidden');
+            stopMenuMusic();
+        });
+
+        document.getElementById('restart-btn')?.addEventListener('click', () => {
+            document.getElementById('pause-menu')?.classList.add('hidden');
+            stopMenuMusic();
+            resetGame();
+            gameStarted = true;
+            isPaused = false;
+        });
+
+        document.getElementById('pause-menu-btn')?.addEventListener('click', returnToMainMenu);
+        document.getElementById('restart-game-over-btn')?.addEventListener('click', () => {
+            document.getElementById('game-over-modal')?.classList.add('hidden');
+            stopMenuMusic();
+            resetGame();
+            gameStarted = true;
+            isPaused = false;
+        });
+        document.getElementById('menu-game-over-btn')?.addEventListener('click', returnToMainMenu);
+
+        // --- Volume / Audio Controls ---
+        const volumeSlider = document.getElementById('volume-slider');
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', (e) => {
+                masterVolume = parseFloat(e.target.value);
+                if (masterGainNode) {
+                    masterGainNode.gain.value = masterVolume;
+                }
+            });
+        }
+
+        // --- Main Game Loop ---
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = Math.min((now - lastTime) / 1000, 0.1); // Cap delta time to prevent physics tunneling
+            lastTime = now;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Always render background visuals
+            drawEnvironment();
+
+            if (gameStarted && !isPaused) {
+                // Smooth cannon movement interpolation (Lerp)
+                cannon.x += (cannon.targetX - cannon.x) * 0.25;
+
+                // Constrain cannon position inside screen bounds
+                const cannonPadding = 30;
+                if (cannon.x < cannonPadding) {
+                    cannon.x = cannonPadding;
+                    cannon.targetX = cannonPadding;
+                } else if (cannon.x > width - cannonPadding) {
+                    cannon.x = width - cannonPadding;
+                    cannon.targetX = width - cannonPadding;
+                }
+
+                // Continuous firing timer linked to Fire Rate Upgrade Level
+                shootTimer += dt;
+                const shootInterval = Math.max(0.08, 0.35 - (fireRateLevel * 0.025));
+                if (isFiring && shootTimer >= shootInterval) {
+                    spawnBullet();
+                    playSound('shoot');
+                    shootTimer = 0;
+                }
+
+                // Update entities
+                updateBullets(dt);
+                updateRocks(dt);
+                updateCoins(dt);
+                updateParticles(dt);
+                drawCannon();
+            } else if (!gameStarted) {
+                // Render background animations on menu screens
+                updateParticles(dt);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Initialization ---
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        resetGame();
+        playMenuMusic();
+        requestAnimationFrame(gameLoop);
+    });
+    </script>
 </body>
 </html>
