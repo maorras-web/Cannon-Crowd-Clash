@@ -1,773 +1,170 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-    <title>Cannon Crowd Clash</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #1a1a2e;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #ffffff;
-        }
-
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
-        }
-
-        /* --- UI Overlays --- */
-        .ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-        }
-
-        .interactive {
-            pointer-events: auto;
-        }
-
-        .hud {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            font-weight: bold;
-            font-size: 1.2rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-        }
-
-        .hud-item {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(5px);
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #ff416c, #ff4b2b);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 25px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(255, 75, 43, 0.6);
-        }
-
-        .btn-small {
-            padding: 6px 14px;
-            font-size: 0.9rem;
-            border-radius: 15px;
-        }
-
-        /* --- Modals / Screens --- */
-        .modal {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 25, 0.85);
-            backdrop-filter: blur(8px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            z-index: 10;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .modal-title {
-            font-size: 2.2rem;
-            color: #fff;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-            text-align: center;
-        }
-
-        .upgrade-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            width: 90%;
-            max-width: 320px;
-        }
-
-        .upgrade-card {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .upgrade-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .upgrade-name {
-            font-weight: bold;
-            font-size: 1rem;
-        }
-
-        .upgrade-cost {
-            font-size: 0.85rem;
-            color: #ffd700;
-        }
-
-        .settings-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        input[type="range"] {
-            width: 150px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ball Blast 2D</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
-
-        <!-- HUD LAYER -->
-        <div class="ui-layer">
-            <div class="hud">
-                <div class="hud-item">ניקוד: <span id="score-val">0</span></div>
-                <div class="hud-item">מטבעות: <span id="coins-val">0</span></div>
-                <button id="pause-btn" class="btn btn-small interactive">השהה</button>
-            </div>
-        </div>
-
-        <!-- START OVERLAY -->
-        <div id="start-overlay" class="modal interactive">
-            <h1 class="modal-title">Cannon Crowd Clash</h1>
-            <div class="upgrade-container">
-                <div class="upgrade-card">
-                    <div class="upgrade-info">
-                        <span class="upgrade-name">קצב ירייה</span>
-                        <span class="upgrade-cost" id="firerate-cost">מחיר: 10 מטבעות</span>
-                    </div>
-                    <button id="buy-firerate" class="btn btn-small">שדרג</button>
-                </div>
-                <div class="upgrade-card">
-                    <div class="upgrade-info">
-                        <span class="upgrade-name">עוצמת ירייה</span>
-                        <span class="upgrade-cost" id="power-cost">מחיר: 15 מטבעות</span>
-                    </div>
-                    <button id="buy-power" class="btn btn-small">שדרג</button>
-                </div>
-            </div>
-            <button id="start-btn" class="btn" style="padding: 16px 40px; font-size: 1.4rem;">התחל משחק</button>
-        </div>
-
-        <!-- PAUSE MENU -->
-        <div id="pause-menu" class="modal interactive hidden">
-            <h2 class="modal-title">משחק מושהה</h2>
-            <div class="settings-row">
-                <label for="volume-slider">עוצמת שמע:</label>
-                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5">
-            </div>
-            <button id="resume-btn" class="btn">המשך</button>
-            <button id="restart-btn" class="btn">התחל מחדש</button>
-            <button id="pause-menu-btn" class="btn">תפריט ראשי</button>
-        </div>
-
-        <!-- GAME OVER MODAL -->
-        <div id="game-over-modal" class="modal interactive hidden">
-            <h2 class="modal-title" style="color: #ff4b2b;">המשחק הסתיים!</h2>
-            <p style="font-size: 1.2rem;">הניקוד שלך: <span id="final-score">0</span></p>
-            <button id="restart-game-over-btn" class="btn">נסה שוב</button>
-            <button id="menu-game-over-btn" class="btn">תפריט ראשי</button>
+    <!-- 0. מסך פתיח מקדים (Splash Screen) -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <p class="splash-tap-text">TAP ANYWHERE TO START</p>
         </div>
     </div>
 
-    <script>
-    window.addEventListener('DOMContentLoaded', () => {
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        // State Variables
-        let width = 0;
-        let height = 0;
-        let gameStarted = false;
-        let isPaused = false;
-        let score = 0;
-        let coins = Number(localStorage.getItem('ccc_coins')) || 0;
-
-        // Upgrades
-        let fireRateLevel = Number(localStorage.getItem('ccc_firerate')) || 1;
-        let powerLevel = Number(localStorage.getItem('ccc_power')) || 1;
-
-        // Entities
-        let cannon = { x: 0, y: 0, targetX: 0, radius: 25 };
-        let bullets = [];
-        let rocks = [];
-        let coinItems = [];
-        let particles = [];
-
-        // Game Controls & Timers
-        let isFiring = false;
-        let shootTimer = 0;
-        let rockSpawnTimer = 0;
-
-        // Audio System (Web Audio API)
-        let audioCtx = null;
-        let masterGainNode = null;
-        let masterVolume = 0.5;
-        let menuMusicInterval = null;
-
-        function initAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-                masterGainNode = audioCtx.createGain();
-                masterGainNode.gain.value = masterVolume;
-                masterGainNode.connect(audioCtx.destination);
-            }
-        }
-
-        function unlockAudio() {
-            initAudio();
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        function playSound(type) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(masterGainNode);
-
-            const now = audioCtx.currentTime;
-
-            if (type === 'shoot') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-                osc.start(now);
-                osc.stop(now + 0.08);
-            } else if (type === 'hit') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
-            } else if (type === 'coin') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.setValueAtTime(1200, now + 0.05);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now);
-                osc.stop(now + 0.15);
-            }
-        }
-
-        function playMenuMusic() {
-            if (menuMusicInterval) return;
-            menuMusicInterval = setInterval(() => {
-                if (audioCtx && (isPaused || !gameStarted)) {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-                    osc.connect(gain);
-                    gain.connect(masterGainNode);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 0.4);
-                }
-            }, 600);
-        }
-
-        function stopMenuMusic() {
-            if (menuMusicInterval) {
-                clearInterval(menuMusicInterval);
-                menuMusicInterval = null;
-            }
-        }
-
-        function resizeCanvas() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            cannon.y = height - 70;
-            if (!gameStarted) {
-                cannon.x = width / 2;
-                cannon.targetX = width / 2;
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('score-val').innerText = score;
-            document.getElementById('coins-val').innerText = coins;
-            document.getElementById('firerate-cost').innerText = `מחיר: ${fireRateLevel * 10} מטבעות`;
-            document.getElementById('power-cost').innerText = `מחיר: ${powerLevel * 15} מטבעות`;
-
-            localStorage.setItem('ccc_coins', coins);
-            localStorage.setItem('ccc_firerate', fireRateLevel);
-            localStorage.setItem('ccc_power', powerLevel);
-        }
-
-        function resetGame() {
-            score = 0;
-            bullets = [];
-            rocks = [];
-            coinItems = [];
-            particles = [];
-            cannon.x = width / 2;
-            cannon.targetX = width / 2;
-            updateUI();
-        }
-
-        function requestFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            }
-        }
-
-        // --- Touch & Mouse Events ---
-        function handleInputStart(x) {
-            unlockAudio();
-            if (!gameStarted || isPaused) return;
-            isFiring = true;
-            cannon.targetX = x;
-        }
-
-        function handleInputMove(x) {
-            if (!gameStarted || isPaused) return;
-            cannon.targetX = x;
-        }
-
-        function handleInputEnd() {
-            isFiring = false;
-        }
-
-        window.addEventListener('mousedown', (e) => handleInputStart(e.clientX));
-        window.addEventListener('mousemove', (e) => handleInputMove(e.clientX));
-        window.addEventListener('mouseup', handleInputEnd);
-
-        window.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) handleInputStart(e.touches[0].clientX);
-        }, { passive: true });
-
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0) handleInputMove(e.touches[0].clientX);
-        }, { passive: true });
-
-        window.addEventListener('touchend', handleInputEnd);
-
-        // --- Upgrades listeners ---
-        document.getElementById('buy-firerate')?.addEventListener('click', () => {
-            const cost = fireRateLevel * 10;
-            if (coins >= cost) {
-                coins -= cost;
-                fireRateLevel++;
-                updateUI();
-            }
-        });
-
-        document.getElementById('buy-power')?.addEventListener('click', () => {
-            const cost = powerLevel * 15;
-            if (coins >= cost) {
-                coins -= cost;
-                powerLevel++;
-                updateUI();
-            }
-        });
-
-        // --- Game Actions ---
-        function spawnBullet() {
-            bullets.push({
-                x: cannon.x,
-                y: cannon.y - 30,
-                radius: 6 + powerLevel,
-                damage: powerLevel,
-                speed: 600
-            });
-        }
-
-        function spawnRock() {
-            const radius = Math.random() * 20 + 20;
-            const hp = Math.floor(Math.random() * 5 * (1 + score / 50)) + 1;
-            rocks.push({
-                x: Math.random() * (width - radius * 2) + radius,
-                y: -radius,
-                radius: radius,
-                hp: hp,
-                maxHp: hp,
-                speed: Math.random() * 50 + 100
-            });
-        }
-
-        function createParticles(x, y, color, count = 8) {
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 200,
-                    vy: (Math.random() - 0.5) * 200,
-                    radius: Math.random() * 3 + 2,
-                    color: color,
-                    life: 0.4
-                });
-            }
-        }
-
-        function triggerGameOver() {
-            gameStarted = false;
-            document.getElementById('final-score').innerText = score;
-            document.getElementById('game-over-modal')?.classList.remove('hidden');
-            playMenuMusic();
-        }
-
-        function returnToMainMenu() {
-            document.getElementById('pause-menu')?.classList.add('hidden');
-            document.getElementById('game-over-modal')?.classList.add('hidden');
-            document.getElementById('start-overlay')?.classList.remove('hidden');
-            stopMenuMusic();
-            playMenuMusic();
-            gameStarted = false;
-            isPaused = false;
-            resetGame();
-        }
-
-        // --- Updates & Physics ---
-        function updateBullets(dt) {
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                const b = bullets[i];
-                b.y -= b.speed * dt;
-                if (b.y < -20) {
-                    bullets.splice(i, 1);
-                }
-            }
-        }
-
-        function updateRocks(dt) {
-            rockSpawnTimer += dt;
-            if (rockSpawnTimer > 1.2) {
-                spawnRock();
-                rockSpawnTimer = 0;
-            }
-
-            for (let i = rocks.length - 1; i >= 0; i--) {
-                const r = rocks[i];
-                r.y += r.speed * dt;
-
-                // Collision with Cannon (Game Over)
-                const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
-                if (distToCannon < r.radius + cannon.radius) {
-                    createParticles(cannon.x, cannon.y, '#ff4b2b', 25);
-                    triggerGameOver();
-                    return;
-                }
-
-                // Collision with Bullets
-                for (let j = bullets.length - 1; j >= 0; j--) {
-                    const b = bullets[j];
-                    const dist = Math.hypot(r.x - b.x, r.y - b.y);
-
-                    if (dist < r.radius + b.radius) {
-                        r.hp -= b.damage;
-                        playSound('hit');
-                        createParticles(b.x, b.y, '#ff416c', 4);
-                        bullets.splice(j, 1);
-
-                        if (r.hp <= 0) {
-                            score += r.maxHp;
-                            if (Math.random() < 0.4) {
-                                coinItems.push({ x: r.x, y: r.y, speed: 150 });
-                            }
-                            createParticles(r.x, r.y, '#ffa500', 12);
-                            rocks.splice(i, 1);
-                            updateUI();
-                            break;
-                        }
-                    }
-                }
-
-                // Remove out-of-bounds rocks
-                if (r && r.y - r.radius > height) {
-                    rocks.splice(i, 1);
-                }
-            }
-        }
-
-        function updateCoins(dt) {
-            for (let i = coinItems.length - 1; i >= 0; i--) {
-                const c = coinItems[i];
-                c.y += c.speed * dt;
-
-                const dist = Math.hypot(c.x - cannon.x, c.y - cannon.y);
-                if (dist < cannon.radius + 15) {
-                    coins++;
-                    playSound('coin');
-                    createParticles(c.x, c.y, '#ffd700', 6);
-                    coinItems.splice(i, 1);
-                    updateUI();
-                    continue;
-                }
-
-                if (c.y > height + 20) {
-                    coinItems.splice(i, 1);
-                }
-            }
-        }
-
-        function updateParticles(dt) {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                p.life -= dt;
-                if (p.life <= 0) {
-                    particles.splice(i, 1);
-                }
-            }
-        }
-
-        // --- Rendering ---
-        function drawEnvironment() {
-            // Draw Bullets
-            ctx.fillStyle = '#ff416c';
-            for (const b of bullets) {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Draw Rocks
-            for (const r of rocks) {
-                ctx.fillStyle = '#4e54c8';
-                ctx.beginPath();
-                ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#8f94fb';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-
-                // Draw HP Text inside rock
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 14px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(r.hp, r.x, r.y);
-            }
-
-            // Draw Coins
-            ctx.fillStyle = '#ffd700';
-            for (const c of coinItems) {
-                ctx.beginPath();
-                ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
-
-            // Draw Particles
-            for (const p of particles) {
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = Math.max(0, p.life / 0.4);
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-            }
-        }
-
-        function drawCannon() {
-            ctx.save();
-            ctx.translate(cannon.x, cannon.y);
-
-            // Barrel
-            ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(-12, -35, 24, 35);
-
-            // Base
-            ctx.fillStyle = '#e74c3c';
-            ctx.beginPath();
-            ctx.arc(0, 0, cannon.radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            ctx.restore();
-        }
-
-        // --- Button Click Listeners (Start, Pause, Restart, Menu) ---
-        document.getElementById('start-btn')?.addEventListener('click', () => {
-            unlockAudio();
-            stopMenuMusic();
-            requestFullScreen();
-
-            resetGame();
-            gameStarted = true;
-            isPaused = false;
-
-            document.getElementById('start-overlay')?.classList.add('hidden');
-        });
-
-        document.getElementById('pause-btn')?.addEventListener('click', () => {
-            if (!gameStarted) return;
-            isPaused = !isPaused;
-            const pauseMenu = document.getElementById('pause-menu');
-
-            if (isPaused) {
-                pauseMenu?.classList.remove('hidden');
-                playMenuMusic();
-            } else {
-                pauseMenu?.classList.add('hidden');
-                stopMenuMusic();
-            }
-        });
-
-        document.getElementById('resume-btn')?.addEventListener('click', () => {
-            isPaused = false;
-            document.getElementById('pause-menu')?.classList.add('hidden');
-            stopMenuMusic();
-        });
-
-        document.getElementById('restart-btn')?.addEventListener('click', () => {
-            document.getElementById('pause-menu')?.classList.add('hidden');
-            stopMenuMusic();
-            resetGame();
-            gameStarted = true;
-            isPaused = false;
-        });
-
-        document.getElementById('pause-menu-btn')?.addEventListener('click', returnToMainMenu);
-        document.getElementById('restart-game-over-btn')?.addEventListener('click', () => {
-            document.getElementById('game-over-modal')?.classList.add('hidden');
-            stopMenuMusic();
-            resetGame();
-            gameStarted = true;
-            isPaused = false;
-        });
-        document.getElementById('menu-game-over-btn')?.addEventListener('click', returnToMainMenu);
-
-        // --- Volume / Audio Controls ---
-        const volumeSlider = document.getElementById('volume-slider');
-        if (volumeSlider) {
-            volumeSlider.addEventListener('input', (e) => {
-                masterVolume = parseFloat(e.target.value);
-                if (masterGainNode) {
-                    masterGainNode.gain.value = masterVolume;
-                }
-            });
-        }
-
-        // --- Main Game Loop ---
-        let lastTime = performance.now();
-
-        function gameLoop(now) {
-            const dt = Math.min((now - lastTime) / 1000, 0.1); // Cap delta time to prevent physics tunneling
-            lastTime = now;
-
-            ctx.clearRect(0, 0, width, height);
-
-            // Always render background visuals
-            drawEnvironment();
-
-            if (gameStarted && !isPaused) {
-                // Smooth cannon movement interpolation (Lerp)
-                cannon.x += (cannon.targetX - cannon.x) * 0.25;
-
-                // Constrain cannon position inside screen bounds
-                const cannonPadding = 30;
-                if (cannon.x < cannonPadding) {
-                    cannon.x = cannonPadding;
-                    cannon.targetX = cannonPadding;
-                } else if (cannon.x > width - cannonPadding) {
-                    cannon.x = width - cannonPadding;
-                    cannon.targetX = width - cannonPadding;
-                }
-
-                // Continuous firing timer linked to Fire Rate Upgrade Level
-                shootTimer += dt;
-                const shootInterval = Math.max(0.08, 0.35 - (fireRateLevel * 0.025));
-                if (isFiring && shootTimer >= shootInterval) {
-                    spawnBullet();
-                    playSound('shoot');
-                    shootTimer = 0;
-                }
-
-                // Update entities
-                updateBullets(dt);
-                updateRocks(dt);
-                updateCoins(dt);
-                updateParticles(dt);
-                drawCannon();
-            } else if (!gameStarted) {
-                // Render background animations on menu screens
-                updateParticles(dt);
-            }
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        // --- Initialization ---
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        resetGame();
-        playMenuMusic();
-        requestAnimationFrame(gameLoop);
-    });
-    </script>
+    <!-- אזהרה למחשבים שולחניים -->
+    <div id="mobile-only-warning">
+        <h2>MOBILE ONLY</h2>
+        <p>Please open this game on your mobile phone!</p>
+    </div>
+
+    <!-- HUD במהלך המשחק -->
+    <div id="ui-container">
+        <!-- מד חיים -->
+        <div id="hp-container">
+            <div id="hp-bar"></div>
+            <span id="hp-text">1000 / 1000</span>
+        </div>
+
+        <!-- מד שלב -->
+        <div id="level-bar-container">
+            <span id="level-text">LEVEL 1</span>
+            <div class="progress-outer">
+                <div id="level-progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- מד מטבעות -->
+        <div id="coin-card">
+            <span class="coin-icon">🪙</span>
+            <span id="coins-val">0</span>
+        </div>
+
+        <!-- ניקוד -->
+        <div id="score-card">
+            <span class="score-label">SCORE</span>
+            <span id="score-val">0</span>
+        </div>
+
+        <!-- כפתור Pause -->
+        <button id="pause-btn" class="icon-btn">⏸</button>
+    </div>
+
+    <!-- 1. מסך תפריט ראשי + חנות ומפות -->
+    <div id="start-overlay">
+        <div id="start-menu">
+            <h1 class="game-title">BALL BLAST</h1>
+            <p class="game-subtitle">Upgrade your cannon & unlock maps!</p>
+
+            <div class="stats-row">
+                <div class="best-badge">BEST: <span id="start-best-score">0</span></div>
+                <div class="coins-badge">🪙 <span id="start-coins">0</span></div>
+            </div>
+
+            <!-- לשוניות ניווט בתפריט -->
+            <div class="menu-tabs">
+                <button id="tab-play-btn" class="tab-btn active">PLAY</button>
+                <button id="tab-shop-btn" class="tab-btn">SHOP</button>
+                <button id="tab-maps-btn" class="tab-btn">MAPS</button>
+            </div>
+
+            <!-- תוכן לשונית PLAY -->
+            <div id="tab-play" class="tab-content">
+                <button id="start-btn" class="btn">START GAME</button>
+            </div>
+
+            <!-- תוכן לשונית SHOP -->
+            <div id="tab-shop" class="tab-content hidden">
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>FIRE RATE</strong>
+                        <span id="fire-rate-lvl">Lvl 1</span>
+                    </div>
+                    <button id="buy-fire-rate-btn" class="buy-btn">🪙 <span id="fire-rate-cost">100</span></button>
+                </div>
+
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>FIRE POWER</strong>
+                        <span id="fire-power-lvl">Lvl 1</span>
+                    </div>
+                    <button id="buy-fire-power-btn" class="buy-btn">🪙 <span id="fire-power-cost">150</span></button>
+                </div>
+
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>COIN MAGNET</strong>
+                        <span id="magnet-lvl">Lvl 0</span>
+                    </div>
+                    <button id="buy-magnet-btn" class="buy-btn">🪙 <span id="magnet-cost">200</span></button>
+                </div>
+
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>TRIPLE CANNON</strong>
+                        <span id="multishot-status">Locked</span>
+                    </div>
+                    <button id="buy-multishot-btn" class="buy-btn">🪙 <span id="multishot-cost">500</span></button>
+                </div>
+            </div>
+
+            <!-- תוכן לשונית MAPS -->
+            <div id="tab-maps" class="tab-content hidden">
+                <div class="map-card selected" id="map-card-day">
+                    <span>☀️ DAY MOUNTAINS</span>
+                    <button id="select-map-day" class="map-btn">SELECTED</button>
+                </div>
+                <div class="map-card" id="map-card-sunset">
+                    <span>🌅 SUNSET HILLS</span>
+                    <button id="select-map-sunset" class="map-btn">🪙 500</button>
+                </div>
+                <div class="map-card" id="map-card-space">
+                    <span>🌌 NEON SPACE</span>
+                    <button id="select-map-space" class="map-btn">🪙 1500</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 2. תפריט עצירה (Pause) -->
+    <div id="pause-menu" class="hidden">
+        <div class="pause-card">
+            <h2>GAME PAUSED</h2>
+
+            <div class="customization-section" style="margin: 20px 0;">
+                <span class="section-label" style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 10px;">CANNON COLOR</span>
+                <div class="color-picker" style="display: flex; justify-content: center; gap: 10px;">
+                    <button class="color-btn active" style="background: #2563eb; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#2563eb')"></button>
+                    <button class="color-btn" style="background: #dc2626; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#dc2626')"></button>
+                    <button class="color-btn" style="background: #16a34a; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#16a34a')"></button>
+                    <button class="color-btn" style="background: #9333ea; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#9333ea')"></button>
+                </div>
+            </div>
+
+            <button id="resume-btn" class="btn">RESUME</button>
+            <button id="pause-home-btn" class="btn btn-secondary" style="margin-top: 10px;">MAIN MENU</button>
+        </div>
+    </div>
+
+    <!-- 3. מסך Game Over -->
+    <div id="game-over-modal" class="hidden">
+        <div class="pause-card">
+            <h2 style="color: #ef4444; font-size: 24px;">GAME OVER</h2>
+            <p style="font-size: 1.1rem; color: #fff; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
+            <p style="font-size: 1rem; color: #facc15; margin: 5px 0;">COINS: 🪙 <strong id="final-coins-val">0</strong></p>
+            <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">BEST: <span id="best-score-val">0</span></p>
+            
+            <div class="modal-buttons">
+                <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
+                <button id="home-btn" class="btn btn-secondary">MAIN MENU / SHOP</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js?v=9"></script>
 </body>
 </html>
