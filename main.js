@@ -1,66 +1,26 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- Background Ambient Music System (Menu Only) ---
-    const MENU_MUSIC_URL = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3';
-    
-    let menuMusic = new Audio(MENU_MUSIC_URL);
-    menuMusic.loop = true;
-    menuMusic.volume = 0.3;
-
-    function playMenuMusic() {
-        if (menuMusic.paused && !gameStarted) {
-            menuMusic.play().catch(err => {
-                console.warn("Autoplay blocked, waiting for user interaction:", err);
-            });
-        }
-    }
-
-    function stopMenuMusic() {
-        menuMusic.pause();
-        menuMusic.currentTime = 0;
-    }
-
-    // ניסיון הפעלה מיידי בטעינה
-    playMenuMusic();
-
-    // --- Audio Initializer Helper ---
-    let audioUnlocked = false;
-    function unlockAudio() {
-        if (!audioUnlocked) {
-            initAudio();
-            audioUnlocked = true;
-        }
-        playMenuMusic();
-    }
-
-    // --- Splash Screen ---
-    const splashScreen = document.getElementById('splash-screen');
-    if (splashScreen) {
-        const hideSplash = () => {
-            unlockAudio();
-            splashScreen.style.opacity = '0';
-            setTimeout(() => { splashScreen.style.display = 'none'; }, 500);
-            window.removeEventListener('pointerdown', hideSplash);
-        };
-        window.addEventListener('pointerdown', hideSplash);
-    }
-
-    // --- Mobile Detection ---
+    // --- Strict Mobile Only Check ---
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     }
+
     if (!isMobileDevice()) {
         const warning = document.getElementById('mobile-only-warning');
-        if (warning) warning.style.display = 'flex';
+        if (warning) {
+            warning.style.display = 'flex';
+            warning.classList.remove('hidden');
+        }
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.style.display = 'none';
+        const startOverlay = document.getElementById('start-overlay');
+        if (startOverlay) startOverlay.style.display = 'none';
+        
+        // עצירת הרצת הקוד כליל עבור מחשבים
+        return; 
     }
 
-    function requestFullScreen() {
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
-        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-    }
-
-    // --- Canvas Setup ---
+    // --- Dynamic Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     document.body.appendChild(canvas);
@@ -80,6 +40,77 @@ window.addEventListener('DOMContentLoaded', () => {
         initClouds();
     }
 
+    // --- State Variables ---
+    let gameStarted = false;
+    let isPaused = false;
+    let audioUnlocked = false;
+
+    // --- Sound Effects & Music Setup ---
+    const MENU_MUSIC_URL = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3';
+    let menuMusic = new Audio(MENU_MUSIC_URL);
+    menuMusic.loop = true;
+    menuMusic.volume = 0.3;
+
+    let audioCtx = null;
+    let masterGainNode = null;
+    let masterVolume = 0.25;
+
+    function initAudio() {
+        if (audioUnlocked) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGainNode = audioCtx.createGain();
+            masterGainNode.gain.value = masterVolume;
+            masterGainNode.connect(audioCtx.destination);
+            audioUnlocked = true;
+        } catch (e) {
+            console.warn("AudioContext init failed:", e);
+        }
+    }
+
+    function playMenuMusic() {
+        if (!gameStarted && audioUnlocked) {
+            menuMusic.play().catch(() => {});
+        }
+    }
+
+    function stopMenuMusic() {
+        menuMusic.pause();
+        menuMusic.currentTime = 0;
+    }
+
+    function unlockAudio() {
+        if (!audioUnlocked) {
+            initAudio();
+        }
+        playMenuMusic();
+    }
+
+    // --- Splash Screen Handling ---
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        const hideSplash = (e) => {
+            if (e) e.preventDefault();
+            unlockAudio();
+            splashScreen.style.opacity = '0';
+            setTimeout(() => { 
+                splashScreen.style.display = 'none'; 
+            }, 500);
+            window.removeEventListener('pointerdown', hideSplash);
+            window.removeEventListener('touchstart', hideSplash);
+            window.removeEventListener('click', hideSplash);
+        };
+        window.addEventListener('pointerdown', hideSplash);
+        window.addEventListener('touchstart', hideSplash);
+        window.addEventListener('click', hideSplash);
+    }
+
+    function requestFullScreen() {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+    }
+
     // --- Persistent Upgrades & Maps Data ---
     let totalCoins = parseInt(localStorage.getItem('cannon_total_coins')) || 0;
     let highScore = parseInt(localStorage.getItem('cannon_high_score_2d')) || 0;
@@ -92,27 +123,11 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
     let unlockedMaps = JSON.parse(localStorage.getItem('cannon_unlocked_maps')) || ['day'];
 
-    // --- Sound Effects System ---
-    let audioCtx = null;
-    let masterGainNode = null;
-    let masterVolume = 0.25;
-
-    function initAudio() {
-        try {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                masterGainNode = audioCtx.createGain();
-                masterGainNode.gain.value = masterVolume;
-                masterGainNode.connect(audioCtx.destination);
-            } else if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        } catch (e) {}
-    }
-
     function playSound(type) {
         if (!audioCtx || isPaused || masterVolume <= 0) return;
         try {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -367,7 +382,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- State & UI Updates ---
-    let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
     let score = 0;
@@ -385,30 +399,38 @@ window.addEventListener('DOMContentLoaded', () => {
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
 
-        document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
-        document.getElementById('fire-rate-cost').innerText = fireRateCost;
-        document.getElementById('buy-fire-rate-btn').disabled = totalCoins < fireRateCost;
+        const frLvl = document.getElementById('fire-rate-lvl');
+        const frCost = document.getElementById('fire-rate-cost');
+        const frBtn = document.getElementById('buy-fire-rate-btn');
+        if (frLvl) frLvl.innerText = `Lvl ${fireRateLevel}`;
+        if (frCost) frCost.innerText = fireRateCost;
+        if (frBtn) frBtn.disabled = totalCoins < fireRateCost;
 
-        document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
-        document.getElementById('fire-power-cost').innerText = firePowerCost;
-        document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
+        const fpLvl = document.getElementById('fire-power-lvl');
+        const fpCost = document.getElementById('fire-power-cost');
+        const fpBtn = document.getElementById('buy-fire-power-btn');
+        if (fpLvl) fpLvl.innerText = `Lvl ${firePowerLevel}`;
+        if (fpCost) fpCost.innerText = firePowerCost;
+        if (fpBtn) fpBtn.disabled = totalCoins < firePowerCost;
 
         const magnetLvlEl = document.getElementById('magnet-lvl');
         const magnetCostEl = document.getElementById('magnet-cost');
         const buyMagnetBtn = document.getElementById('buy-magnet-btn');
-
         if (magnetLvlEl) magnetLvlEl.innerText = `Lvl ${magnetLevel}`;
         if (magnetCostEl) magnetCostEl.innerText = magnetCost;
         if (buyMagnetBtn) buyMagnetBtn.disabled = totalCoins < magnetCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
-        if (hasMultishot) {
-            document.getElementById('multishot-status').innerText = 'UNLOCKED';
-            multishotBtn.innerText = 'OWNED';
-            multishotBtn.disabled = true;
-        } else {
-            document.getElementById('multishot-status').innerText = 'Locked';
-            multishotBtn.disabled = totalCoins < 500;
+        const multishotStatus = document.getElementById('multishot-status');
+        if (multishotBtn) {
+            if (hasMultishot) {
+                if (multishotStatus) multishotStatus.innerText = 'UNLOCKED';
+                multishotBtn.innerText = 'OWNED';
+                multishotBtn.disabled = true;
+            } else {
+                if (multishotStatus) multishotStatus.innerText = 'Locked';
+                multishotBtn.disabled = totalCoins < 500;
+            }
         }
 
         updateMapSelectorUI();
@@ -424,6 +446,8 @@ window.addEventListener('DOMContentLoaded', () => {
         maps.forEach(m => {
             const cardEl = document.getElementById(m.card);
             const btnEl = document.getElementById(m.btn);
+            if (!cardEl || !btnEl) return;
+
             const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
@@ -520,7 +544,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    // --- Bullets & Upgrades Logic ---
+    // --- Bullets Mechanics ---
     const bullets = [];
     let shootTimer = 0;
 
@@ -682,13 +706,14 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Controls ---
+    // --- Touch Input Controls (Mobile Only) ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         unlockAudio();
-        isDragging = true; isFiring = true;
+        isDragging = true; 
+        isFiring = true;
         touchStartX = e.touches[0].clientX;
     }, { passive: false });
 
@@ -702,7 +727,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
+    const stopInput = (e) => { 
+        if (e && e.preventDefault) e.preventDefault(); 
+        isDragging = false; 
+        isFiring = false; 
+    };
     canvas.addEventListener('touchend', stopInput, { passive: false });
 
     // --- Menu Navigation & Purchases ---
@@ -798,7 +827,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
     document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
 
-    // --- State Transitions ---
+    // --- Game Logic Transitions ---
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
         rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
