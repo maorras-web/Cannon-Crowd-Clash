@@ -23,10 +23,10 @@
 
     <!-- HUD במהלך המשחק -->
     <div id="ui-container">
-        <!-- מד חיים -->
-        <div id="hp-container">
-            <div id="hp-bar"></div>
-            <span id="hp-text">10000 / 10000</span>
+        <!-- מד חיים מורחב למניעת גלישת טקסט -->
+        <div id="hp-container" style="width: 110px; height: 22px; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div id="hp-bar" style="position: absolute; left: 0; top: 0; height: 100%; border-radius: 10px;"></div>
+            <span id="hp-text" style="position: relative; z-index: 2; font-size: 10px; font-weight: bold; white-space: nowrap;">10000 / 10000</span>
         </div>
 
         <!-- מד שלב -->
@@ -110,13 +110,13 @@
                     <button id="buy-multishot-btn" class="buy-btn">🪙 <span id="multishot-cost">500</span></button>
                 </div>
 
-                <!-- תותח טיטאן (הוסף ללשונית החנות) -->
-                <div class="upgrade-item shop-card">
+                <!-- תותח טיטאן באנגלית ותואם מלא -->
+                <div class="upgrade-item">
                     <div class="upgrade-info">
-                        <h3>תותח טיטאן</h3>
-                        <p id="titan-status">🪙 2000</p>
+                        <strong>TITAN CANNON</strong>
+                        <span id="titan-status">🪙 2000</span>
                     </div>
-                    <button id="buy-titan-btn" class="buy-btn">קנה</button>
+                    <button id="buy-titan-btn" class="buy-btn">BUY</button>
                 </div>
             </div>
 
