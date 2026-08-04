@@ -58,7 +58,33 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
     let unlockedMaps = JSON.parse(localStorage.getItem('cannon_unlocked_maps')) || ['day'];
 
-    // --- Audio System ---
+    // --- Background Music System ---
+    const MAP_MUSIC_CONFIG = {
+        day: 'assets/audio/retro-adventure.mp3',
+        sunset: 'assets/audio/synthwave-drive.mp3',
+        space: 'assets/audio/space-ambient.mp3'
+    };
+
+    let bgMusic = new Audio();
+    bgMusic.loop = true;
+    bgMusic.volume = 0.4;
+
+    function playMapMusic(mapId) {
+        const musicSrc = MAP_MUSIC_CONFIG[mapId];
+        if (!musicSrc) return;
+
+        if (bgMusic.src.includes(musicSrc) && !bgMusic.paused) return;
+
+        bgMusic.src = musicSrc;
+        bgMusic.load();
+        bgMusic.play().catch(err => console.log("Audio play blocked:", err));
+    }
+
+    function stopMapMusic() {
+        bgMusic.pause();
+    }
+
+    // --- Sound Effects System ---
     let audioCtx = null;
     let masterGainNode = null;
     let masterVolume = 0.25;
@@ -227,7 +253,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Environment Backgrounds (Day, Sunset, Space) ---
+    // --- Environment Backgrounds ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -281,7 +307,6 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.lineTo(0, height);
             ctx.fill();
         } else {
-            // Day Map (Default)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
             skyGrad.addColorStop(0, '#38bdf8');
             skyGrad.addColorStop(0.6, '#bae6fd');
@@ -301,7 +326,6 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
-        // Draw Clouds for Day & Sunset
         if (currentMap !== 'space') {
             ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
             clouds.forEach(c => {
@@ -334,7 +358,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- State, Level & Upgrades UI ---
+    // --- State & UI Updates ---
     let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
@@ -349,7 +373,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
-        // Upgrade Costs & Levels
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
@@ -380,7 +403,6 @@ window.addEventListener('DOMContentLoaded', () => {
             multishotBtn.disabled = totalCoins < 500;
         }
 
-        // Map Selector UI
         updateMapSelectorUI();
     }
 
@@ -749,6 +771,7 @@ window.addEventListener('DOMContentLoaded', () => {
             currentMap = mapId;
             localStorage.setItem('cannon_selected_map', currentMap);
             updateUI();
+            playMapMusic(currentMap);
         } else if (totalCoins >= cost) {
             totalCoins -= cost;
             unlockedMaps.push(mapId);
@@ -758,6 +781,7 @@ window.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('cannon_selected_map', currentMap);
             updateUI();
             playSound('coin');
+            playMapMusic(currentMap);
         }
     }
 
@@ -782,6 +806,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function gameOver() {
         gameStarted = false; isFiring = false; isDragging = false;
+        stopMapMusic();
+
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('cannon_high_score_2d', highScore);
@@ -803,6 +829,7 @@ window.addEventListener('DOMContentLoaded', () => {
         isPaused = false;
         isFiring = false;
         isDragging = false;
+        stopMapMusic();
 
         document.getElementById('game-over-modal')?.classList.add('hidden');
         document.getElementById('pause-menu')?.classList.add('hidden');
@@ -818,11 +845,13 @@ window.addEventListener('DOMContentLoaded', () => {
         gameStarted = true;
         isPaused = false;
         document.getElementById('start-overlay')?.classList.add('hidden');
+        playMapMusic(currentMap);
     });
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
         isPaused = true;
+        stopMapMusic();
         document.getElementById('pause-menu')?.classList.remove('hidden');
     });
 
@@ -830,6 +859,7 @@ window.addEventListener('DOMContentLoaded', () => {
         requestFullScreen();
         isPaused = false;
         document.getElementById('pause-menu')?.classList.add('hidden');
+        playMapMusic(currentMap);
     });
 
     document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
@@ -841,6 +871,7 @@ window.addEventListener('DOMContentLoaded', () => {
         resetGame();
         isPaused = false;
         gameStarted = true;
+        playMapMusic(currentMap);
     });
 
     // --- Main Game Loop ---
