@@ -110,7 +110,7 @@ window.addEventListener('DOMContentLoaded', () => {
         else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
     }
 
-    // --- Persistent Upgrades & Maps Data ---
+    // --- Persistent Upgrades, Cannon & Maps Data ---
     let totalCoins = parseInt(localStorage.getItem('cannon_total_coins')) || 0;
     let highScore = parseInt(localStorage.getItem('cannon_high_score_2d')) || 0;
 
@@ -118,6 +118,10 @@ window.addEventListener('DOMContentLoaded', () => {
     let firePowerLevel = parseInt(localStorage.getItem('cannon_lvl_firepower')) || 1;
     let magnetLevel = parseInt(localStorage.getItem('cannon_lvl_magnet')) || 0;
     let hasMultishot = localStorage.getItem('cannon_has_multishot') === 'true';
+
+    // --- Titan Cannon Unlock Data ---
+    let hasTitanCannon = localStorage.getItem('cannon_has_titan') === 'true';
+    const TITAN_CANNON_COST = 2000;
 
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
     let unlockedMaps = JSON.parse(localStorage.getItem('cannon_unlocked_maps')) || ['day'];
@@ -432,6 +436,20 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // --- Titan Cannon Shop UI ---
+        const titanBtn = document.getElementById('buy-titan-btn');
+        const titanStatus = document.getElementById('titan-status');
+        if (titanBtn) {
+            if (hasTitanCannon) {
+                if (titanStatus) titanStatus.innerText = 'UNLOCKED';
+                titanBtn.innerText = 'OWNED';
+                titanBtn.disabled = true;
+            } else {
+                if (titanStatus) titanStatus.innerText = `🪙 ${TITAN_CANNON_COST}`;
+                titanBtn.disabled = totalCoins < TITAN_CANNON_COST;
+            }
+        }
+
         updateMapSelectorUI();
     }
 
@@ -494,7 +512,7 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- Upgraded Titan Cannon Entity ---
+    // --- Cannon Drawing Logic ---
     let cannonColor = '#3b82f6';
     const cannon = { x: 0, y: 0, targetX: 0 };
 
@@ -509,62 +527,81 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.translate(cannon.x, cannon.y);
 
-        // זוהר תחתון (Glow Aura)
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00f0ff';
+        if (hasTitanCannon) {
+            // --- Titan Cannon Upgraded Render ---
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00f0ff';
 
-        // זחלי תנועה / גלגלים עתידניים
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(-32, 8, 64, 16);
-        ctx.fillStyle = '#3b82f6';
-        ctx.fillRect(-28, 12, 56, 8);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-32, 8, 64, 16);
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(-28, 12, 56, 8);
 
-        // בסיס התותח הראשי
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.moveTo(-26, 8);
-        ctx.lineTo(-18, -18);
-        ctx.lineTo(18, -18);
-        ctx.lineTo(26, 8);
-        ctx.closePath();
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#00f0ff';
-        ctx.stroke();
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(-26, 8);
+            ctx.lineTo(-18, -18);
+            ctx.lineTo(18, -18);
+            ctx.lineTo(26, 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#00f0ff';
+            ctx.stroke();
 
-        // קנים כפולים משוריינים
-        ctx.fillStyle = '#0284c7';
-        if (hasMultishot) {
-            ctx.fillRect(-24, -45, 10, 32);
-            ctx.fillRect(-5, -50, 10, 37);
-            ctx.fillRect(14, -45, 10, 32);
+            ctx.fillStyle = '#0284c7';
+            if (hasMultishot) {
+                ctx.fillRect(-24, -45, 10, 32);
+                ctx.fillRect(-5, -50, 10, 37);
+                ctx.fillRect(14, -45, 10, 32);
 
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(-22, -47, 6, 4);
-            ctx.fillRect(-3, -52, 6, 4);
-            ctx.fillRect(16, -47, 6, 4);
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(-22, -47, 6, 4);
+                ctx.fillRect(-3, -52, 6, 4);
+                ctx.fillRect(16, -47, 6, 4);
+            } else {
+                ctx.fillRect(-18, -45, 12, 32);
+                ctx.fillRect(6, -45, 12, 32);
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(-16, -47, 8, 4);
+                ctx.fillRect(8, -47, 8, 4);
+            }
+
+            const gradient = ctx.createRadialGradient(0, -4, 2, 0, -4, 22);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(0.4, '#38bdf8');
+            gradient.addColorStop(1, cannonColor);
+
+            ctx.beginPath();
+            ctx.arc(0, -4, 20, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
         } else {
-            ctx.fillRect(-18, -45, 12, 32);
-            ctx.fillRect(6, -45, 12, 32);
+            // --- Base Cannon Render ---
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(-20, 0, 40, 12);
 
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(-16, -47, 8, 4);
-            ctx.fillRect(8, -47, 8, 4);
+            ctx.fillStyle = '#0284c7';
+            if (hasMultishot) {
+                ctx.fillRect(-16, -30, 8, 30);
+                ctx.fillRect(-4, -35, 8, 35);
+                ctx.fillRect(8, -30, 8, 30);
+            } else {
+                ctx.fillRect(-8, -35, 16, 35);
+            }
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 16, 0, Math.PI * 2);
+            ctx.fillStyle = cannonColor;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
         }
-
-        // כיפה מרכזית עם זוהר הליבה
-        const gradient = ctx.createRadialGradient(0, -4, 2, 0, -4, 22);
-        gradient.addColorStop(0, '#ffffff');
-        gradient.addColorStop(0.4, '#38bdf8');
-        gradient.addColorStop(1, cannonColor);
-
-        ctx.beginPath();
-        ctx.arc(0, -4, 20, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
 
         ctx.restore();
     }
@@ -833,6 +870,18 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Buy Titan Cannon Handler
+    document.getElementById('buy-titan-btn')?.addEventListener('click', () => {
+        if (!hasTitanCannon && totalCoins >= TITAN_CANNON_COST) {
+            totalCoins -= TITAN_CANNON_COST;
+            hasTitanCannon = true;
+            localStorage.setItem('cannon_total_coins', totalCoins);
+            localStorage.setItem('cannon_has_titan', 'true');
+            updateUI();
+            playSound('coin');
+        }
+    });
+
     // Maps Selection & Purchase Handlers
     function handleMapClick(mapId, cost) {
         unlockAudio();
@@ -943,11 +992,9 @@ window.addEventListener('DOMContentLoaded', () => {
         drawEnvironment();
 
         if (gameStarted && !isPaused) {
-            // תנועת תותח מוחלקת
             cannon.x += (cannon.targetX - cannon.x) * 0.25;
             cannon.x = Math.max(35, Math.min(width - 35, cannon.x));
 
-            // מנגנון יריות
             shootTimer += dt;
             const fireInterval = Math.max(0.08, 0.25 - (fireRateLevel * 0.02));
             if (isFiring && shootTimer >= fireInterval) {
@@ -967,7 +1014,6 @@ window.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(gameLoop);
     }
 
-    // אתחול ראשוני
     resizeCanvas();
     resetGame();
     requestAnimationFrame(gameLoop);
