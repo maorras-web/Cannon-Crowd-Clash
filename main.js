@@ -1,9 +1,23 @@
 window.addEventListener('DOMContentLoaded', () => {
 
+    // --- Audio Initializer Helper ---
+    let audioUnlocked = false;
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        initAudio();
+        if (bgMusic) {
+            bgMusic.play().then(() => {
+                audioUnlocked = true;
+            }).catch(() => {});
+        }
+        audioUnlocked = true;
+    }
+
     // --- Splash Screen ---
     const splashScreen = document.getElementById('splash-screen');
     if (splashScreen) {
         const hideSplash = () => {
+            unlockAudio();
             splashScreen.style.opacity = '0';
             setTimeout(() => { splashScreen.style.display = 'none'; }, 500);
             window.removeEventListener('pointerdown', hideSplash);
@@ -58,26 +72,32 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
     let unlockedMaps = JSON.parse(localStorage.getItem('cannon_unlocked_maps')) || ['day'];
 
-    // --- Background Music System ---
+    // --- Background Music System (Online Audio Streams) ---
     const MAP_MUSIC_CONFIG = {
-        day: 'assets/audio/retro-adventure.mp3',
-        sunset: 'assets/audio/synthwave-drive.mp3',
-        space: 'assets/audio/space-ambient.mp3'
+        day: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=8-bit-arcade-138828.mp3',
+        sunset: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=synthwave-80s-110045.mp3',
+        space: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3'
     };
 
     let bgMusic = new Audio();
     bgMusic.loop = true;
-    bgMusic.volume = 0.4;
+    bgMusic.volume = 0.3;
 
     function playMapMusic(mapId) {
         const musicSrc = MAP_MUSIC_CONFIG[mapId];
         if (!musicSrc) return;
 
-        if (bgMusic.src.includes(musicSrc) && !bgMusic.paused) return;
+        if (bgMusic.src === musicSrc && !bgMusic.paused) return;
 
         bgMusic.src = musicSrc;
         bgMusic.load();
-        bgMusic.play().catch(err => console.log("Audio play blocked:", err));
+        
+        const playPromise = bgMusic.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(err => {
+                console.warn("Autoplay blocked or stream issue:", err);
+            });
+        }
     }
 
     function stopMapMusic() {
@@ -679,6 +699,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        unlockAudio();
         isDragging = true; isFiring = true;
         touchStartX = e.touches[0].clientX;
     }, { passive: false });
@@ -706,6 +727,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const mapsTabContent = document.getElementById('tab-maps');
 
     function switchTab(activeBtn, activeContent) {
+        unlockAudio();
         [playTabBtn, shopTabBtn, mapsTabBtn].forEach(b => b?.classList.remove('active'));
         [playTabContent, shopTabContent, mapsTabContent].forEach(c => c?.classList.add('hidden'));
 
@@ -767,6 +789,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Maps Selection & Purchase Handlers
     function handleMapClick(mapId, cost) {
+        unlockAudio();
         if (unlockedMaps.includes(mapId)) {
             currentMap = mapId;
             localStorage.setItem('cannon_selected_map', currentMap);
@@ -839,8 +862,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
+        unlockAudio();
         requestFullScreen();
-        initAudio();
         resetGame();
         gameStarted = true;
         isPaused = false;
@@ -856,6 +879,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => {
+        unlockAudio();
         requestFullScreen();
         isPaused = false;
         document.getElementById('pause-menu')?.classList.add('hidden');
@@ -866,6 +890,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
+        unlockAudio();
         requestFullScreen();
         document.getElementById('game-over-modal')?.classList.add('hidden');
         resetGame();
