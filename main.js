@@ -1,16 +1,36 @@
 window.addEventListener('DOMContentLoaded', () => {
 
+    // --- Background Ambient Music System ---
+    const MENU_MUSIC_URL = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3';
+    
+    let menuMusic = new Audio(MENU_MUSIC_URL);
+    menuMusic.loop = true;
+    menuMusic.volume = 0.3;
+
+    function playMenuMusic() {
+        if (menuMusic.paused) {
+            menuMusic.play().catch(err => {
+                console.warn("Autoplay blocked, waiting for user interaction:", err);
+            });
+        }
+    }
+
+    function stopMenuMusic() {
+        menuMusic.pause();
+        menuMusic.currentTime = 0;
+    }
+
+    // ניסיון הפעלה מיידי בטעינה
+    playMenuMusic();
+
     // --- Audio Initializer Helper ---
     let audioUnlocked = false;
     function unlockAudio() {
-        if (audioUnlocked) return;
-        initAudio();
-        if (bgMusic) {
-            bgMusic.play().then(() => {
-                audioUnlocked = true;
-            }).catch(() => {});
+        if (!audioUnlocked) {
+            initAudio();
+            audioUnlocked = true;
         }
-        audioUnlocked = true;
+        playMenuMusic(); // מבטיח שהמוזיקה תופעל בנגיעה הראשונה במידה והדפדפן חסם אוטופליי
     }
 
     // --- Splash Screen ---
@@ -71,38 +91,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
     let unlockedMaps = JSON.parse(localStorage.getItem('cannon_unlocked_maps')) || ['day'];
-
-    // --- Background Music System (Online Audio Streams) ---
-    const MAP_MUSIC_CONFIG = {
-        day: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=8-bit-arcade-138828.mp3',
-        sunset: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=synthwave-80s-110045.mp3',
-        space: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3'
-    };
-
-    let bgMusic = new Audio();
-    bgMusic.loop = true;
-    bgMusic.volume = 0.3;
-
-    function playMapMusic(mapId) {
-        const musicSrc = MAP_MUSIC_CONFIG[mapId];
-        if (!musicSrc) return;
-
-        if (bgMusic.src === musicSrc && !bgMusic.paused) return;
-
-        bgMusic.src = musicSrc;
-        bgMusic.load();
-        
-        const playPromise = bgMusic.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(err => {
-                console.warn("Autoplay blocked or stream issue:", err);
-            });
-        }
-    }
-
-    function stopMapMusic() {
-        bgMusic.pause();
-    }
 
     // --- Sound Effects System ---
     let audioCtx = null;
@@ -794,7 +782,6 @@ window.addEventListener('DOMContentLoaded', () => {
             currentMap = mapId;
             localStorage.setItem('cannon_selected_map', currentMap);
             updateUI();
-            playMapMusic(currentMap);
         } else if (totalCoins >= cost) {
             totalCoins -= cost;
             unlockedMaps.push(mapId);
@@ -804,7 +791,6 @@ window.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('cannon_selected_map', currentMap);
             updateUI();
             playSound('coin');
-            playMapMusic(currentMap);
         }
     }
 
@@ -829,7 +815,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function gameOver() {
         gameStarted = false; isFiring = false; isDragging = false;
-        stopMapMusic();
+        playMenuMusic(); // מחזיר את מוזיקת הרקע כשחוזרים לטאב הפסידה/תפריט
 
         if (score > highScore) {
             highScore = score;
@@ -852,7 +838,7 @@ window.addEventListener('DOMContentLoaded', () => {
         isPaused = false;
         isFiring = false;
         isDragging = false;
-        stopMapMusic();
+        playMenuMusic(); // מחזיר את המוזיקה בחזרה לתפריט הראשי
 
         document.getElementById('game-over-modal')?.classList.add('hidden');
         document.getElementById('pause-menu')?.classList.add('hidden');
@@ -863,18 +849,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
         unlockAudio();
+        stopMenuMusic(); // מפסיק את מוזיקת התפריט כשמתחילים משחק
         requestFullScreen();
         resetGame();
         gameStarted = true;
         isPaused = false;
         document.getElementById('start-overlay')?.classList.add('hidden');
-        playMapMusic(currentMap);
     });
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
         isPaused = true;
-        stopMapMusic();
         document.getElementById('pause-menu')?.classList.remove('hidden');
     });
 
@@ -883,7 +868,6 @@ window.addEventListener('DOMContentLoaded', () => {
         requestFullScreen();
         isPaused = false;
         document.getElementById('pause-menu')?.classList.add('hidden');
-        playMapMusic(currentMap);
     });
 
     document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
@@ -891,12 +875,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('restart-btn')?.addEventListener('click', () => {
         unlockAudio();
+        stopMenuMusic(); // מפסיק מוזיקה אם הייתה פעילה ב-Game Over
         requestFullScreen();
         document.getElementById('game-over-modal')?.classList.add('hidden');
         resetGame();
         isPaused = false;
         gameStarted = true;
-        playMapMusic(currentMap);
     });
 
     // --- Main Game Loop ---
