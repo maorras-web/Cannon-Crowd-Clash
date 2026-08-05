@@ -354,30 +354,38 @@ window.addEventListener('DOMContentLoaded', () => {
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
 
-        document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
-        document.getElementById('fire-rate-cost').innerText = fireRateCost;
-        document.getElementById('buy-fire-rate-btn').disabled = totalCoins < fireRateCost;
+        const frLvl = document.getElementById('fire-rate-lvl');
+        const frCost = document.getElementById('fire-rate-cost');
+        const frBtn = document.getElementById('buy-fire-rate-btn');
+        if (frLvl) frLvl.innerText = `Lvl ${fireRateLevel}`;
+        if (frCost) frCost.innerText = fireRateCost;
+        if (frBtn) frBtn.disabled = totalCoins < fireRateCost;
 
-        document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
-        document.getElementById('fire-power-cost').innerText = firePowerCost;
-        document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
+        const fpLvl = document.getElementById('fire-power-lvl');
+        const fpCost = document.getElementById('fire-power-cost');
+        const fpBtn = document.getElementById('buy-fire-power-btn');
+        if (fpLvl) fpLvl.innerText = `Lvl ${firePowerLevel}`;
+        if (fpCost) fpCost.innerText = firePowerCost;
+        if (fpBtn) fpBtn.disabled = totalCoins < firePowerCost;
 
         const magnetLvlEl = document.getElementById('magnet-lvl');
         const magnetCostEl = document.getElementById('magnet-cost');
         const buyMagnetBtn = document.getElementById('buy-magnet-btn');
-
         if (magnetLvlEl) magnetLvlEl.innerText = `Lvl ${magnetLevel}`;
         if (magnetCostEl) magnetCostEl.innerText = magnetCost;
         if (buyMagnetBtn) buyMagnetBtn.disabled = totalCoins < magnetCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
+        const multishotStatus = document.getElementById('multishot-status');
         if (hasMultishot) {
-            document.getElementById('multishot-status').innerText = 'UNLOCKED';
-            multishotBtn.innerText = 'OWNED';
-            multishotBtn.disabled = true;
+            if (multishotStatus) multishotStatus.innerText = 'UNLOCKED';
+            if (multishotBtn) {
+                multishotBtn.innerText = 'OWNED';
+                multishotBtn.disabled = true;
+            }
         } else {
-            document.getElementById('multishot-status').innerText = 'Locked';
-            multishotBtn.disabled = totalCoins < 500;
+            if (multishotStatus) multishotStatus.innerText = 'Locked';
+            if (multishotBtn) multishotBtn.disabled = totalCoins < 500;
         }
 
         updateMapSelectorUI();
@@ -393,6 +401,8 @@ window.addEventListener('DOMContentLoaded', () => {
         maps.forEach(m => {
             const cardEl = document.getElementById(m.card);
             const btnEl = document.getElementById(m.btn);
+            if (!cardEl || !btnEl) return;
+
             const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
@@ -657,10 +667,9 @@ window.addEventListener('DOMContentLoaded', () => {
     let enemyAnimTime = 0;
 
     function updateEnemies(dt) {
-        enemyAnimTime += dt * 8; // מהירות נפנוף הכנפיים
+        enemyAnimTime += dt * 8;
 
         enemySpawnTimer += dt;
-        // הופעת עטלף אויב כל 10 שניות
         if (enemySpawnTimer > 10 && enemies.length === 0 && gameStarted && !isPaused) {
             enemySpawnTimer = 0;
             enemies.push({
@@ -676,7 +685,6 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
 
-            // תנועה מצד לצד + תנודה אנכית כעין מעוף
             e.x += e.vx * dt;
             e.y += Math.sin(enemyAnimTime * 0.5) * 0.6;
 
@@ -684,7 +692,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 e.vx = -e.vx;
             }
 
-            // התנגשות בתותח
             const distToCannon = Math.hypot(e.x - cannon.x, e.y - cannon.y);
             if (distToCannon < e.radius + 26) {
                 currentHp -= 40;
@@ -696,7 +703,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            // פגיעת קליעים בחיה
             for (let j = bullets.length - 1; j >= 0; j--) {
                 const b = bullets[j];
                 const distToBullet = Math.hypot(e.x - b.x, e.y - b.y);
@@ -724,12 +730,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 const wingFlap = Math.sin(enemyAnimTime) * 18;
 
-                // ציור כנפיים (סגול)
                 ctx.fillStyle = '#581c87';
                 ctx.strokeStyle = '#a855f7';
                 ctx.lineWidth = 2;
 
-                // כנף שמאל
                 ctx.beginPath();
                 ctx.moveTo(0, -5);
                 ctx.quadraticCurveTo(-25, -30 + wingFlap, -45, -5 + wingFlap);
@@ -737,7 +741,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 ctx.fill();
                 ctx.stroke();
 
-                // כנף ימין
                 ctx.beginPath();
                 ctx.moveTo(0, -5);
                 ctx.quadraticCurveTo(25, -30 + wingFlap, 45, -5 + wingFlap);
@@ -745,28 +748,24 @@ window.addEventListener('DOMContentLoaded', () => {
                 ctx.fill();
                 ctx.stroke();
 
-                // גוף וראש העטלף
                 ctx.fillStyle = '#3b0764';
                 ctx.beginPath();
                 ctx.arc(0, 0, 14, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                // אוזניים
                 ctx.fillStyle = '#581c87';
                 ctx.beginPath();
                 ctx.moveTo(-8, -10); ctx.lineTo(-14, -22); ctx.lineTo(-2, -12);
                 ctx.moveTo(8, -10); ctx.lineTo(14, -22); ctx.lineTo(2, -12);
                 ctx.fill();
 
-                // עיניים אדומות
                 ctx.fillStyle = '#ef4444';
                 ctx.beginPath();
                 ctx.arc(-5, -3, 3, 0, Math.PI * 2);
                 ctx.arc(5, -3, 3, 0, Math.PI * 2);
                 ctx.fill();
 
-                // מד חיים מעל החיה
                 ctx.fillStyle = '#ffffff';
                 ctx.font = '900 12px sans-serif';
                 ctx.textAlign = 'center';
@@ -890,11 +889,29 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
     document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
 
-    // --- State Transitions ---
-    function resetGame() {
-        score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
-        enemies.length = 0; enemySpawnTimer = 0;
+    // --- Game Lifecycle ---
+    const startMenu = document.getElementById('start-menu');
+    const gameUi = document.getElementById('game-ui');
+    const gameOverMenu = document.getElementById('game-over-menu');
+    const pauseMenu = document.getElementById('pause-menu');
+
+    function startGame() {
+        initAudio();
+        requestFullScreen();
+
+        gameStarted = true;
+        isPaused = false;
+        score = 0;
+        currentLevel = 1;
+        levelProgress = 0;
+        currentHp = maxHp;
+
+        bullets.length = 0;
+        rocks.length = 0;
+        particles.length = 0;
+        coinsList.length = 0;
+        enemies.length = 0;
+
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
@@ -903,71 +920,75 @@ window.addEventListener('DOMContentLoaded', () => {
 
         updateHpBar();
         updateLevelUI();
-        updateUI();
+
+        if (startMenu) startMenu.classList.add('hidden');
+        if (gameOverMenu) gameOverMenu.classList.add('hidden');
+        if (pauseMenu) pauseMenu.classList.add('hidden');
+        if (gameUi) gameUi.classList.remove('hidden');
+
+        spawnRock(width * 0.3, 80, 8, 2);
+        spawnRock(width * 0.7, 80, 6, 1);
     }
 
     function gameOver() {
-        gameStarted = false; isFiring = false; isDragging = false;
+        gameStarted = false;
+        playSound('explode');
+
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('cannon_high_score_2d', highScore);
         }
 
-        const gameOverModal = document.getElementById('game-over-modal');
-        const finalScoreVal = document.getElementById('final-score-val');
-        const finalCoinsVal = document.getElementById('final-coins-val');
-        const bestScoreVal = document.getElementById('best-score-val');
+        const finalScore = document.getElementById('final-score');
+        const finalBest = document.getElementById('final-best-score');
+        if (finalScore) finalScore.innerText = score;
+        if (finalBest) finalBest.innerText = highScore;
 
-        if (finalScoreVal) finalScoreVal.innerText = score;
-        if (finalCoinsVal) finalCoinsVal.innerText = totalCoins;
-        if (bestScoreVal) bestScoreVal.innerText = highScore;
-        if (gameOverModal) gameOverModal.classList.remove('hidden');
-    }
-
-    function returnToMainMenu() {
-        gameStarted = false;
-        isPaused = false;
-        isFiring = false;
-        isDragging = false;
-
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        document.getElementById('pause-menu')?.classList.add('hidden');
-        document.getElementById('start-overlay')?.classList.remove('hidden');
-
+        if (gameUi) gameUi.classList.add('hidden');
+        if (gameOverMenu) gameOverMenu.classList.remove('hidden');
         updateUI();
     }
 
-    document.getElementById('start-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        initAudio();
-        resetGame();
-        gameStarted = true;
-        isPaused = false;
-        document.getElementById('start-overlay')?.classList.add('hidden');
-    });
-
-    document.getElementById('pause-btn')?.addEventListener('click', () => {
+    function togglePause() {
         if (!gameStarted) return;
-        isPaused = true;
-        document.getElementById('pause-menu')?.classList.remove('hidden');
-    });
+        isPaused = !isPaused;
+        if (pauseMenu) {
+            if (isPaused) pauseMenu.classList.remove('hidden');
+            else pauseMenu.classList.add('hidden');
+        }
+    }
 
-    document.getElementById('resume-btn')?.addEventListener('click', () => {
-        requestFullScreen();
+    function backToMenu() {
+        gameStarted = false;
         isPaused = false;
-        document.getElementById('pause-menu')?.classList.add('hidden');
-    });
+        if (gameUi) gameUi.classList.add('hidden');
+        if (pauseMenu) pauseMenu.classList.add('hidden');
+        if (gameOverMenu) gameOverMenu.classList.add('hidden');
+        if (startMenu) startMenu.classList.remove('hidden');
+        updateUI();
+    }
 
-    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
-    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
+    document.getElementById('start-btn')?.addEventListener('click', startGame);
+    document.getElementById('restart-btn')?.addEventListener('click', startGame);
+    document.getElementById('pause-btn')?.addEventListener('click', togglePause);
+    document.getElementById('resume-btn')?.addEventListener('click', togglePause);
+    document.getElementById('menu-btn')?.addEventListener('click', backToMenu);
 
-    document.getElementById('restart-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        resetGame();
-        isPaused = false;
-        gameStarted = true;
+    // --- Keyboard Controls Support ---
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
     });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    function handleKeyboardInput(dt) {
+        if (!gameStarted || isPaused) return;
+        const moveSpeed = 600 * dt;
+        if (keys['ArrowLeft'] || keys['KeyA']) cannon.targetX -= moveSpeed;
+        if (keys['ArrowRight'] || keys['KeyD']) cannon.targetX += moveSpeed;
+        if (keys['Space']) isFiring = true;
+    }
 
     // --- Main Game Loop ---
     let lastTime = performance.now();
@@ -976,19 +997,24 @@ window.addEventListener('DOMContentLoaded', () => {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
+        ctx.clearRect(0, 0, width, height);
+
         drawEnvironment();
 
         if (gameStarted && !isPaused) {
-            cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
-            cannon.x += (cannon.targetX - cannon.x) * 0.25;
+            handleKeyboardInput(dt);
 
-            const fireInterval = Math.max(0.02, 0.075 - (fireRateLevel * 0.007));
+            // Smooth Movement
+            cannon.x += (cannon.targetX - cannon.x) * 0.2;
+            cannon.x = Math.max(30, Math.min(width - 30, cannon.x));
 
+            // Automatic Firing Logic
             shootTimer += dt;
-            if (isFiring && shootTimer >= fireInterval) {
-                shootTimer = 0;
+            const fireInterval = Math.max(0.08, 0.25 - (fireRateLevel * 0.02));
+            if (shootTimer >= fireInterval) {
                 spawnBullet();
                 playSound('shoot');
+                shootTimer = 0;
             }
 
             updateBullets(dt);
@@ -996,13 +1022,18 @@ window.addEventListener('DOMContentLoaded', () => {
             updateEnemies(dt);
             updateCoins(dt);
             updateParticles(dt);
+        } else if (!gameStarted) {
+            // Idle animations on start screen
+            updateParticles(dt);
         }
 
         drawCannon();
+
         requestAnimationFrame(gameLoop);
     }
 
-    resizeCanvas();
+    // --- Window Resize & Initialization ---
     window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
     requestAnimationFrame(gameLoop);
 });
