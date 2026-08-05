@@ -2,174 +2,161 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Ball Blast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cannon Crowd Clash 2D</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <!-- Splash Screen -->
+    <!-- מסך פתיחה Splash Screen -->
     <div id="splash-screen">
-        <h1>BALL BLAST</h1>
-        <p>TAP TO PLAY</p>
+        <div class="splash-content">
+            <div class="splash-icon">🚀</div>
+            <h1 class="splash-title">CANNON CLASH</h1>
+            <p class="splash-subtitle">לחץ על המסך כדי להתחיל</p>
+        </div>
     </div>
 
-    <!-- Mobile Only Warning -->
-    <div id="mobile-only-warning" class="hidden">
-        <p>📱 המשחק מותאם למכשירים ניידים בלבד</p>
-    </div>
-
-    <!-- Game UI Header -->
+    <!-- UI בזמן משחק -->
     <div id="game-ui" class="hidden">
-        <div class="top-bar">
-            <button id="pause-btn" class="icon-btn">⏸️</button>
-            <div class="stats-group">
-                <div class="stat-box">🪙 <span id="coins-val">0</span></div>
-                <div class="stat-box">🏆 <span id="score-val">0</span></div>
+        <div class="top-nav">
+            <div class="score-container">
+                <span class="icon">🏆</span>
+                <span id="score-val">0</span>
+            </div>
+            <div class="coins-container">
+                <span class="icon">🪙</span>
+                <span id="coins-val">0</span>
             </div>
         </div>
 
-        <div class="level-container">
-            <div id="level-text">LEVEL 1</div>
-            <div class="progress-bar-bg">
+        <!-- מד מתקדם של השלב -->
+        <div class="level-bar-container">
+            <span id="level-text">LEVEL 1</span>
+            <div class="level-progress-bg">
                 <div id="level-progress-fill"></div>
             </div>
         </div>
 
-        <div class="hp-container">
-            <div class="hp-bar-bg">
-                <div id="hp-bar"></div>
-            </div>
+        <!-- מד חיים של התותח -->
+        <div class="hp-bar-container">
+            <div id="hp-bar"></div>
             <span id="hp-text">1000 / 1000</span>
         </div>
     </div>
 
-    <!-- Main Navigation Menu (Full Screen Modal) -->
-    <div id="start-menu" class="fullscreen-menu">
-        <div class="menu-header">
-            <h1 class="game-title">BALL BLAST</h1>
-            <div class="header-stats">
-                <div class="header-stat">🏆 BEST: <span id="start-best-score">0</span></div>
-                <div class="header-stat wallet">🪙 <span id="start-coins">0</span></div>
+    <!-- תפריט ראשי / חנות במסך מלא -->
+    <div id="start-menu" class="full-screen-menu">
+        <header class="menu-header">
+            <div class="app-title">
+                <h1>CANNON CLASH 2D</h1>
+                <p>שדרג את התותח וכבוש את המפות!</p>
             </div>
+            <div class="player-stats">
+                <div class="stat-badge">🪙 <span id="start-coins">0</span></div>
+                <div class="stat-badge">🏆 <span id="start-best-score">0</span></div>
+            </div>
+        </header>
+
+        <!-- לשוניות ניווט -->
+        <nav class="shop-tabs">
+            <button id="tab-play-btn" class="tab-btn active">🎮 משחק</button>
+            <button id="tab-shop-btn" class="tab-btn">⚡ שדרוגים</button>
+            <button id="tab-maps-btn" class="tab-btn">🗺️ מפות</button>
+        </nav>
+
+        <!-- תוכן הלשוניות -->
+        <div class="tabs-content">
             
-            <!-- Navigation Tabs -->
-            <div class="nav-tabs">
-                <button id="tab-play-btn" class="tab-btn active">PLAY</button>
-                <button id="tab-shop-btn" class="tab-btn">SHOP</button>
-                <button id="tab-maps-btn" class="tab-btn">MAPS</button>
-            </div>
-        </div>
-
-        <div class="menu-content">
-            <!-- PLAY TAB -->
-            <div id="tab-play" class="tab-content">
-                <button id="start-btn" class="main-play-btn">START GAME</button>
+            <!-- לשונית משחק -->
+            <div id="tab-play" class="tab-content active-content">
+                <button id="start-btn" class="big-action-btn">התחל משחק</button>
             </div>
 
-            <!-- SHOP TAB (Arcade Fullscreen Layout) -->
+            <!-- לשונית שדרוגים -->
             <div id="tab-shop" class="tab-content hidden">
-                <div class="section-title">POWER-UPS</div>
-                
-                <div class="shop-list">
-                    <!-- Fire Rate -->
+                <div class="shop-cards-grid">
+                    
                     <div class="shop-card">
-                        <div class="item-icon">⚡</div>
-                        <div class="item-details">
-                            <div class="item-title">Fire Rate</div>
-                            <div class="item-desc">+2% Faster Shooting</div>
-                            <div class="item-level" id="fire-rate-lvl">LVL: 1</div>
+                        <div class="card-icon">⚡</div>
+                        <div class="card-info">
+                            <h3>קצב ירי</h3>
+                            <span id="fire-rate-lvl" class="lvl-tag">LVL: 1</span>
                         </div>
                         <button id="buy-fire-rate-btn" class="buy-btn">
-                            <span id="fire-rate-cost">100</span> 🪙
+                            🪙 <span id="fire-rate-cost">100</span>
                         </button>
                     </div>
 
-                    <!-- Fire Power -->
                     <div class="shop-card">
-                        <div class="item-icon">🚀</div>
-                        <div class="item-details">
-                            <div class="item-title">Fire Power</div>
-                            <div class="item-desc">+1 Bullet Damage</div>
-                            <div class="item-level" id="fire-power-lvl">LVL: 1</div>
+                        <div class="card-icon">💥</div>
+                        <div class="card-info">
+                            <h3>עוצמת ירייה</h3>
+                            <span id="fire-power-lvl" class="lvl-tag">LVL: 1</span>
                         </div>
                         <button id="buy-fire-power-btn" class="buy-btn">
-                            <span id="fire-power-cost">150</span> 🪙
+                            🪙 <span id="fire-power-cost">150</span>
                         </button>
                     </div>
 
-                    <!-- Coin Magnet -->
                     <div class="shop-card">
-                        <div class="item-icon">🧲</div>
-                        <div class="item-details">
-                            <div class="item-title">Coin Magnet</div>
-                            <div class="item-desc">Attracts Nearby Coins</div>
-                            <div class="item-level" id="magnet-lvl">LVL: 0</div>
+                        <div class="card-icon">🧲</div>
+                        <div class="card-info">
+                            <h3>מגנט מטבעות</h3>
+                            <span id="magnet-lvl" class="lvl-tag">LVL: 0</span>
                         </div>
                         <button id="buy-magnet-btn" class="buy-btn">
-                            <span id="magnet-cost">200</span> 🪙
+                            🪙 <span id="magnet-cost">200</span>
                         </button>
                     </div>
 
-                    <!-- Triple Cannon -->
                     <div class="shop-card">
-                        <div class="item-icon">💥</div>
-                        <div class="item-details">
-                            <div class="item-title">Triple Cannon</div>
-                            <div class="item-desc">Fires 3 Bullets Simultaneously</div>
-                            <div class="item-level" id="multishot-status">Locked</div>
+                        <div class="card-icon">🔱</div>
+                        <div class="card-info">
+                            <h3>ירי משולש</h3>
+                            <span id="multishot-status" class="lvl-tag">נעול</span>
                         </div>
                         <button id="buy-multishot-btn" class="buy-btn">
-                            500 🪙
+                            🪙 <span>500</span>
                         </button>
                     </div>
+
                 </div>
             </div>
 
-            <!-- MAPS TAB -->
+            <!-- לשונית מפות -->
             <div id="tab-maps" class="tab-content hidden">
-                <div class="section-title">ENVIRONMENTS</div>
                 <div class="maps-grid">
-                    <div id="map-card-day" class="map-card selected">
-                        <div class="map-preview day-bg">☀️</div>
-                        <div class="map-name">Day Sky</div>
-                        <button id="select-map-day" class="map-btn selected-btn">SELECTED</button>
+                    
+                    <div class="map-card selected" id="map-card-day">
+                        <div class="map-preview map-day-bg"></div>
+                        <h4>יום בהיר</h4>
+                        <button id="select-map-day" class="map-btn selected-btn">בשימוש</button>
                     </div>
-                    <div id="map-card-sunset" class="map-card">
-                        <div class="map-preview sunset-bg">🌅</div>
-                        <div class="map-name">Sunset</div>
+
+                    <div class="map-card" id="map-card-sunset">
+                        <div class="map-preview map-sunset-bg"></div>
+                        <h4>שקיעה סגולה</h4>
                         <button id="select-map-sunset" class="map-btn">🪙 500</button>
                     </div>
-                    <div id="map-card-space" class="map-card">
-                        <div class="map-preview space-bg">🌌</div>
-                        <div class="map-name">Deep Space</div>
+
+                    <div class="map-card" id="map-card-space">
+                        <div class="map-preview map-space-bg"></div>
+                        <h4>חלל עמוק</h4>
                         <button id="select-map-space" class="map-btn">🪙 1500</button>
                     </div>
+
                 </div>
             </div>
+
         </div>
     </div>
 
-    <!-- Pause Menu -->
-    <div id="pause-menu" class="fullscreen-overlay hidden">
-        <div class="modal-card">
-            <h2>PAUSED</h2>
-            <button id="resume-btn" class="menu-btn primary">RESUME</button>
-            <button id="menu-btn" class="menu-btn secondary">MAIN MENU</button>
-        </div>
-    </div>
-
-    <!-- Game Over Menu -->
-    <div id="game-over-menu" class="fullscreen-overlay hidden">
-        <div class="modal-card">
-            <h2 class="danger">GAME OVER</h2>
-            <div class="final-stats">
-                <p>SCORE: <span id="final-score">0</span></p>
-                <p>BEST: <span id="final-best-score">0</span></p>
-            </div>
-            <button id="restart-btn" class="menu-btn primary">PLAY AGAIN</button>
-        </div>
+    <!-- מסך Game Over -->
+    <div id="game-over-menu" class="full-screen-menu hidden">
+        <h2 class="game-over-title">המשחק נגמר!</h2>
+        <button id="restart-btn" class="big-action-btn">נסה שוב</button>
     </div>
 
     <script src="main.js"></script>
