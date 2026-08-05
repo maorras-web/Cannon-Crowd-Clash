@@ -11,6 +11,21 @@ window.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('pointerdown', hideSplash);
     }
 
+    // --- Mobile Detection ---
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    }
+    if (!isMobileDevice()) {
+        const warning = document.getElementById('mobile-only-warning');
+        if (warning) warning.style.display = 'flex';
+    }
+
+    function requestFullScreen() {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+    }
+
     // --- Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -31,7 +46,7 @@ window.addEventListener('DOMContentLoaded', () => {
         initClouds();
     }
 
-    // --- Data Persistence ---
+    // --- Persistent Upgrades & Maps Data ---
     let totalCoins = parseInt(localStorage.getItem('cannon_total_coins')) || 0;
     let highScore = parseInt(localStorage.getItem('cannon_high_score_2d')) || 0;
 
@@ -107,7 +122,7 @@ window.addEventListener('DOMContentLoaded', () => {
         } catch(e) {}
     }
 
-    // --- Particles & Items ---
+    // --- Particles & Coins ---
     const particles = [];
     const coinsList = [];
 
@@ -212,7 +227,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Environment Backgrounds ---
+    // --- Environment Backgrounds (Day, Sunset, Space) ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -251,7 +266,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
             ctx.fillStyle = '#38bdf8';
             for (let i = 0; i < 20; i++) {
-                ctx.fillRect((i * 97) % width, (i * 131) % (height * 0.7), 2, 2);
+                const sx = (i * 97) % width;
+                const sy = (i * 131) % (height * 0.7);
+                ctx.fillRect(sx, sy, 2, 2);
             }
 
             ctx.fillStyle = '#1e1b4b';
@@ -264,6 +281,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.lineTo(0, height);
             ctx.fill();
         } else {
+            // Day Map (Default)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
             skyGrad.addColorStop(0, '#38bdf8');
             skyGrad.addColorStop(0.6, '#bae6fd');
@@ -283,6 +301,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
+        // Draw Clouds for Day & Sunset
         if (currentMap !== 'space') {
             ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
             clouds.forEach(c => {
@@ -315,7 +334,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- State & UI ---
+    // --- State, Level & Upgrades UI ---
     let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
@@ -330,44 +349,38 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
+        // Upgrade Costs & Levels
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
 
-        const frLvl = document.getElementById('fire-rate-lvl');
-        const frCost = document.getElementById('fire-rate-cost');
-        const frBtn = document.getElementById('buy-fire-rate-btn');
-        if (frLvl) frLvl.innerText = `LVL: ${fireRateLevel}`;
-        if (frCost) frCost.innerText = fireRateCost;
-        if (frBtn) frBtn.disabled = totalCoins < fireRateCost;
+        document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
+        document.getElementById('fire-rate-cost').innerText = fireRateCost;
+        document.getElementById('buy-fire-rate-btn').disabled = totalCoins < fireRateCost;
 
-        const fpLvl = document.getElementById('fire-power-lvl');
-        const fpCost = document.getElementById('fire-power-cost');
-        const fpBtn = document.getElementById('buy-fire-power-btn');
-        if (fpLvl) fpLvl.innerText = `LVL: ${firePowerLevel}`;
-        if (fpCost) fpCost.innerText = firePowerCost;
-        if (fpBtn) fpBtn.disabled = totalCoins < firePowerCost;
+        document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
+        document.getElementById('fire-power-cost').innerText = firePowerCost;
+        document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
 
         const magnetLvlEl = document.getElementById('magnet-lvl');
         const magnetCostEl = document.getElementById('magnet-cost');
         const buyMagnetBtn = document.getElementById('buy-magnet-btn');
-        if (magnetLvlEl) magnetLvlEl.innerText = `LVL: ${magnetLevel}`;
+
+        if (magnetLvlEl) magnetLvlEl.innerText = `Lvl ${magnetLevel}`;
         if (magnetCostEl) magnetCostEl.innerText = magnetCost;
         if (buyMagnetBtn) buyMagnetBtn.disabled = totalCoins < magnetCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
-        const multishotStatus = document.getElementById('multishot-status');
         if (hasMultishot) {
-            if (multishotStatus) multishotStatus.innerText = 'UNLOCKED';
-            if (multishotBtn) {
-                multishotBtn.innerText = 'OWNED';
-                multishotBtn.disabled = true;
-            }
+            document.getElementById('multishot-status').innerText = 'UNLOCKED';
+            multishotBtn.innerText = 'OWNED';
+            multishotBtn.disabled = true;
         } else {
-            if (multishotStatus) multishotStatus.innerText = 'LOCKED';
-            if (multishotBtn) multishotBtn.disabled = totalCoins < 500;
+            document.getElementById('multishot-status').innerText = 'Locked';
+            multishotBtn.disabled = totalCoins < 500;
         }
 
+        // Map Selector UI
         updateMapSelectorUI();
     }
 
@@ -381,8 +394,6 @@ window.addEventListener('DOMContentLoaded', () => {
         maps.forEach(m => {
             const cardEl = document.getElementById(m.card);
             const btnEl = document.getElementById(m.btn);
-            if (!cardEl || !btnEl) return;
-
             const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
@@ -431,7 +442,12 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Cannon Entity ---
+    let cannonColor = '#2563eb';
     const cannon = { x: 0, y: 0, targetX: 0 };
+
+    window.changeCannonColor = function(hexColorStr) {
+        cannonColor = hexColorStr;
+    };
 
     function drawCannon() {
         const floorY = height - 60;
@@ -461,7 +477,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
         gradient.addColorStop(0, '#93c5fd');
-        gradient.addColorStop(1, '#2563eb');
+        gradient.addColorStop(1, cannonColor);
 
         ctx.beginPath();
         ctx.arc(0, 0, 26, Math.PI, 0, false);
@@ -474,7 +490,7 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    // --- Bullets ---
+    // --- Bullets & Upgrades Logic ---
     const bullets = [];
     let shootTimer = 0;
 
@@ -505,7 +521,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Rocks ---
+    // --- Rocks Mechanics ---
     const rocks = [];
     const rockColors = ['#ef4444', '#f97316', '#22c55e', '#06b6d4', '#a855f7'];
 
@@ -637,22 +653,28 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Controls ---
-    let isDragging = false, touchStartX = 0;
+    let isDragging = false, isFiring = false, touchStartX = 0;
+
     canvas.addEventListener('touchstart', (e) => {
-        isDragging = true; touchStartX = e.touches[0].clientX;
-    }, { passive: true });
+        e.preventDefault();
+        isDragging = true; isFiring = true;
+        touchStartX = e.touches[0].clientX;
+    }, { passive: false });
 
     canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
         if (isDragging && gameStarted && !isPaused) {
             const currentX = e.touches[0].clientX;
-            cannon.targetX += (currentX - touchStartX);
+            const deltaX = currentX - touchStartX;
+            cannon.targetX += deltaX;
             touchStartX = currentX;
         }
-    }, { passive: true });
+    }, { passive: false });
 
-    window.addEventListener('touchend', () => { isDragging = false; });
+    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
+    canvas.addEventListener('touchend', stopInput, { passive: false });
 
-    // --- Navigation & Purchases ---
+    // --- Menu Navigation & Purchases ---
     const playTabBtn = document.getElementById('tab-play-btn');
     const shopTabBtn = document.getElementById('tab-shop-btn');
     const mapsTabBtn = document.getElementById('tab-maps-btn');
@@ -673,6 +695,7 @@ window.addEventListener('DOMContentLoaded', () => {
     shopTabBtn?.addEventListener('click', () => switchTab(shopTabBtn, shopTabContent));
     mapsTabBtn?.addEventListener('click', () => switchTab(mapsTabBtn, mapsTabContent));
 
+    // Shop Buy Handlers
     document.getElementById('buy-fire-rate-btn')?.addEventListener('click', () => {
         const cost = fireRateLevel * 100;
         if (totalCoins >= cost) {
@@ -720,6 +743,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Maps Selection & Purchase Handlers
     function handleMapClick(mapId, cost) {
         if (unlockedMaps.includes(mapId)) {
             currentMap = mapId;
@@ -741,68 +765,104 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
     document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
 
-    // Game Lifecycle
-    function startGame() {
-        initAudio();
-        gameStarted = true;
-        isPaused = false;
-        score = 0;
-        currentLevel = 1;
-        levelProgress = 0;
-        currentHp = maxHp;
-
-        bullets.length = 0;
-        rocks.length = 0;
-        particles.length = 0;
-        coinsList.length = 0;
-
+    // --- State Transitions ---
+    function resetGame() {
+        score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
+        rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
-        document.getElementById('start-menu')?.classList.add('hidden');
-        document.getElementById('game-ui')?.classList.remove('hidden');
+        const scoreVal = document.getElementById('score-val');
+        if (scoreVal) scoreVal.innerText = '0';
 
         updateHpBar();
         updateLevelUI();
-
-        spawnRock(width * 0.3, 80, 8, 2);
-        spawnRock(width * 0.7, 80, 6, 1);
+        updateUI();
     }
 
     function gameOver() {
-        gameStarted = false;
-        playSound('explode');
+        gameStarted = false; isFiring = false; isDragging = false;
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('cannon_high_score_2d', highScore);
         }
-        document.getElementById('game-ui')?.classList.add('hidden');
-        document.getElementById('game-over-menu')?.classList.remove('hidden');
+
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreVal = document.getElementById('final-score-val');
+        const finalCoinsVal = document.getElementById('final-coins-val');
+        const bestScoreVal = document.getElementById('best-score-val');
+
+        if (finalScoreVal) finalScoreVal.innerText = score;
+        if (finalCoinsVal) finalCoinsVal.innerText = totalCoins;
+        if (bestScoreVal) bestScoreVal.innerText = highScore;
+        if (gameOverModal) gameOverModal.classList.remove('hidden');
+    }
+
+    function returnToMainMenu() {
+        gameStarted = false;
+        isPaused = false;
+        isFiring = false;
+        isDragging = false;
+
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        document.getElementById('pause-menu')?.classList.add('hidden');
+        document.getElementById('start-overlay')?.classList.remove('hidden');
+
         updateUI();
     }
 
-    document.getElementById('start-btn')?.addEventListener('click', startGame);
-    document.getElementById('restart-btn')?.addEventListener('click', startGame);
+    document.getElementById('start-btn')?.addEventListener('click', () => {
+        requestFullScreen();
+        initAudio();
+        resetGame();
+        gameStarted = true;
+        isPaused = false;
+        document.getElementById('start-overlay')?.classList.add('hidden');
+    });
 
-    // Main Loop
+    document.getElementById('pause-btn')?.addEventListener('click', () => {
+        if (!gameStarted) return;
+        isPaused = true;
+        document.getElementById('pause-menu')?.classList.remove('hidden');
+    });
+
+    document.getElementById('resume-btn')?.addEventListener('click', () => {
+        requestFullScreen();
+        isPaused = false;
+        document.getElementById('pause-menu')?.classList.add('hidden');
+    });
+
+    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
+    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
+
+    document.getElementById('restart-btn')?.addEventListener('click', () => {
+        requestFullScreen();
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        resetGame();
+        isPaused = false;
+        gameStarted = true;
+    });
+
+    // --- Main Game Loop ---
     let lastTime = performance.now();
+
     function gameLoop(now) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
-        ctx.clearRect(0, 0, width, height);
         drawEnvironment();
 
         if (gameStarted && !isPaused) {
-            cannon.x += (cannon.targetX - cannon.x) * 0.2;
-            cannon.x = Math.max(30, Math.min(width - 30, cannon.x));
+            cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
+            cannon.x += (cannon.targetX - cannon.x) * 0.25;
+
+            const fireInterval = Math.max(0.02, 0.075 - (fireRateLevel * 0.007));
 
             shootTimer += dt;
-            const fireInterval = Math.max(0.08, 0.25 - (fireRateLevel * 0.02));
-            if (shootTimer >= fireInterval) {
+            if (isFiring && shootTimer >= fireInterval) {
+                shootTimer = 0;
                 spawnBullet();
                 playSound('shoot');
-                shootTimer = 0;
             }
 
             updateBullets(dt);
@@ -815,7 +875,7 @@ window.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(gameLoop);
     }
 
-    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
     requestAnimationFrame(gameLoop);
 });
