@@ -1,170 +1,398 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ball Blast 2D</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
 
-    <!-- 0. מסך פתיח מקדים (Splash Screen) -->
-    <div id="splash-screen">
-        <div class="splash-content">
-            <p class="splash-tap-text">TAP ANYWHERE TO START</p>
-        </div>
-    </div>
+html, body {
+    width: 100%;
+    height: 100vh;
+    height: -webkit-fill-available;
+    overflow: hidden;
+    background-color: #000;
+    font-family: system-ui, -apple-system, sans-serif;
+}
 
-    <!-- אזהרה למחשבים שולחניים -->
-    <div id="mobile-only-warning">
-        <h2>MOBILE ONLY</h2>
-        <p>Please open this game on your mobile phone!</p>
-    </div>
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
 
-    <!-- HUD במהלך המשחק -->
-    <div id="ui-container">
-        <!-- מד חיים -->
-        <div id="hp-container">
-            <div id="hp-bar"></div>
-            <span id="hp-text">1000 / 1000</span>
-        </div>
+/* Splash Screen */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('splash-bg.jpg') center/cover no-repeat;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-direction: column;
+    padding-bottom: 60px;
+    z-index: 200;
+    cursor: pointer;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
 
-        <!-- מד שלב -->
-        <div id="level-bar-container">
-            <span id="level-text">LEVEL 1</span>
-            <div class="progress-outer">
-                <div id="level-progress-fill"></div>
-            </div>
-        </div>
+.splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
 
-        <!-- מד מטבעות -->
-        <div id="coin-card">
-            <span class="coin-icon">🪙</span>
-            <span id="coins-val">0</span>
-        </div>
+.splash-tap-text {
+    color: #facc15;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9), 0 0 5px rgba(0, 0, 0, 0.8);
+    animation: pulseText 1.5s infinite;
+}
 
-        <!-- ניקוד -->
-        <div id="score-card">
-            <span class="score-label">SCORE</span>
-            <span id="score-val">0</span>
-        </div>
+@keyframes pulseText {
+    0%, 100% { opacity: 0.4; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.04); }
+}
 
-        <!-- כפתור Pause -->
-        <button id="pause-btn" class="icon-btn">⏸</button>
-    </div>
+/* UI Overlay */
+#ui-container {
+    position: absolute;
+    top: 15px;
+    left: 0;
+    width: 100%;
+    padding: 0 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+}
 
-    <!-- 1. מסך תפריט ראשי + חנות ומפות -->
-    <div id="start-overlay">
-        <div id="start-menu">
-            <h1 class="game-title">BALL BLAST</h1>
-            <p class="game-subtitle">Upgrade your cannon & unlock maps!</p>
+#ui-container button {
+    pointer-events: auto;
+}
 
-            <div class="stats-row">
-                <div class="best-badge">BEST: <span id="start-best-score">0</span></div>
-                <div class="coins-badge">🪙 <span id="start-coins">0</span></div>
-            </div>
+#hp-container {
+    width: 95px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
 
-            <!-- לשוניות ניווט בתפריט -->
-            <div class="menu-tabs">
-                <button id="tab-play-btn" class="tab-btn active">PLAY</button>
-                <button id="tab-shop-btn" class="tab-btn">SHOP</button>
-                <button id="tab-maps-btn" class="tab-btn">MAPS</button>
-            </div>
+#hp-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #22c55e;
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
 
-            <!-- תוכן לשונית PLAY -->
-            <div id="tab-play" class="tab-content">
-                <button id="start-btn" class="btn">START GAME</button>
-            </div>
+#hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 8px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
+}
 
-            <!-- תוכן לשונית SHOP -->
-            <div id="tab-shop" class="tab-content hidden">
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <strong>FIRE RATE</strong>
-                        <span id="fire-rate-lvl">Lvl 1</span>
-                    </div>
-                    <button id="buy-fire-rate-btn" class="buy-btn">🪙 <span id="fire-rate-cost">100</span></button>
-                </div>
+#level-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
 
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <strong>FIRE POWER</strong>
-                        <span id="fire-power-lvl">Lvl 1</span>
-                    </div>
-                    <button id="buy-fire-power-btn" class="buy-btn">🪙 <span id="fire-power-cost">150</span></button>
-                </div>
+#level-text {
+    color: #fff;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
 
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <strong>COIN MAGNET</strong>
-                        <span id="magnet-lvl">Lvl 0</span>
-                    </div>
-                    <button id="buy-magnet-btn" class="buy-btn">🪙 <span id="magnet-cost">200</span></button>
-                </div>
+.progress-outer {
+    width: 75px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+}
 
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <strong>TRIPLE CANNON</strong>
-                        <span id="multishot-status">Locked</span>
-                    </div>
-                    <button id="buy-multishot-btn" class="buy-btn">🪙 <span id="multishot-cost">500</span></button>
-                </div>
-            </div>
+#level-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #eab308;
+    transition: width 0.1s linear;
+}
 
-            <!-- תוכן לשונית MAPS -->
-            <div id="tab-maps" class="tab-content hidden">
-                <div class="map-card selected" id="map-card-day">
-                    <span>☀️ DAY MOUNTAINS</span>
-                    <button id="select-map-day" class="map-btn">SELECTED</button>
-                </div>
-                <div class="map-card" id="map-card-sunset">
-                    <span>🌅 SUNSET HILLS</span>
-                    <button id="select-map-sunset" class="map-btn">🪙 500</button>
-                </div>
-                <div class="map-card" id="map-card-space">
-                    <span>🌌 NEON SPACE</span>
-                    <button id="select-map-space" class="map-btn">🪙 1500</button>
-                </div>
-            </div>
+#coin-card {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(250, 204, 21, 0.4);
+    color: #facc15;
+    font-weight: 900;
+    font-size: 14px;
+}
 
-        </div>
-    </div>
+#score-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.75);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
 
-    <!-- 2. תפריט עצירה (Pause) -->
-    <div id="pause-menu" class="hidden">
-        <div class="pause-card">
-            <h2>GAME PAUSED</h2>
+.score-label {
+    color: #94a3b8;
+    font-size: 8px;
+    font-weight: bold;
+}
 
-            <div class="customization-section" style="margin: 20px 0;">
-                <span class="section-label" style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 10px;">CANNON COLOR</span>
-                <div class="color-picker" style="display: flex; justify-content: center; gap: 10px;">
-                    <button class="color-btn active" style="background: #2563eb; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#2563eb')"></button>
-                    <button class="color-btn" style="background: #dc2626; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#dc2626')"></button>
-                    <button class="color-btn" style="background: #16a34a; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#16a34a')"></button>
-                    <button class="color-btn" style="background: #9333ea; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" onclick="changeCannonColor('#9333ea')"></button>
-                </div>
-            </div>
+#score-val {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+}
 
-            <button id="resume-btn" class="btn">RESUME</button>
-            <button id="pause-home-btn" class="btn btn-secondary" style="margin-top: 10px;">MAIN MENU</button>
-        </div>
-    </div>
+.icon-btn {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
 
-    <!-- 3. מסך Game Over -->
-    <div id="game-over-modal" class="hidden">
-        <div class="pause-card">
-            <h2 style="color: #ef4444; font-size: 24px;">GAME OVER</h2>
-            <p style="font-size: 1.1rem; color: #fff; margin: 10px 0;">SCORE: <strong id="final-score-val" style="color: #38bdf8;">0</strong></p>
-            <p style="font-size: 1rem; color: #facc15; margin: 5px 0;">COINS: 🪙 <strong id="final-coins-val">0</strong></p>
-            <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">BEST: <span id="best-score-val">0</span></p>
-            
-            <div class="modal-buttons">
-                <button id="restart-btn" class="btn btn-restart">PLAY AGAIN</button>
-                <button id="home-btn" class="btn btn-secondary">MAIN MENU / SHOP</button>
-            </div>
-        </div>
-    </div>
+/* Modals & Menus */
+#start-overlay, #pause-menu, #game-over-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 7, 20, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
 
-    <script src="main.js?v=9"></script>
-</body>
-</html>
+.hidden {
+    display: none !important;
+}
+
+#start-menu, .pause-card {
+    background: #0f172a;
+    border: 2px solid #1e293b;
+    padding: 24px 18px;
+    border-radius: 20px;
+    text-align: center;
+    width: 88%;
+    max-width: 350px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+.game-title {
+    color: #38bdf8;
+    font-size: 26px;
+    font-weight: 900;
+}
+
+.game-subtitle {
+    color: #94a3b8;
+    font-size: 11px;
+    margin-bottom: 12px;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.best-badge, .coins-badge {
+    background: rgba(255,255,255,0.06);
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #e2e8f0;
+}
+
+.coins-badge {
+    color: #facc15;
+}
+
+/* Menu Tabs */
+.menu-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-weight: bold;
+    font-size: 13px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: #2563eb;
+    color: #fff;
+}
+
+/* Shop Items */
+.upgrade-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.upgrade-info {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+
+.upgrade-info strong {
+    color: #fff;
+    font-size: 12px;
+}
+
+.upgrade-info span {
+    color: #38bdf8;
+    font-size: 10px;
+}
+
+.buy-btn {
+    background: #eab308;
+    color: #000;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.buy-btn:disabled {
+    background: #475569;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Map Selector */
+.map-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.map-card.selected {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.map-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.map-btn.selected-btn {
+    background: #22c55e;
+}
+
+.modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: #2563eb;
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.btn-restart {
+    background: #22c55e;
+}
+
+.btn-secondary {
+    background: #475569;
+}
+
+#mobile-only-warning {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    color: #fff;
+    z-index: 999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}

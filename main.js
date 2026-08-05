@@ -1,24 +1,32 @@
 window.addEventListener('DOMContentLoaded', () => {
 
-    // --- Strict Mobile Only Check ---
+    // --- Splash Screen ---
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        const hideSplash = () => {
+            splashScreen.style.opacity = '0';
+            setTimeout(() => { splashScreen.style.display = 'none'; }, 500);
+            window.removeEventListener('pointerdown', hideSplash);
+        };
+        window.addEventListener('pointerdown', hideSplash);
+    }
+
+    // --- Mobile Detection ---
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     }
-
     if (!isMobileDevice()) {
         const warning = document.getElementById('mobile-only-warning');
-        if (warning) {
-            warning.style.display = 'flex';
-            warning.classList.remove('hidden');
-        }
-        const splash = document.getElementById('splash-screen');
-        if (splash) splash.style.display = 'none';
-        const startOverlay = document.getElementById('start-overlay');
-        if (startOverlay) startOverlay.style.display = 'none';
-        return; 
+        if (warning) warning.style.display = 'flex';
     }
 
-    // --- Dynamic Canvas Setup ---
+    function requestFullScreen() {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+    }
+
+    // --- Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     document.body.appendChild(canvas);
@@ -37,80 +45,8 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.scale(dpr, dpr);
         initClouds();
     }
-    window.addEventListener('resize', resizeCanvas);
 
-    // --- State Variables ---
-    let gameStarted = false;
-    let isPaused = false;
-    let audioUnlocked = false;
-
-    // --- Sound Effects & Music Setup ---
-    const MENU_MUSIC_URL = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=space-ambient-111154.mp3';
-    let menuMusic = new Audio(MENU_MUSIC_URL);
-    menuMusic.loop = true;
-    menuMusic.volume = 0.3;
-
-    let audioCtx = null;
-    let masterGainNode = null;
-    let masterVolume = 0.25;
-
-    function initAudio() {
-        if (audioUnlocked) return;
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            masterGainNode = audioCtx.createGain();
-            masterGainNode.gain.value = masterVolume;
-            masterGainNode.connect(audioCtx.destination);
-            audioUnlocked = true;
-        } catch (e) {
-            console.warn("AudioContext init failed:", e);
-        }
-    }
-
-    function playMenuMusic() {
-        if (!gameStarted && audioUnlocked) {
-            menuMusic.play().catch(() => {});
-        }
-    }
-
-    function stopMenuMusic() {
-        menuMusic.pause();
-        menuMusic.currentTime = 0;
-    }
-
-    function unlockAudio() {
-        if (!audioUnlocked) {
-            initAudio();
-        }
-        playMenuMusic();
-    }
-
-    // --- Splash Screen Handling ---
-    const splashScreen = document.getElementById('splash-screen');
-    if (splashScreen) {
-        const hideSplash = (e) => {
-            if (e) e.preventDefault();
-            unlockAudio();
-            splashScreen.style.opacity = '0';
-            setTimeout(() => { 
-                splashScreen.style.display = 'none'; 
-            }, 500);
-            window.removeEventListener('pointerdown', hideSplash);
-            window.removeEventListener('touchstart', hideSplash);
-            window.removeEventListener('click', hideSplash);
-        };
-        window.addEventListener('pointerdown', hideSplash);
-        window.addEventListener('touchstart', hideSplash);
-        window.addEventListener('click', hideSplash);
-    }
-
-    function requestFullScreen() {
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
-        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-    }
-
-    // --- Persistent Upgrades, Cannon & Maps Data ---
+    // --- Persistent Upgrades & Maps Data ---
     let totalCoins = parseInt(localStorage.getItem('cannon_total_coins')) || 0;
     let highScore = parseInt(localStorage.getItem('cannon_high_score_2d')) || 0;
 
@@ -119,18 +55,30 @@ window.addEventListener('DOMContentLoaded', () => {
     let magnetLevel = parseInt(localStorage.getItem('cannon_lvl_magnet')) || 0;
     let hasMultishot = localStorage.getItem('cannon_has_multishot') === 'true';
 
-    // --- Titan Cannon Unlock Data ---
-    let hasTitanCannon = localStorage.getItem('cannon_has_titan') === 'true';
-    const TITAN_CANNON_COST = 2000;
-
     let currentMap = localStorage.getItem('cannon_selected_map') || 'day';
     let unlockedMaps = JSON.parse(localStorage.getItem('cannon_unlocked_maps')) || ['day'];
+
+    // --- Audio System ---
+    let audioCtx = null;
+    let masterGainNode = null;
+    let masterVolume = 0.25;
+
+    function initAudio() {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.gain.value = masterVolume;
+                masterGainNode.connect(audioCtx.destination);
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        } catch (e) {}
+    }
 
     function playSound(type) {
         if (!audioCtx || isPaused || masterVolume <= 0) return;
         try {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
             const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -140,12 +88,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (type === 'shoot') {
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(700, now);
-                osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.06);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
                 osc.start(now);
-                osc.stop(now + 0.08);
+                osc.stop(now + 0.06);
             } else if (type === 'hit') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(220, now);
@@ -214,7 +162,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 c.vy += (cannon.y - c.y) * magnetSpeed * dt;
             }
 
-            if (distToCannon < c.radius + 35) {
+            if (distToCannon < c.radius + 28) {
                 totalCoins += c.value;
                 localStorage.setItem('cannon_total_coins', totalCoins);
                 updateUI();
@@ -279,7 +227,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Environment Backgrounds ---
+    // --- Environment Backgrounds (Day, Sunset, Space) ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -333,6 +281,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.lineTo(0, height);
             ctx.fill();
         } else {
+            // Day Map (Default)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
             skyGrad.addColorStop(0, '#38bdf8');
             skyGrad.addColorStop(0.6, '#bae6fd');
@@ -352,6 +301,7 @@ window.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
+        // Draw Clouds
         if (currentMap !== 'space') {
             ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
             clouds.forEach(c => {
@@ -384,7 +334,8 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
     }
 
-    // --- State & UI Updates ---
+    // --- State, Level & Upgrades UI ---
+    let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
     let score = 0;
@@ -398,56 +349,35 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
+        // Upgrade Costs
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
 
-        const frLvl = document.getElementById('fire-rate-lvl');
-        const frCost = document.getElementById('fire-rate-cost');
-        const frBtn = document.getElementById('buy-fire-rate-btn');
-        if (frLvl) frLvl.innerText = `Lvl ${fireRateLevel}`;
-        if (frCost) frCost.innerText = fireRateCost;
-        if (frBtn) frBtn.disabled = totalCoins < fireRateCost;
+        document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
+        document.getElementById('fire-rate-cost').innerText = fireRateCost;
+        document.getElementById('buy-fire-rate-btn').disabled = totalCoins < fireRateCost;
 
-        const fpLvl = document.getElementById('fire-power-lvl');
-        const fpCost = document.getElementById('fire-power-cost');
-        const fpBtn = document.getElementById('buy-fire-power-btn');
-        if (fpLvl) fpLvl.innerText = `Lvl ${firePowerLevel}`;
-        if (fpCost) fpCost.innerText = firePowerCost;
-        if (fpBtn) fpBtn.disabled = totalCoins < firePowerCost;
+        document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
+        document.getElementById('fire-power-cost').innerText = firePowerCost;
+        document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
 
         const magnetLvlEl = document.getElementById('magnet-lvl');
         const magnetCostEl = document.getElementById('magnet-cost');
         const buyMagnetBtn = document.getElementById('buy-magnet-btn');
+
         if (magnetLvlEl) magnetLvlEl.innerText = `Lvl ${magnetLevel}`;
         if (magnetCostEl) magnetCostEl.innerText = magnetCost;
         if (buyMagnetBtn) buyMagnetBtn.disabled = totalCoins < magnetCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
-        const multishotStatus = document.getElementById('multishot-status');
-        if (multishotBtn) {
-            if (hasMultishot) {
-                if (multishotStatus) multishotStatus.innerText = 'UNLOCKED';
-                multishotBtn.innerText = 'OWNED';
-                multishotBtn.disabled = true;
-            } else {
-                if (multishotStatus) multishotStatus.innerText = 'Locked';
-                multishotBtn.disabled = totalCoins < 500;
-            }
-        }
-
-        // --- Titan Cannon Shop UI ---
-        const titanBtn = document.getElementById('buy-titan-btn');
-        const titanStatus = document.getElementById('titan-status');
-        if (titanBtn) {
-            if (hasTitanCannon) {
-                if (titanStatus) titanStatus.innerText = 'UNLOCKED';
-                titanBtn.innerText = 'OWNED';
-                titanBtn.disabled = true;
-            } else {
-                if (titanStatus) titanStatus.innerText = `🪙 ${TITAN_CANNON_COST}`;
-                titanBtn.disabled = totalCoins < TITAN_CANNON_COST;
-            }
+        if (hasMultishot) {
+            document.getElementById('multishot-status').innerText = 'UNLOCKED';
+            multishotBtn.innerText = 'OWNED';
+            multishotBtn.disabled = true;
+        } else {
+            document.getElementById('multishot-status').innerText = 'Locked';
+            multishotBtn.disabled = totalCoins < 500;
         }
 
         updateMapSelectorUI();
@@ -463,8 +393,6 @@ window.addEventListener('DOMContentLoaded', () => {
         maps.forEach(m => {
             const cardEl = document.getElementById(m.card);
             const btnEl = document.getElementById(m.btn);
-            if (!cardEl || !btnEl) return;
-
             const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
@@ -493,9 +421,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (levelText) levelText.innerText = `LEVEL ${currentLevel}`;
     }
 
-    // --- HP Mechanics (10,000 HP) ---
-    const maxHp = 10000;
-    let currentHp = 10000;
+    // --- HP Mechanics ---
+    const maxHp = 1000;
+    let currentHp = 1000;
 
     function updateHpBar() {
         const hpBar = document.getElementById('hp-bar');
@@ -506,14 +434,14 @@ window.addEventListener('DOMContentLoaded', () => {
         hpBar.style.width = `${percentage}%`;
         hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
 
-        let colorHex = '#3b82f6';
+        let colorHex = '#22c55e';
         if (percentage < 30) colorHex = '#ef4444';
         else if (percentage < 60) colorHex = '#eab308';
         hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- Cannon Drawing Logic ---
-    let cannonColor = '#3b82f6';
+    // --- Cannon Entity ---
+    let cannonColor = '#2563eb';
     const cannon = { x: 0, y: 0, targetX: 0 };
 
     window.changeCannonColor = function(hexColorStr) {
@@ -527,98 +455,53 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.translate(cannon.x, cannon.y);
 
-        if (hasTitanCannon) {
-            // --- Titan Cannon Upgraded Render ---
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00f0ff';
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(-22, 10, 12, 0, Math.PI * 2);
+        ctx.arc(22, 10, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
 
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(-32, 8, 64, 16);
-            ctx.fillStyle = '#3b82f6';
-            ctx.fillRect(-28, 12, 56, 8);
-
-            ctx.fillStyle = '#1e293b';
-            ctx.beginPath();
-            ctx.moveTo(-26, 8);
-            ctx.lineTo(-18, -18);
-            ctx.lineTo(18, -18);
-            ctx.lineTo(26, 8);
-            ctx.closePath();
-            ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#00f0ff';
-            ctx.stroke();
-
-            ctx.fillStyle = '#0284c7';
-            if (hasMultishot) {
-                ctx.fillRect(-24, -45, 10, 32);
-                ctx.fillRect(-5, -50, 10, 37);
-                ctx.fillRect(14, -45, 10, 32);
-
-                ctx.fillStyle = '#38bdf8';
-                ctx.fillRect(-22, -47, 6, 4);
-                ctx.fillRect(-3, -52, 6, 4);
-                ctx.fillRect(16, -47, 6, 4);
-            } else {
-                ctx.fillRect(-18, -45, 12, 32);
-                ctx.fillRect(6, -45, 12, 32);
-
-                ctx.fillStyle = '#38bdf8';
-                ctx.fillRect(-16, -47, 8, 4);
-                ctx.fillRect(8, -47, 8, 4);
-            }
-
-            const gradient = ctx.createRadialGradient(0, -4, 2, 0, -4, 22);
-            gradient.addColorStop(0, '#ffffff');
-            gradient.addColorStop(0.4, '#38bdf8');
-            gradient.addColorStop(1, cannonColor);
-
-            ctx.beginPath();
-            ctx.arc(0, -4, 20, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.stroke();
+        ctx.fillStyle = '#1e293b';
+        if (hasMultishot) {
+            ctx.fillRect(-20, -30, 8, 30);
+            ctx.fillRect(-4, -34, 8, 34);
+            ctx.fillRect(12, -30, 8, 30);
         } else {
-            // --- Base Cannon Render ---
-            ctx.fillStyle = '#334155';
-            ctx.fillRect(-20, 0, 40, 12);
-
-            ctx.fillStyle = '#0284c7';
-            if (hasMultishot) {
-                ctx.fillRect(-16, -30, 8, 30);
-                ctx.fillRect(-4, -35, 8, 35);
-                ctx.fillRect(8, -30, 8, 30);
-            } else {
-                ctx.fillRect(-8, -35, 16, 35);
-            }
-
-            ctx.beginPath();
-            ctx.arc(0, 0, 16, 0, Math.PI * 2);
-            ctx.fillStyle = cannonColor;
-            ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#ffffff';
-            ctx.stroke();
+            ctx.fillRect(-16, -30, 10, 30);
+            ctx.fillRect(6, -30, 10, 30);
         }
+
+        const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
+        gradient.addColorStop(0, '#93c5fd');
+        gradient.addColorStop(1, cannonColor);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, Math.PI, 0, false);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
 
         ctx.restore();
     }
 
-    // --- Bullets Mechanics ---
+    // --- Bullets ---
     const bullets = [];
     let shootTimer = 0;
 
     function spawnBullet() {
         const damage = firePowerLevel;
         if (hasMultishot) {
-            bullets.push({ x: cannon.x - 19, y: cannon.y - 45, radius: 7, dmg: damage });
-            bullets.push({ x: cannon.x, y: cannon.y - 50, radius: 8, dmg: damage });
-            bullets.push({ x: cannon.x + 19, y: cannon.y - 45, radius: 7, dmg: damage });
+            bullets.push({ x: cannon.x - 16, y: cannon.y - 30, radius: 6, dmg: damage });
+            bullets.push({ x: cannon.x, y: cannon.y - 34, radius: 6, dmg: damage });
+            bullets.push({ x: cannon.x + 16, y: cannon.y - 30, radius: 6, dmg: damage });
         } else {
-            bullets.push({ x: cannon.x - 12, y: cannon.y - 45, radius: 7, dmg: damage });
-            bullets.push({ x: cannon.x + 12, y: cannon.y - 45, radius: 7, dmg: damage });
+            bullets.push({ x: cannon.x - 11, y: cannon.y - 30, radius: 6, dmg: damage });
+            bullets.push({ x: cannon.x + 11, y: cannon.y - 30, radius: 6, dmg: damage });
         }
     }
 
@@ -628,14 +511,10 @@ window.addEventListener('DOMContentLoaded', () => {
             const b = bullets[i];
             b.y -= speed;
 
-            ctx.save();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00f0ff';
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#38bdf8';
+            ctx.fillStyle = '#facc15';
             ctx.fill();
-            ctx.restore();
 
             if (b.y < -10) bullets.splice(i, 1);
         }
@@ -692,8 +571,8 @@ window.addEventListener('DOMContentLoaded', () => {
             if (r.y + r.radius >= floorY) { r.y = floorY - r.radius; r.vy = r.bounceForce; }
 
             const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
-            if (distToCannon < r.radius + 32) {
-                currentHp -= 150;
+            if (distToCannon < r.radius + 26) {
+                currentHp -= 25;
                 updateHpBar();
                 playSound('hit');
                 createExplosion(cannon.x, cannon.y - 10, '#ef4444', 12);
@@ -772,14 +651,138 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Touch Input Controls (Mobile Only) ---
+    // --- Enemy Animal (Angry Bat / Dragon) ---
+    const enemies = [];
+    let enemySpawnTimer = 0;
+    let enemyAnimTime = 0;
+
+    function updateEnemies(dt) {
+        enemyAnimTime += dt * 8; // מהירות נפנוף הכנפיים
+
+        enemySpawnTimer += dt;
+        // הופעת עטלף אויב כל 10 שניות
+        if (enemySpawnTimer > 10 && enemies.length === 0 && gameStarted && !isPaused) {
+            enemySpawnTimer = 0;
+            enemies.push({
+                x: Math.random() > 0.5 ? 50 : width - 50,
+                y: 130,
+                vx: 100,
+                radius: 24,
+                hp: 15 + (currentLevel * 5),
+                maxHp: 15 + (currentLevel * 5)
+            });
+        }
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+
+            // תנועה מצד לצד + תנודה אנכית כעין מעוף
+            e.x += e.vx * dt;
+            e.y += Math.sin(enemyAnimTime * 0.5) * 0.6;
+
+            if (e.x - e.radius <= 10 || e.x + e.radius >= width - 10) {
+                e.vx = -e.vx;
+            }
+
+            // התנגשות בתותח
+            const distToCannon = Math.hypot(e.x - cannon.x, e.y - cannon.y);
+            if (distToCannon < e.radius + 26) {
+                currentHp -= 40;
+                updateHpBar();
+                playSound('hit');
+                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 15);
+                enemies.splice(i, 1);
+                if (currentHp <= 0) { gameOver(); return; }
+                continue;
+            }
+
+            // פגיעת קליעים בחיה
+            for (let j = bullets.length - 1; j >= 0; j--) {
+                const b = bullets[j];
+                const distToBullet = Math.hypot(e.x - b.x, e.y - b.y);
+
+                if (distToBullet < e.radius + b.radius) {
+                    bullets.splice(j, 1);
+                    e.hp -= b.dmg;
+                    score += 20;
+                    playSound('hit');
+                    createExplosion(b.x, b.y, '#a855f7', 4);
+
+                    if (e.hp <= 0) {
+                        playSound('explode');
+                        createExplosion(e.x, e.y, '#a855f7', 25);
+                        spawnCoins(e.x, e.y, 6);
+                        enemies.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            if (enemies[i]) {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+
+                const wingFlap = Math.sin(enemyAnimTime) * 18;
+
+                // ציור כנפיים (סגול)
+                ctx.fillStyle = '#581c87';
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 2;
+
+                // כנף שמאל
+                ctx.beginPath();
+                ctx.moveTo(0, -5);
+                ctx.quadraticCurveTo(-25, -30 + wingFlap, -45, -5 + wingFlap);
+                ctx.quadraticCurveTo(-20, 10, 0, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                // כנף ימין
+                ctx.beginPath();
+                ctx.moveTo(0, -5);
+                ctx.quadraticCurveTo(25, -30 + wingFlap, 45, -5 + wingFlap);
+                ctx.quadraticCurveTo(20, 10, 0, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                // גוף וראש העטלף
+                ctx.fillStyle = '#3b0764';
+                ctx.beginPath();
+                ctx.arc(0, 0, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // אוזניים
+                ctx.fillStyle = '#581c87';
+                ctx.beginPath();
+                ctx.moveTo(-8, -10); ctx.lineTo(-14, -22); ctx.lineTo(-2, -12);
+                ctx.moveTo(8, -10); ctx.lineTo(14, -22); ctx.lineTo(2, -12);
+                ctx.fill();
+
+                // עיניים אדומות
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(-5, -3, 3, 0, Math.PI * 2);
+                ctx.arc(5, -3, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // מד חיים מעל החיה
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(Math.max(0, e.hp), 0, -26);
+
+                ctx.restore();
+            }
+        }
+    }
+
+    // --- Controls ---
     let isDragging = false, isFiring = false, touchStartX = 0;
 
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        unlockAudio();
-        isDragging = true; 
-        isFiring = true;
+        isDragging = true; isFiring = true;
         touchStartX = e.touches[0].clientX;
     }, { passive: false });
 
@@ -793,11 +796,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    const stopInput = (e) => { 
-        if (e && e.preventDefault) e.preventDefault(); 
-        isDragging = false; 
-        isFiring = false; 
-    };
+    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
     canvas.addEventListener('touchend', stopInput, { passive: false });
 
     // --- Menu Navigation & Purchases ---
@@ -810,7 +809,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const mapsTabContent = document.getElementById('tab-maps');
 
     function switchTab(activeBtn, activeContent) {
-        unlockAudio();
         [playTabBtn, shopTabBtn, mapsTabBtn].forEach(b => b?.classList.remove('active'));
         [playTabContent, shopTabContent, mapsTabContent].forEach(c => c?.classList.add('hidden'));
 
@@ -870,21 +868,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Buy Titan Cannon Handler
-    document.getElementById('buy-titan-btn')?.addEventListener('click', () => {
-        if (!hasTitanCannon && totalCoins >= TITAN_CANNON_COST) {
-            totalCoins -= TITAN_CANNON_COST;
-            hasTitanCannon = true;
-            localStorage.setItem('cannon_total_coins', totalCoins);
-            localStorage.setItem('cannon_has_titan', 'true');
-            updateUI();
-            playSound('coin');
-        }
-    });
-
     // Maps Selection & Purchase Handlers
     function handleMapClick(mapId, cost) {
-        unlockAudio();
         if (unlockedMaps.includes(mapId)) {
             currentMap = mapId;
             localStorage.setItem('cannon_selected_map', currentMap);
@@ -905,10 +890,11 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
     document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
 
-    // --- Game Logic Transitions ---
+    // --- State Transitions ---
     function resetGame() {
         score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
         rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
+        enemies.length = 0; enemySpawnTimer = 0;
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
@@ -922,8 +908,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function gameOver() {
         gameStarted = false; isFiring = false; isDragging = false;
-        playMenuMusic();
-
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('cannon_high_score_2d', highScore);
@@ -945,31 +929,22 @@ window.addEventListener('DOMContentLoaded', () => {
         isPaused = false;
         isFiring = false;
         isDragging = false;
-        playMenuMusic();
 
         document.getElementById('game-over-modal')?.classList.add('hidden');
         document.getElementById('pause-menu')?.classList.add('hidden');
         document.getElementById('start-overlay')?.classList.remove('hidden');
+
+        updateUI();
     }
 
     document.getElementById('start-btn')?.addEventListener('click', () => {
         requestFullScreen();
-        unlockAudio();
-        stopMenuMusic();
+        initAudio();
+        resetGame();
+        gameStarted = true;
+        isPaused = false;
         document.getElementById('start-overlay')?.classList.add('hidden');
-        resetGame();
-        gameStarted = true;
     });
-
-    document.getElementById('restart-btn')?.addEventListener('click', () => {
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        resetGame();
-        stopMenuMusic();
-        gameStarted = true;
-    });
-
-    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
-    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
 
     document.getElementById('pause-btn')?.addEventListener('click', () => {
         if (!gameStarted) return;
@@ -978,43 +953,56 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('resume-btn')?.addEventListener('click', () => {
+        requestFullScreen();
         isPaused = false;
         document.getElementById('pause-menu')?.classList.add('hidden');
     });
 
+    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
+    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
+
+    document.getElementById('restart-btn')?.addEventListener('click', () => {
+        requestFullScreen();
+        document.getElementById('game-over-modal')?.classList.add('hidden');
+        resetGame();
+        isPaused = false;
+        gameStarted = true;
+    });
+
     // --- Main Game Loop ---
     let lastTime = performance.now();
+
     function gameLoop(now) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
-        ctx.clearRect(0, 0, width, height);
         drawEnvironment();
 
         if (gameStarted && !isPaused) {
+            cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
             cannon.x += (cannon.targetX - cannon.x) * 0.25;
-            cannon.x = Math.max(35, Math.min(width - 35, cannon.x));
+
+            const fireInterval = Math.max(0.02, 0.075 - (fireRateLevel * 0.007));
 
             shootTimer += dt;
-            const fireInterval = Math.max(0.08, 0.25 - (fireRateLevel * 0.02));
             if (isFiring && shootTimer >= fireInterval) {
+                shootTimer = 0;
                 spawnBullet();
                 playSound('shoot');
-                shootTimer = 0;
             }
 
             updateBullets(dt);
             updateRocks(dt);
+            updateEnemies(dt);
             updateCoins(dt);
             updateParticles(dt);
         }
 
         drawCannon();
-
         requestAnimationFrame(gameLoop);
     }
 
     resizeCanvas();
-    resetGame();
+    window.addEventListener('resize', resizeCanvas);
     requestAnimationFrame(gameLoop);
 });
