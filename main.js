@@ -31,7 +31,7 @@ window.addEventListener('DOMContentLoaded', () => {
         initClouds();
     }
 
-    // --- Persistent Data ---
+    // --- Data Persistence ---
     let totalCoins = parseInt(localStorage.getItem('cannon_total_coins')) || 0;
     let highScore = parseInt(localStorage.getItem('cannon_high_score_2d')) || 0;
 
@@ -107,7 +107,7 @@ window.addEventListener('DOMContentLoaded', () => {
         } catch(e) {}
     }
 
-    // --- Particles & Coins ---
+    // --- Particles & Items ---
     const particles = [];
     const coinsList = [];
 
@@ -364,7 +364,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 multishotBtn.disabled = true;
             }
         } else {
-            if (multishotStatus) multishotStatus.innerText = 'Locked';
+            if (multishotStatus) multishotStatus.innerText = 'LOCKED';
             if (multishotBtn) multishotBtn.disabled = totalCoins < 500;
         }
 
@@ -383,7 +383,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const btnEl = document.getElementById(m.btn);
             if (!cardEl || !btnEl) return;
 
-            const isUnlocked = unlockedMaps.includes(mapId => mapId === m.id) || unlockedMaps.includes(m.id);
+            const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
             if (isSelected) {
@@ -636,70 +636,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Enemy Animal (Bat / Dragon) ---
-    const enemies = [];
-    let enemySpawnTimer = 0;
-    let enemyAnimTime = 0;
-
-    function updateEnemies(dt) {
-        enemyAnimTime += dt * 8;
-        enemySpawnTimer += dt;
-
-        if (enemySpawnTimer > 10 && enemies.length === 0 && gameStarted && !isPaused) {
-            enemySpawnTimer = 0;
-            enemies.push({
-                x: Math.random() > 0.5 ? 50 : width - 50,
-                y: 130, vx: 100, radius: 24,
-                hp: 15 + (currentLevel * 5)
-            });
-        }
-
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            const e = enemies[i];
-            e.x += e.vx * dt;
-            e.y += Math.sin(enemyAnimTime * 0.5) * 0.6;
-
-            if (e.x - e.radius <= 10 || e.x + e.radius >= width - 10) e.vx = -e.vx;
-
-            for (let j = bullets.length - 1; j >= 0; j--) {
-                const b = bullets[j];
-                if (Math.hypot(e.x - b.x, e.y - b.y) < e.radius + b.radius) {
-                    bullets.splice(j, 1);
-                    e.hp -= b.dmg;
-                    playSound('hit');
-                    createExplosion(b.x, b.y, '#a855f7', 4);
-
-                    if (e.hp <= 0) {
-                        playSound('explode');
-                        createExplosion(e.x, e.y, '#a855f7', 25);
-                        spawnCoins(e.x, e.y, 6);
-                        enemies.splice(i, 1);
-                        break;
-                    }
-                }
-            }
-
-            if (enemies[i]) {
-                ctx.save();
-                ctx.translate(e.x, e.y);
-                const wingFlap = Math.sin(enemyAnimTime) * 18;
-
-                ctx.fillStyle = '#581c87';
-                ctx.beginPath();
-                ctx.arc(0, 0, 14, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = '#ef4444';
-                ctx.beginPath();
-                ctx.arc(-5, -3, 3, 0, Math.PI * 2);
-                ctx.arc(5, -3, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.restore();
-            }
-        }
-    }
-
     // --- Controls ---
     let isDragging = false, touchStartX = 0;
     canvas.addEventListener('touchstart', (e) => {
@@ -819,7 +755,6 @@ window.addEventListener('DOMContentLoaded', () => {
         rocks.length = 0;
         particles.length = 0;
         coinsList.length = 0;
-        enemies.length = 0;
 
         cannon.x = width / 2;
         cannon.targetX = width / 2;
@@ -872,7 +807,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
             updateBullets(dt);
             updateRocks(dt);
-            updateEnemies(dt);
             updateCoins(dt);
             updateParticles(dt);
         }

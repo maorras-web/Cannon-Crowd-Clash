@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9,16 +9,17 @@
 </head>
 <body>
 
-    <!-- מסך פתיחה Splash Screen -->
+    <!-- Splash Screen -->
     <div id="splash-screen">
         <div class="splash-content">
-            <div class="splash-icon">🚀</div>
+            <img src="assets/splash.png" alt="Cannon Clash Logo" class="splash-img" onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='block';">
+            <div id="fallback-icon" class="splash-icon" style="display:none;">🚀</div>
             <h1 class="splash-title">CANNON CLASH</h1>
-            <p class="splash-subtitle">לחץ על המסך כדי להתחיל</p>
+            <p class="splash-subtitle">Tap anywhere to start</p>
         </div>
     </div>
 
-    <!-- UI בזמן משחק -->
+    <!-- In-Game UI -->
     <div id="game-ui" class="hidden">
         <div class="top-nav">
             <div class="score-container">
@@ -31,7 +32,6 @@
             </div>
         </div>
 
-        <!-- מד מתקדם של השלב -->
         <div class="level-bar-container">
             <span id="level-text">LEVEL 1</span>
             <div class="level-progress-bg">
@@ -39,19 +39,18 @@
             </div>
         </div>
 
-        <!-- מד חיים של התותח -->
         <div class="hp-bar-container">
             <div id="hp-bar"></div>
             <span id="hp-text">1000 / 1000</span>
         </div>
     </div>
 
-    <!-- תפריט ראשי / חנות במסך מלא -->
+    <!-- Main Menu & Shop -->
     <div id="start-menu" class="full-screen-menu">
         <header class="menu-header">
             <div class="app-title">
                 <h1>CANNON CLASH 2D</h1>
-                <p>שדרג את התותח וכבוש את המפות!</p>
+                <p>Upgrade your cannon & conquer maps!</p>
             </div>
             <div class="player-stats">
                 <div class="stat-badge">🪙 <span id="start-coins">0</span></div>
@@ -59,29 +58,25 @@
             </div>
         </header>
 
-        <!-- לשוניות ניווט -->
         <nav class="shop-tabs">
-            <button id="tab-play-btn" class="tab-btn active">🎮 משחק</button>
-            <button id="tab-shop-btn" class="tab-btn">⚡ שדרוגים</button>
-            <button id="tab-maps-btn" class="tab-btn">🗺️ מפות</button>
+            <button id="tab-play-btn" class="tab-btn active">🎮 Play</button>
+            <button id="tab-shop-btn" class="tab-btn">⚡ Upgrades</button>
+            <button id="tab-maps-btn" class="tab-btn">🗺️ Maps</button>
         </nav>
 
-        <!-- תוכן הלשוניות -->
         <div class="tabs-content">
             
-            <!-- לשונית משחק -->
             <div id="tab-play" class="tab-content active-content">
-                <button id="start-btn" class="big-action-btn">התחל משחק</button>
+                <button id="start-btn" class="big-action-btn">START GAME</button>
             </div>
 
-            <!-- לשונית שדרוגים -->
             <div id="tab-shop" class="tab-content hidden">
                 <div class="shop-cards-grid">
                     
                     <div class="shop-card">
                         <div class="card-icon">⚡</div>
                         <div class="card-info">
-                            <h3>קצב ירי</h3>
+                            <h3>Fire Rate</h3>
                             <span id="fire-rate-lvl" class="lvl-tag">LVL: 1</span>
                         </div>
                         <button id="buy-fire-rate-btn" class="buy-btn">
@@ -92,7 +87,7 @@
                     <div class="shop-card">
                         <div class="card-icon">💥</div>
                         <div class="card-info">
-                            <h3>עוצמת ירייה</h3>
+                            <h3>Fire Power</h3>
                             <span id="fire-power-lvl" class="lvl-tag">LVL: 1</span>
                         </div>
                         <button id="buy-fire-power-btn" class="buy-btn">
@@ -103,7 +98,7 @@
                     <div class="shop-card">
                         <div class="card-icon">🧲</div>
                         <div class="card-info">
-                            <h3>מגנט מטבעות</h3>
+                            <h3>Coin Magnet</h3>
                             <span id="magnet-lvl" class="lvl-tag">LVL: 0</span>
                         </div>
                         <button id="buy-magnet-btn" class="buy-btn">
@@ -114,8 +109,8 @@
                     <div class="shop-card">
                         <div class="card-icon">🔱</div>
                         <div class="card-info">
-                            <h3>ירי משולש</h3>
-                            <span id="multishot-status" class="lvl-tag">נעול</span>
+                            <h3>Triple Shot</h3>
+                            <span id="multishot-status" class="lvl-tag">LOCKED</span>
                         </div>
                         <button id="buy-multishot-btn" class="buy-btn">
                             🪙 <span>500</span>
@@ -125,25 +120,24 @@
                 </div>
             </div>
 
-            <!-- לשונית מפות -->
             <div id="tab-maps" class="tab-content hidden">
                 <div class="maps-grid">
                     
                     <div class="map-card selected" id="map-card-day">
                         <div class="map-preview map-day-bg"></div>
-                        <h4>יום בהיר</h4>
-                        <button id="select-map-day" class="map-btn selected-btn">בשימוש</button>
+                        <h4>Bright Day</h4>
+                        <button id="select-map-day" class="map-btn selected-btn">SELECTED</button>
                     </div>
 
                     <div class="map-card" id="map-card-sunset">
                         <div class="map-preview map-sunset-bg"></div>
-                        <h4>שקיעה סגולה</h4>
+                        <h4>Purple Sunset</h4>
                         <button id="select-map-sunset" class="map-btn">🪙 500</button>
                     </div>
 
                     <div class="map-card" id="map-card-space">
                         <div class="map-preview map-space-bg"></div>
-                        <h4>חלל עמוק</h4>
+                        <h4>Deep Space</h4>
                         <button id="select-map-space" class="map-btn">🪙 1500</button>
                     </div>
 
@@ -153,10 +147,10 @@
         </div>
     </div>
 
-    <!-- מסך Game Over -->
+    <!-- Game Over Menu -->
     <div id="game-over-menu" class="full-screen-menu hidden">
-        <h2 class="game-over-title">המשחק נגמר!</h2>
-        <button id="restart-btn" class="big-action-btn">נסה שוב</button>
+        <h2 class="game-over-title">GAME OVER!</h2>
+        <button id="restart-btn" class="big-action-btn">TRY AGAIN</button>
     </div>
 
     <script src="main.js"></script>
