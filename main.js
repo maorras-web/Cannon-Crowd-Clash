@@ -11,21 +11,6 @@ window.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('pointerdown', hideSplash);
     }
 
-    // --- Mobile Detection ---
-    function isMobileDevice() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    }
-    if (!isMobileDevice()) {
-        const warning = document.getElementById('mobile-only-warning');
-        if (warning) warning.style.display = 'flex';
-    }
-
-    function requestFullScreen() {
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
-        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-    }
-
     // --- Canvas Setup ---
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -227,7 +212,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Environment Backgrounds (Day, Sunset, Space) ---
+    // --- Environment Backgrounds ---
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -249,75 +234,20 @@ window.addEventListener('DOMContentLoaded', () => {
             skyGrad.addColorStop(1, '#f97316');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, width, height);
-
-            ctx.fillStyle = '#31104b';
-            ctx.beginPath();
-            ctx.moveTo(0, height - 60);
-            ctx.lineTo(width * 0.25, height - 190);
-            ctx.lineTo(width * 0.5, height - 60);
-            ctx.lineTo(width * 0.8, height - 220);
-            ctx.lineTo(width, height - 60);
-            ctx.lineTo(width, height);
-            ctx.lineTo(0, height);
-            ctx.fill();
         } else if (currentMap === 'space') {
             ctx.fillStyle = '#030712';
             ctx.fillRect(0, 0, width, height);
-
             ctx.fillStyle = '#38bdf8';
             for (let i = 0; i < 20; i++) {
-                const sx = (i * 97) % width;
-                const sy = (i * 131) % (height * 0.7);
-                ctx.fillRect(sx, sy, 2, 2);
+                ctx.fillRect((i * 97) % width, (i * 131) % (height * 0.7), 2, 2);
             }
-
-            ctx.fillStyle = '#1e1b4b';
-            ctx.beginPath();
-            ctx.moveTo(0, height - 60);
-            ctx.lineTo(width * 0.3, height - 160);
-            ctx.lineTo(width * 0.6, height - 60);
-            ctx.lineTo(width, height - 140);
-            ctx.lineTo(width, height);
-            ctx.lineTo(0, height);
-            ctx.fill();
         } else {
-            // Day Map (Default)
             const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
             skyGrad.addColorStop(0, '#38bdf8');
             skyGrad.addColorStop(0.6, '#bae6fd');
             skyGrad.addColorStop(1, '#e0f2fe');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, width, height);
-
-            ctx.fillStyle = '#64748b';
-            ctx.beginPath();
-            ctx.moveTo(0, height - 60);
-            ctx.lineTo(width * 0.2, height - 180);
-            ctx.lineTo(width * 0.45, height - 60);
-            ctx.lineTo(width * 0.75, height - 210);
-            ctx.lineTo(width, height - 60);
-            ctx.lineTo(width, height);
-            ctx.lineTo(0, height);
-            ctx.fill();
-        }
-
-        // Draw Clouds
-        if (currentMap !== 'space') {
-            ctx.fillStyle = currentMap === 'sunset' ? 'rgba(253, 186, 116, 0.6)' : 'rgba(255, 255, 255, 0.85)';
-            clouds.forEach(c => {
-                if (gameStarted && !isPaused) c.x += c.speed * 0.016;
-                if (c.x - 100 > width) c.x = -100;
-
-                ctx.save();
-                ctx.translate(c.x, c.y);
-                ctx.scale(c.scale, c.scale);
-                ctx.beginPath();
-                ctx.arc(0, 0, 25, 0, Math.PI * 2);
-                ctx.arc(20, -10, 20, 0, Math.PI * 2);
-                ctx.arc(40, 0, 22, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            });
         }
 
         const floorY = height - 60;
@@ -325,16 +255,9 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.fillRect(0, floorY, width, 20);
         ctx.fillStyle = currentMap === 'space' ? '#020617' : (currentMap === 'sunset' ? '#292524' : '#78350f');
         ctx.fillRect(0, floorY + 20, width, 40);
-
-        ctx.strokeStyle = currentMap === 'space' ? '#38bdf8' : (currentMap === 'sunset' ? '#f97316' : '#4ade80');
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(0, floorY);
-        ctx.lineTo(width, floorY);
-        ctx.stroke();
     }
 
-    // --- State, Level & Upgrades UI ---
+    // --- State & UI Updates ---
     let gameStarted = false, isPaused = false;
     let currentLevel = 1, levelProgress = 0;
     const maxLevelProgress = 100;
@@ -349,35 +272,42 @@ window.addEventListener('DOMContentLoaded', () => {
         if (startCoins) startCoins.innerText = totalCoins;
         if (startBest) startBest.innerText = highScore;
 
-        // Upgrade Costs
         const fireRateCost = fireRateLevel * 100;
         const firePowerCost = firePowerLevel * 150;
         const magnetCost = (magnetLevel + 1) * 200;
 
-        document.getElementById('fire-rate-lvl').innerText = `Lvl ${fireRateLevel}`;
-        document.getElementById('fire-rate-cost').innerText = fireRateCost;
-        document.getElementById('buy-fire-rate-btn').disabled = totalCoins < fireRateCost;
+        const frLvl = document.getElementById('fire-rate-lvl');
+        const frCost = document.getElementById('fire-rate-cost');
+        const frBtn = document.getElementById('buy-fire-rate-btn');
+        if (frLvl) frLvl.innerText = `LVL: ${fireRateLevel}`;
+        if (frCost) frCost.innerText = fireRateCost;
+        if (frBtn) frBtn.disabled = totalCoins < fireRateCost;
 
-        document.getElementById('fire-power-lvl').innerText = `Lvl ${firePowerLevel}`;
-        document.getElementById('fire-power-cost').innerText = firePowerCost;
-        document.getElementById('buy-fire-power-btn').disabled = totalCoins < firePowerCost;
+        const fpLvl = document.getElementById('fire-power-lvl');
+        const fpCost = document.getElementById('fire-power-cost');
+        const fpBtn = document.getElementById('buy-fire-power-btn');
+        if (fpLvl) fpLvl.innerText = `LVL: ${firePowerLevel}`;
+        if (fpCost) fpCost.innerText = firePowerCost;
+        if (fpBtn) fpBtn.disabled = totalCoins < firePowerCost;
 
         const magnetLvlEl = document.getElementById('magnet-lvl');
         const magnetCostEl = document.getElementById('magnet-cost');
         const buyMagnetBtn = document.getElementById('buy-magnet-btn');
-
-        if (magnetLvlEl) magnetLvlEl.innerText = `Lvl ${magnetLevel}`;
+        if (magnetLvlEl) magnetLvlEl.innerText = `LVL: ${magnetLevel}`;
         if (magnetCostEl) magnetCostEl.innerText = magnetCost;
         if (buyMagnetBtn) buyMagnetBtn.disabled = totalCoins < magnetCost;
 
         const multishotBtn = document.getElementById('buy-multishot-btn');
+        const multishotStatus = document.getElementById('multishot-status');
         if (hasMultishot) {
-            document.getElementById('multishot-status').innerText = 'UNLOCKED';
-            multishotBtn.innerText = 'OWNED';
-            multishotBtn.disabled = true;
+            if (multishotStatus) multishotStatus.innerText = 'UNLOCKED';
+            if (multishotBtn) {
+                multishotBtn.innerText = 'OWNED';
+                multishotBtn.disabled = true;
+            }
         } else {
-            document.getElementById('multishot-status').innerText = 'Locked';
-            multishotBtn.disabled = totalCoins < 500;
+            if (multishotStatus) multishotStatus.innerText = 'Locked';
+            if (multishotBtn) multishotBtn.disabled = totalCoins < 500;
         }
 
         updateMapSelectorUI();
@@ -393,6 +323,8 @@ window.addEventListener('DOMContentLoaded', () => {
         maps.forEach(m => {
             const cardEl = document.getElementById(m.card);
             const btnEl = document.getElementById(m.btn);
+            if (!cardEl || !btnEl) return;
+
             const isUnlocked = unlockedMaps.includes(m.id);
             const isSelected = currentMap === m.id;
 
@@ -433,63 +365,23 @@ window.addEventListener('DOMContentLoaded', () => {
         const percentage = Math.max(0, (currentHp / maxHp) * 100);
         hpBar.style.width = `${percentage}%`;
         hpText.innerText = `${Math.max(0, currentHp)} / ${maxHp}`;
-
-        let colorHex = '#22c55e';
-        if (percentage < 30) colorHex = '#ef4444';
-        else if (percentage < 60) colorHex = '#eab308';
-        hpBar.style.backgroundColor = colorHex;
     }
 
-    // --- Cannon Entity ---
-    let cannonColor = '#2563eb';
+    // --- Cannon & Bullets ---
     const cannon = { x: 0, y: 0, targetX: 0 };
-
-    window.changeCannonColor = function(hexColorStr) {
-        cannonColor = hexColorStr;
-    };
-
     function drawCannon() {
         const floorY = height - 60;
         cannon.y = floorY - 20;
 
         ctx.save();
         ctx.translate(cannon.x, cannon.y);
-
-        ctx.fillStyle = '#334155';
+        ctx.fillStyle = '#2563eb';
         ctx.beginPath();
-        ctx.arc(-22, 10, 12, 0, Math.PI * 2);
-        ctx.arc(22, 10, 12, 0, Math.PI * 2);
+        ctx.arc(0, 0, 24, Math.PI, 0, false);
         ctx.fill();
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.fillStyle = '#1e293b';
-        if (hasMultishot) {
-            ctx.fillRect(-20, -30, 8, 30);
-            ctx.fillRect(-4, -34, 8, 34);
-            ctx.fillRect(12, -30, 8, 30);
-        } else {
-            ctx.fillRect(-16, -30, 10, 30);
-            ctx.fillRect(6, -30, 10, 30);
-        }
-
-        const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 30);
-        gradient.addColorStop(0, '#93c5fd');
-        gradient.addColorStop(1, cannonColor);
-
-        ctx.beginPath();
-        ctx.arc(0, 0, 26, Math.PI, 0, false);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-
         ctx.restore();
     }
 
-    // --- Bullets ---
     const bullets = [];
     let shootTimer = 0;
 
@@ -510,294 +402,59 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.y -= speed;
-
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#facc15';
             ctx.fill();
-
             if (b.y < -10) bullets.splice(i, 1);
         }
     }
 
-    // --- Rocks Mechanics ---
+    // --- Rocks ---
     const rocks = [];
-    const rockColors = ['#ef4444', '#f97316', '#22c55e', '#06b6d4', '#a855f7'];
-
-    function createRockVertices(radius) {
-        const points = [];
-        const numSides = 8;
-        for (let i = 0; i < numSides; i++) {
-            const angle = (i / numSides) * Math.PI * 2;
-            const variance = radius * (0.85 + Math.random() * 0.3);
-            points.push({ x: Math.cos(angle) * variance, y: Math.sin(angle) * variance });
-        }
-        return points;
-    }
-
     function spawnRock(x, y, hp, sizeIndex) {
         const radii = [28, 42, 60];
-        const radius = radii[sizeIndex];
-        const color = rockColors[Math.floor(Math.random() * rockColors.length)];
-
         rocks.push({
-            x: x !== undefined ? x : Math.random() * (width - 100) + 50,
-            y: y !== undefined ? y : 80,
-            vx: (Math.random() > 0.5 ? 1 : -1) * (70 + Math.random() * 40),
-            vy: 0,
-            gravity: 350,
-            bounceForce: -(260 + sizeIndex * 40),
-            radius: radius,
-            hp: hp,
-            maxHp: hp,
-            sizeIndex: sizeIndex,
-            color: color,
-            vertices: createRockVertices(radius)
+            x: x || width / 2, y: y || 80,
+            vx: (Math.random() > 0.5 ? 1 : -1) * 80, vy: 0,
+            gravity: 350, bounceForce: -260,
+            radius: radii[sizeIndex], hp: hp, maxHp: hp, sizeIndex: sizeIndex
         });
     }
 
     function updateRocks(dt) {
         const floorY = height - 60;
-
         for (let i = rocks.length - 1; i >= 0; i--) {
             const r = rocks[i];
             r.vy += r.gravity * dt;
             r.x += r.vx * dt;
             r.y += r.vy * dt;
 
-            if (r.x - r.radius <= 0) { r.x = r.radius; r.vx = Math.abs(r.vx); }
-            else if (r.x + r.radius >= width) { r.x = width - r.radius; r.vx = -Math.abs(r.vx); }
-
+            if (r.x - r.radius <= 0 || r.x + r.radius >= width) r.vx = -r.vx;
             if (r.y + r.radius >= floorY) { r.y = floorY - r.radius; r.vy = r.bounceForce; }
 
-            const distToCannon = Math.hypot(r.x - cannon.x, r.y - cannon.y);
-            if (distToCannon < r.radius + 26) {
-                currentHp -= 25;
-                updateHpBar();
-                playSound('hit');
-                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 12);
-                r.vy = r.bounceForce;
-
-                if (currentHp <= 0) { gameOver(); return; }
-            }
-
-            for (let j = bullets.length - 1; j >= 0; j--) {
-                const b = bullets[j];
-                const distToBullet = Math.hypot(r.x - b.x, r.y - b.y);
-
-                if (distToBullet < r.radius + b.radius) {
-                    bullets.splice(j, 1);
-                    r.hp -= b.dmg;
-                    score += 10;
-                    levelProgress += 3;
-
-                    const scoreVal = document.getElementById('score-val');
-                    if (scoreVal) scoreVal.innerText = score;
-
-                    updateLevelUI();
-                    playSound('hit');
-                    createExplosion(b.x, b.y, r.color, 3);
-
-                    if (r.hp <= 0) {
-                        playSound('explode');
-                        createExplosion(r.x, r.y, r.color, 20);
-                        spawnCoins(r.x, r.y, (r.sizeIndex + 1) * 3);
-
-                        if (r.sizeIndex > 0) {
-                            const newHp = Math.ceil(r.maxHp / 2);
-                            spawnRock(r.x - 18, r.y, newHp, r.sizeIndex - 1);
-                            spawnRock(r.x + 18, r.y, newHp, r.sizeIndex - 1);
-                        }
-
-                        rocks.splice(i, 1);
-
-                        if (levelProgress >= maxLevelProgress) {
-                            currentLevel++;
-                            levelProgress = 0;
-                            updateLevelUI();
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if (rocks[i]) {
-                ctx.save();
-                ctx.translate(r.x, r.y);
-                ctx.beginPath();
-                ctx.moveTo(r.vertices[0].x, r.vertices[0].y);
-                for (let v = 1; v < r.vertices.length; v++) {
-                    ctx.lineTo(r.vertices[v].x, r.vertices[v].y);
-                }
-                ctx.closePath();
-                ctx.fillStyle = r.color;
-                ctx.fill();
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.font = `900 ${Math.max(16, r.radius * 0.65)}px Rubik, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(Math.max(0, r.hp), 0, 0);
-                ctx.restore();
-            }
-        }
-
-        if (rocks.length === 0 && gameStarted && !isPaused) {
-            spawnRock(width * 0.3, 80, Math.max(5, 8 * currentLevel), 2);
-            spawnRock(width * 0.7, 80, Math.max(4, 6 * currentLevel), 1);
-        }
-    }
-
-    // --- Enemy Animal (Angry Bat / Dragon) ---
-    const enemies = [];
-    let enemySpawnTimer = 0;
-    let enemyAnimTime = 0;
-
-    function updateEnemies(dt) {
-        enemyAnimTime += dt * 8; // מהירות נפנוף הכנפיים
-
-        enemySpawnTimer += dt;
-        // הופעת עטלף אויב כל 10 שניות
-        if (enemySpawnTimer > 10 && enemies.length === 0 && gameStarted && !isPaused) {
-            enemySpawnTimer = 0;
-            enemies.push({
-                x: Math.random() > 0.5 ? 50 : width - 50,
-                y: 130,
-                vx: 100,
-                radius: 24,
-                hp: 15 + (currentLevel * 5),
-                maxHp: 15 + (currentLevel * 5)
-            });
-        }
-
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            const e = enemies[i];
-
-            // תנועה מצד לצד + תנודה אנכית כעין מעוף
-            e.x += e.vx * dt;
-            e.y += Math.sin(enemyAnimTime * 0.5) * 0.6;
-
-            if (e.x - e.radius <= 10 || e.x + e.radius >= width - 10) {
-                e.vx = -e.vx;
-            }
-
-            // התנגשות בתותח
-            const distToCannon = Math.hypot(e.x - cannon.x, e.y - cannon.y);
-            if (distToCannon < e.radius + 26) {
-                currentHp -= 40;
-                updateHpBar();
-                playSound('hit');
-                createExplosion(cannon.x, cannon.y - 10, '#ef4444', 15);
-                enemies.splice(i, 1);
-                if (currentHp <= 0) { gameOver(); return; }
-                continue;
-            }
-
-            // פגיעת קליעים בחיה
-            for (let j = bullets.length - 1; j >= 0; j--) {
-                const b = bullets[j];
-                const distToBullet = Math.hypot(e.x - b.x, e.y - b.y);
-
-                if (distToBullet < e.radius + b.radius) {
-                    bullets.splice(j, 1);
-                    e.hp -= b.dmg;
-                    score += 20;
-                    playSound('hit');
-                    createExplosion(b.x, b.y, '#a855f7', 4);
-
-                    if (e.hp <= 0) {
-                        playSound('explode');
-                        createExplosion(e.x, e.y, '#a855f7', 25);
-                        spawnCoins(e.x, e.y, 6);
-                        enemies.splice(i, 1);
-                        break;
-                    }
-                }
-            }
-
-            if (enemies[i]) {
-                ctx.save();
-                ctx.translate(e.x, e.y);
-
-                const wingFlap = Math.sin(enemyAnimTime) * 18;
-
-                // ציור כנפיים (סגול)
-                ctx.fillStyle = '#581c87';
-                ctx.strokeStyle = '#a855f7';
-                ctx.lineWidth = 2;
-
-                // כנף שמאל
-                ctx.beginPath();
-                ctx.moveTo(0, -5);
-                ctx.quadraticCurveTo(-25, -30 + wingFlap, -45, -5 + wingFlap);
-                ctx.quadraticCurveTo(-20, 10, 0, 5);
-                ctx.fill();
-                ctx.stroke();
-
-                // כנף ימין
-                ctx.beginPath();
-                ctx.moveTo(0, -5);
-                ctx.quadraticCurveTo(25, -30 + wingFlap, 45, -5 + wingFlap);
-                ctx.quadraticCurveTo(20, 10, 0, 5);
-                ctx.fill();
-                ctx.stroke();
-
-                // גוף וראש העטלף
-                ctx.fillStyle = '#3b0764';
-                ctx.beginPath();
-                ctx.arc(0, 0, 14, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-
-                // אוזניים
-                ctx.fillStyle = '#581c87';
-                ctx.beginPath();
-                ctx.moveTo(-8, -10); ctx.lineTo(-14, -22); ctx.lineTo(-2, -12);
-                ctx.moveTo(8, -10); ctx.lineTo(14, -22); ctx.lineTo(2, -12);
-                ctx.fill();
-
-                // עיניים אדומות
-                ctx.fillStyle = '#ef4444';
-                ctx.beginPath();
-                ctx.arc(-5, -3, 3, 0, Math.PI * 2);
-                ctx.arc(5, -3, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                // מד חיים מעל החיה
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '900 12px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(Math.max(0, e.hp), 0, -26);
-
-                ctx.restore();
-            }
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
         }
     }
 
     // --- Controls ---
-    let isDragging = false, isFiring = false, touchStartX = 0;
-
+    let isDragging = false, touchStartX = 0;
     canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isDragging = true; isFiring = true;
-        touchStartX = e.touches[0].clientX;
-    }, { passive: false });
+        isDragging = true; touchStartX = e.touches[0].clientX;
+    }, { passive: true });
 
     canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (isDragging && gameStarted && !isPaused) {
+        if (isDragging) {
             const currentX = e.touches[0].clientX;
-            const deltaX = currentX - touchStartX;
-            cannon.targetX += deltaX;
+            cannon.targetX += (currentX - touchStartX);
             touchStartX = currentX;
         }
-    }, { passive: false });
+    }, { passive: true });
 
-    const stopInput = (e) => { if (e && e.preventDefault) e.preventDefault(); isDragging = false; isFiring = false; };
-    canvas.addEventListener('touchend', stopInput, { passive: false });
+    window.addEventListener('touchend', () => { isDragging = false; });
 
     // --- Menu Navigation & Purchases ---
     const playTabBtn = document.getElementById('tab-play-btn');
@@ -868,7 +525,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Maps Selection & Purchase Handlers
+    // Maps Handlers
     function handleMapClick(mapId, cost) {
         if (unlockedMaps.includes(mapId)) {
             currentMap = mapId;
@@ -890,110 +547,46 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('select-map-sunset')?.addEventListener('click', () => handleMapClick('sunset', 500));
     document.getElementById('select-map-space')?.addEventListener('click', () => handleMapClick('space', 1500));
 
-    // --- State Transitions ---
-    function resetGame() {
-        score = 0; currentHp = maxHp; currentLevel = 1; levelProgress = 0;
-        rocks.length = 0; bullets.length = 0; particles.length = 0; coinsList.length = 0;
-        enemies.length = 0; enemySpawnTimer = 0;
+    // Game Lifecycle
+    function startGame() {
+        initAudio();
+        gameStarted = true;
+        isPaused = false;
+        score = 0;
+        currentLevel = 1;
+        levelProgress = 0;
+        currentHp = maxHp;
+
         cannon.x = width / 2;
         cannon.targetX = width / 2;
 
-        const scoreVal = document.getElementById('score-val');
-        if (scoreVal) scoreVal.innerText = '0';
+        document.getElementById('start-menu')?.classList.add('hidden');
+        document.getElementById('game-ui')?.classList.remove('hidden');
 
-        updateHpBar();
-        updateLevelUI();
-        updateUI();
+        spawnRock(width * 0.3, 80, 8, 2);
     }
 
-    function gameOver() {
-        gameStarted = false; isFiring = false; isDragging = false;
-        if (score > highScore) {
-            highScore = score;
-            localStorage.setItem('cannon_high_score_2d', highScore);
-        }
+    document.getElementById('start-btn')?.addEventListener('click', startGame);
 
-        const gameOverModal = document.getElementById('game-over-modal');
-        const finalScoreVal = document.getElementById('final-score-val');
-        const finalCoinsVal = document.getElementById('final-coins-val');
-        const bestScoreVal = document.getElementById('best-score-val');
-
-        if (finalScoreVal) finalScoreVal.innerText = score;
-        if (finalCoinsVal) finalCoinsVal.innerText = totalCoins;
-        if (bestScoreVal) bestScoreVal.innerText = highScore;
-        if (gameOverModal) gameOverModal.classList.remove('hidden');
-    }
-
-    function returnToMainMenu() {
-        gameStarted = false;
-        isPaused = false;
-        isFiring = false;
-        isDragging = false;
-
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        document.getElementById('pause-menu')?.classList.add('hidden');
-        document.getElementById('start-overlay')?.classList.remove('hidden');
-
-        updateUI();
-    }
-
-    document.getElementById('start-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        initAudio();
-        resetGame();
-        gameStarted = true;
-        isPaused = false;
-        document.getElementById('start-overlay')?.classList.add('hidden');
-    });
-
-    document.getElementById('pause-btn')?.addEventListener('click', () => {
-        if (!gameStarted) return;
-        isPaused = true;
-        document.getElementById('pause-menu')?.classList.remove('hidden');
-    });
-
-    document.getElementById('resume-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        isPaused = false;
-        document.getElementById('pause-menu')?.classList.add('hidden');
-    });
-
-    document.getElementById('pause-home-btn')?.addEventListener('click', returnToMainMenu);
-    document.getElementById('home-btn')?.addEventListener('click', returnToMainMenu);
-
-    document.getElementById('restart-btn')?.addEventListener('click', () => {
-        requestFullScreen();
-        document.getElementById('game-over-modal')?.classList.add('hidden');
-        resetGame();
-        isPaused = false;
-        gameStarted = true;
-    });
-
-    // --- Main Game Loop ---
+    // Main Loop
     let lastTime = performance.now();
-
     function gameLoop(now) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
+        ctx.clearRect(0, 0, width, height);
         drawEnvironment();
 
         if (gameStarted && !isPaused) {
-            cannon.targetX = Math.max(30, Math.min(width - 30, cannon.targetX));
-            cannon.x += (cannon.targetX - cannon.x) * 0.25;
-
-            const fireInterval = Math.max(0.02, 0.075 - (fireRateLevel * 0.007));
-
+            cannon.x += (cannon.targetX - cannon.x) * 0.2;
             shootTimer += dt;
-            if (isFiring && shootTimer >= fireInterval) {
-                shootTimer = 0;
+            if (shootTimer >= Math.max(0.08, 0.25 - (fireRateLevel * 0.02))) {
                 spawnBullet();
                 playSound('shoot');
+                shootTimer = 0;
             }
-
             updateBullets(dt);
             updateRocks(dt);
-            updateEnemies(dt);
             updateCoins(dt);
             updateParticles(dt);
         }
@@ -1002,7 +595,7 @@ window.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(gameLoop);
     }
 
-    resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
     requestAnimationFrame(gameLoop);
 });
